@@ -31,6 +31,10 @@ export interface CatalogSet {
   nature: string;
   evs: Partial<StatTable>;  // the full (AAA = 100%) spread
   roles: Role[];         // derived from moves/ability/item + randbats role label
+  /** where the set came from, e.g. "SV OU", "Player set", "Gen 9 Random Battle (level 74)", "Adapted from Garchomp: ..." */
+  format?: string;
+  /** non-31 IVs the source set asks for (e.g. {spe: 0} on Trick Room sets) */
+  ivs?: Partial<StatTable>;
 }
 
 export interface CatalogSpecies {
@@ -60,6 +64,8 @@ export interface CatalogSpecies {
 export interface Catalog {
   version: string;       // data build stamp
   species: Record<string, CatalogSpecies>;
+  /** item names used by sets that the engine does not know (the runner searches them as no item) */
+  engineUnknownItems?: string[];
 }
 
 // ---------------------------------------------------------------- league state (saved)
@@ -84,6 +90,8 @@ export interface Contract {
   guaranteedYears: number;
   rookie?: {round: number; pick: number; fifthYearOption: boolean};
   tagged?: boolean;       // franchise tag
+  /** signed under a cap exception (allowed over the cap): minimum deal or rookie scale */
+  exception?: 'minimum' | 'rookie';
 }
 
 export interface SeasonLine {
@@ -118,6 +126,13 @@ export interface Mon {
   /** per-team scouting knowledge: points spent (0..5); 5 = full */
   scouting?: Record<TeamId, number>;
   traits?: string[];      // revealed by scouting: "Maxed Speed", "Especially suited: Pivot"
+  /** model bookkeeping (optional, owned by model/) */
+  prospect?: number;      // draft season while in a draft class
+  gradeCap?: Grade;       // permanent EV grade cap from a severe injury
+  tempFor?: MonId;        // signed as the IR replacement for this mon
+  faSince?: number;       // season it became a free agent
+  askMult?: number;       // free-agent ask multiplier (drops each unsigned FA round)
+  family?: string;        // rarity-pool family (returned to the pool on retirement)
 }
 
 export interface StrategyDef {
@@ -142,6 +157,8 @@ export interface Team {
   scoutingPoints: number;
   deadMoney: {season: number; amount: number}[];
   draftPicks: DraftPick[];
+  practiceFocus?: MonId[];   // 2–3 picks that get extra practice XP this week
+  tagSeason?: number;        // season the franchise tag was last used
 }
 
 export interface DraftPick { season: number; round: number; originalTeamId: TeamId; ownerTeamId: TeamId }
@@ -220,6 +237,7 @@ export interface LeagueState {
   pool: Record<string, number>;       // rarity pool: species family id -> remaining count
   nextId: number;
   log: Transaction[];
+  faRound?: number;                   // free-agency rounds completed this offseason (0..3)
 }
 
 export interface Transaction { season: number; week: number; kind: string; text: string; teamIds: TeamId[]; monIds: MonId[] }
