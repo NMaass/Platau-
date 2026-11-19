@@ -1,3 +1,11 @@
+# Plateau
+
+A browser-only Pokémon franchise-mode GM sim: run one of 16 gym-city clubs through seasons, the Indigo Plateau playoffs, drafts, free agency and the hall of fame, with every battle simulated in the background. See [`web/franchise/README.md`](web/franchise/README.md) for how to build and run it, and [`docs/FRANCHISE.md`](docs/FRANCHISE.md) for the design.
+
+Plateau is built on [Rollmon](https://github.com/ziangit/Rollmon) by ziangit (MIT): its poke-engine WebAssembly build, `@pkmn/sim` battle runner and Showdown replay embed power the battles. Rollmon's history is kept in this repository, and its original README follows.
+
+---
+
 # rollmons
 
 A single-player Pokémon draft autobattler that runs entirely in the browser. Roll six Pokémon through a generation × type slot machine, pick each one's set, then watch an AI pilot your team through a ten-battle boss gauntlet and post the run to a leaderboard.

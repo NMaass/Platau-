@@ -17,7 +17,7 @@ A single-player Pokémon draft/autobattler being rebuilt to run **entirely in th
 ## Hard constraints (never violate)
 - Build poke-engine for wasm with `--features gen9 --no-default-features` (Tera compiled out). A Tera-enabled engine returns illegal `-tera` choices.
 - **No foul-play code in this repo** (foul-play is GPL-3.0). The export parser, battle-state mapping, and runner were written fresh. Dependencies are MIT: poke-engine, Pokémon Showdown / `@pkmn/*`.
-- Push only to `origin` (github.com/ziangit/Rollmon).
+- This repository is Plateau (github.com/NMaass/Platau-), built on Rollmon (MIT, github.com/ziangit/Rollmon). Push only to `origin` (the Plateau repo); never to ziangit/Rollmon. The franchise app lives in `web/franchise/` (see its README).
 - Never commit `node_modules`, build output, logs, or sprite/audio assets. Sprites and the replay player are hotlinked from play.pokemonshowdown.com (dev only; distribution decision deferred).
 
 ## Toolchain
