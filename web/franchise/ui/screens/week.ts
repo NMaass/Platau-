@@ -1,6 +1,6 @@
 // Home / This week: Before you play, this week's series card, last week's results
 // (series MVP + template summary + replay links), since last week feed.
-import type {Series, TeamId, InboxItem, Mon} from '../../types.ts';
+import type {Series, TeamId, InboxItem, Mon, LeagueState} from '../../types.ts';
 import {ROLE_LABEL} from '../../catalog/roles.ts';
 import {esc, ic, record, listJoin} from '../dom.ts';
 import {C, S} from '../store.ts';
@@ -99,16 +99,17 @@ export function seriesResult(se: Series, o: {headless?: boolean} = {}): string {
 
 function lastWeek(): string {
   const s = S(), me = s.userTeamId;
-  const prev = s.schedule.filter((x) => x.season === s.season && x.week === s.week - 1);
-  const mine = prev.find((x) => x.homeId === me || x.awayId === me);
+  // the user's most recent played series this season (in the playoffs and offseason that can be weeks back)
+  const mine = [...s.schedule].reverse().find((x) => x.season === s.season && x.games.length && (x.homeId === me || x.awayId === me) && (x.week < s.week || (s.phase !== 'regular' && s.phase !== 'playoffs')));
   if (!mine) return panel('last', 'Last week', `<p class="muted">No games played yet this season.</p>`);
+  const prev = s.schedule.filter((x) => x.season === s.season && x.week === mine.week);
   const others = prev.filter((x) => x !== mine && x.winnerId);
   const around = others.map((x) => {
     const [w, l] = seriesScore(x, x.winnerId!);
     const lose = oppOf(x, x.winnerId!);
     return `<li>${teamAbbr(x.winnerId!)}<span class="muted">beat</span>${teamAbbr(lose)}<b>${record(w, l)}</b><a class="btn sm" href="#battle-${esc(x.id)}-1">Watch</a></li>`;
   }).join('');
-  return panel('last', `Last week · week ${mine.week}`, `${seriesResult(mine)}
+  return panel('last', mine.week === s.week - 1 ? `Last week · week ${mine.week}` : `Last series · week ${mine.week}`, `${seriesResult(mine)}
     <details class="around"><summary class="cap">Around the league</summary><ul class="l-list results">${around}</ul></details>`);
 }
 
@@ -152,6 +153,37 @@ export function openFocus(onSave: (ids: string[]) => void): void {
     const c = d.querySelector('.l-dialog-head .cap'); if (c) c.textContent = cap();
   });
 }
+// ---------------------------------------------------------------- play until
+export type Until = 'week' | 'deadline' | 'regular' | 'plateau' | 'draft';
+export const UNTIL: {key: Until; label: string; done: string}[] = [
+  {key: 'week', label: 'Next week', done: 'the next week'}, {key: 'deadline', label: 'Trade deadline', done: 'the trade deadline'},
+  {key: 'regular', label: 'End of regular season', done: 'the end of the regular season'},
+  {key: 'plateau', label: 'Indigo Plateau', done: 'the end of the Indigo Plateau'}, {key: 'draft', label: 'Draft', done: 'the draft'},
+];
+const PHASES = ['preseason', 'regular', 'playoffs', 'awards', 'draft-lottery', 'draft', 'resign', 'free-agency'];
+/** A point on the calendar as one number, so "have we reached it" is a comparison. */
+export const calendarPos = (s: LeagueState): number => {
+  const ph = PHASES.indexOf(s.phase);
+  return s.season * 10000 + ph * 100 + (ph === 1 || ph === 2 ? s.week : 0);
+};
+/** Where a "Play until" stop is from here: target position (null = not selectable now) and a one-line description.
+ *  Never plays through the draft (the user's picks); from re-signing on, stops refer to next season. */
+export function untilState(s: LeagueState, u: Until): {target: number | null; text: string} {
+  const ph = PHASES.indexOf(s.phase), dl = s.settings.tradeDeadlineWeek;
+  const next = ph >= 6, season = next ? s.season + 1 : s.season, when = next ? ' next season' : '';
+  const at = (p: number, w = 0) => season * 10000 + p * 100 + w;
+  if (u === 'week') return {target: -1, text: s.phase === 'regular' || s.phase === 'playoffs' ? 'Play one week' : 'Move on one step'};
+  if (ph === 5) return {target: null, text: 'Finish the draft first'};
+  const pos = calendarPos(s);
+  const t = u === 'deadline' ? at(1, dl) : u === 'regular' ? at(2, 0) : u === 'plateau' ? at(3) : at(5);
+  const ok = t > pos;
+  const text = u === 'deadline' ? (ok ? `Stops at week ${dl}${when}, the last week trades are open` : 'Already past the deadline this season')
+    : u === 'regular' ? (ok ? `Stops when the Indigo Plateau field is set${when}` : 'The regular season is over')
+    : u === 'plateau' ? (ok ? `Plays the Indigo Plateau through the final${when}` : 'The Indigo Plateau is over')
+    : (ok ? `Awards, retirements and the lottery${when}, then stops at the draft` : 'The draft has started');
+  return {target: ok ? t : null, text};
+}
+
 const TIER_WORD: Record<string, string> = {active: 'Active', backup: 'Backup', practice: 'Practice squad', ir: 'Injured reserve'};
 
 export function viewWeek(): string {
@@ -160,9 +192,10 @@ export function viewWeek(): string {
   const adv = M.advisories(c, s);
   const opp = se ? oppOf(se, s.userTeamId) : null;
   const playLabel = se ? `Play week ${s.week}` : s.phase === 'regular' || s.phase === 'playoffs' ? 'Play week' : 'Continue';
-  const actions = `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a><button class="btn go" type="button" data-act="play">${ic('play')}${esc(playLabel)}</button>`;
+  const actions = `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a><button class="btn" type="button" data-act="until">Play until…</button><button class="btn go" type="button" data-act="play">${ic('play')}${esc(playLabel)}</button>`;
   const title = s.phase === 'regular' ? `Week ${s.week}` : phaseLabel(s.phase);
-  const sub = se && opp ? `of ${s.settings.weeks} · ${se.homeId === s.userTeamId ? 'vs' : 'at'} ${esc(teamName(opp))} · best of ${se.bestOf}` : `Season ${s.season}`;
+  const PO: Record<string, string> = {round1: 'Round 1', conference: 'Conference final', final: 'Plateau final'};
+  const sub = se && opp ? `${se.playoff ? PO[se.playoff] : `of ${s.settings.weeks}`} · ${se.homeId === s.userTeamId ? 'vs' : 'at'} ${esc(teamName(opp))} · best of ${se.bestOf}` : `Season ${s.season}`;
   const before = itemList([...adv.map((a) => ({
     chip: eventChip(ADV[a.kind][0], ADV[a.kind][1], a.label),
     text: esc(a.text),

@@ -132,9 +132,10 @@ export function viewPlayoffs(): string {
   if (started) {
     const mine = s.schedule.filter((x) => x.playoff && x.season === s.season && (x.homeId === me || x.awayId === me));
     const last = mine[mine.length - 1];
+    const IN: Record<string, string> = {round1: 'first round', conference: 'conference final', final: 'Plateau final'};
     const sub = !mine.length ? 'You missed the Indigo Plateau this season.'
-      : last.winnerId && last.winnerId !== me ? `Your run ended in the ${PLAYOFF_LABEL[last.playoff!].toLowerCase()}.`
-        : last.playoff === 'final' && last.winnerId === me ? 'You won the Indigo Plateau.' : `You are in the ${PLAYOFF_LABEL[last.playoff!].toLowerCase()}.`;
+      : last.winnerId && last.winnerId !== me ? `Your run ended in the ${IN[last.playoff!]}.`
+        : last.playoff === 'final' && last.winnerId === me ? 'You won the Indigo Plateau.' : `You are in the ${IN[last.playoff!]}.`;
     return head('Indigo Plateau', `Season ${s.season} · ${esc(sub)}`) +
       `<section class="l-section" aria-labelledby="h-br"><h2 id="h-br">Bracket</h2>${bracket(false)}<span class="x-small">Six clubs. The better division winner in each conference has a bye. Best of ${s.settings.seriesBestOf}; the final is best of ${s.settings.finalBestOf}.</span></section>`;
   }
@@ -232,8 +233,8 @@ function records(): Rec[] {
   add('Most KOs, season', best(lines, (x) => x.l.kos), 'KOs', (x) => String(x.l!.season));
   add('Most series MVPs, season', best(lines, (x) => x.l.seriesMvps), 'MVPs', (x) => String(x.l!.season));
   add('Most hazards set, season', best(lines, (x) => x.l.hazardsSet), 'set', (x) => String(x.l!.season));
-  const careers = all.map((m) => ({m, kos: m.stats.reduce((t, l) => t + l.kos, 0), from: m.stats[0]?.season}));
-  add('Most KOs, career', best(careers, (x) => x.kos), 'KOs', (x) => `${(x as unknown as {from?: number}).from ?? ''}–`);
+  const careers = all.map((m) => ({m, kos: m.stats.reduce((t, l) => t + l.kos, 0), from: m.stats[0]?.season, to: m.stats[m.stats.length - 1]?.season}));
+  add('Most KOs, career', best(careers, (x) => x.kos), 'KOs', (x) => { const y = x as unknown as {from?: number; to?: number}; return y.from == null ? '—' : y.from === y.to ? String(y.from) : `${y.from}–${y.to}`; });
   const seasons = s.history.flatMap((h) => h.standings.map((st) => ({h, st})));
   const top = best(seasons, (x) => x.st.wins);
   if (top) out.push({label: 'Best record, season', who: teamCell(top.x.st.teamId), mark: record(top.x.st.wins, top.x.st.losses), season: String(top.x.h.season), mine: top.x.st.teamId === me});

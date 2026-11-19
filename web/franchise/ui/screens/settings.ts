@@ -1,6 +1,6 @@
 // Settings (theme, save export/import, budgets, new league) and the New League screen.
 import {esc, ic, money} from '../dom.ts';
-import {store} from '../store.ts';
+import {store, fastSim} from '../store.ts';
 import {head, panel} from '../components/page.ts';
 import {isFixtureMode} from '../model.ts';
 import {TEAM_PRESETS} from '../dev-fixture.ts';
@@ -28,6 +28,7 @@ export function viewSettings(): string {
     </div>
     <div class="l-stack loose">
       ${s ? panel('budget', 'Battle think time', budgets) : ''}
+      ${s ? panel('testing', 'Fast sim (no battles, for testing)', `<div class="l-seg" role="group" aria-label="Fast sim">${[['0', 'Off'], ['1', 'On']].map(([v, l]) => `<button type="button" data-act="fastsim" data-v="${v}" aria-pressed="${fastSim() === (v === '1')}">${l}</button>`).join('')}</div><p class="x-small">On: every week is decided by a quick rating model instead of real battles, so a season takes seconds. No replays.</p>`) : ''}
       ${panel('newl', 'New league', `<p class="muted">Start over with a new league. Your current save stays until you replace it.</p><div class="l-actions"><a class="btn" href="#new">${ic('plus')}New league</a></div>`)}
     </div></div>`;
 }

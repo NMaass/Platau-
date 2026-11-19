@@ -178,7 +178,7 @@ export function viewDraft(): string {
   const hide = !!store.ui.hideTaken;
   const rows = hide ? ms.filter((m) => !taken.has(m.id) && m.prospect !== undefined) : ms;
   const mine = d.order.map((p, i) => ({p, n: i + 1})).filter((x) => x.p.ownerTeamId === me);
-  const sub = s.phase === 'draft-lottery' ? `${d.season} draft · the lottery is drawn` : review ? `${d.season} draft · complete` : `${d.season} draft · ${mine.length ? `your picks: ${mine.map((x) => '#' + x.n).join(', ')}` : 'you have no picks'}`;
+  const sub = s.phase === 'draft-lottery' ? `Season ${d.season} draft · the lottery is drawn` : review ? `Season ${d.season} draft · complete` : `Season ${d.season} draft · ${mine.length ? `your picks: ${mine.map((x) => '#' + x.n).join(', ')}` : 'you have no picks'}`;
   const toolbar = `<div class="l-toolbar l-pad"><label><button type="button" class="switch" role="switch" aria-checked="${hide}" data-fo="hidetaken" aria-label="Hide taken"></button>Hide taken</label><span class="x-small">${plural(api.draftBoard(s).length, 'prospect')} left</span></div>`;
   return head('Draft', esc(sub)) +
     (review ? '' : clockCard()) +

@@ -23,7 +23,9 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
   const out: Advisory[] = [];
   const me = state.teams[state.userTeamId];
   const name = (id: MonId) => catalog.species[state.mons[id]?.speciesId]?.name ?? 'Unknown';
-  me.lineup.slots.forEach((sl, i) => {
+  // lineup problems only matter while games are coming (not in the offseason)
+  const games = state.phase === 'preseason' || state.phase === 'regular' || state.phase === 'playoffs';
+  if (games) me.lineup.slots.forEach((sl, i) => {
     const m = sl.monId ? state.mons[sl.monId] : undefined;
     if (!m || m.teamId !== me.id) {
       out.push({id: `slot-${i}`, kind: 'lineup', label: 'Lineup', text: `No one fills the ${ROLE_LABEL[sl.role]} slot. A backup will be auto-filled.`, action: {label: 'Fix lineup', route: '#lineup'}});
@@ -42,7 +44,7 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
   });
   if (state.phase === 'preseason' || state.phase === 'regular') {
     const n = rosterCount(teamMons(state, me.id));
-    if (n !== 18) out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: n > 18 ? `You carry ${n}; the lowest-rated will be released down to 18.` : `You carry ${n}; free agents will be signed up to 18.`, action: {label: 'Roster', route: '#roster'}});
+    if (n !== 18) out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: n > 18 ? `You carry ${n}; the lowest-rated will be released down to 18.` : `You carry ${n}; free agents will be signed up to 18.`, action: n > 18 ? {label: 'Roster', route: '#roster'} : {label: 'Sign', route: '#freeagents'}});
   }
   for (const o of state.offers) {
     if (o.status !== 'open' || o.toTeamId !== me.id) continue;
@@ -53,7 +55,7 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
     const opp = s.homeId === me.id ? s.awayId : s.homeId;
     const unknown = likelyLineup(catalog, state, opp).filter(x => !knowsExactly(state, me.id, state.mons[x.monId])).length;
     out.push({id: `scout-${opp}`, kind: 'scout', label: 'Scouting',
-      text: unknown ? `${unknown} of ${state.teams[opp].name}' likely six are not fully known yet.` : `Report on ${state.teams[opp].city} ${state.teams[opp].name} is ready.`,
+      text: unknown ? `${unknown} of ${state.teams[opp].name}' likely six ${unknown === 1 ? 'is' : 'are'} not fully known yet.` : `Report on ${state.teams[opp].city} ${state.teams[opp].name} is ready.`,
       action: {label: 'Read report', route: '#opponent'}});
   }
   if (capPayroll(state, me.id) > state.settings.cap) out.push({id: 'cap', kind: 'contract', label: 'Cap', text: 'You are over the cap: only minimum deals can be signed.', action: {label: 'Contracts', route: '#roster?lens=contracts'}});
@@ -63,7 +65,7 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
   }
   if (state.phase === 'resign') {
     const exp = teamMons(state, me.id).filter(m => m.contract && m.contract.yearsLeft <= 0);
-    if (exp.length) out.push({id: 'resign', kind: 'contract', label: 'Re-sign', text: `${exp.length} expiring contract${exp.length > 1 ? 's' : ''}: re-sign or tag before free agency.`, action: {label: 'Contracts', route: '#roster?lens=contracts'}});
+    if (exp.length) out.push({id: 'resign', kind: 'contract', label: 'Re-sign', text: `${exp.length} expiring contract${exp.length > 1 ? 's' : ''}: re-sign or tag before free agency.`, action: {label: 'Re-sign', route: '#freeagents'}});
   }
   return out;
 }

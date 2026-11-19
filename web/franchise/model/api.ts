@@ -62,7 +62,21 @@ export function advisories(catalog: Catalog, state: LeagueState): {id: string; k
 // ---- roster & lineup actions
 export function setStrategy(catalog: Catalog, state: LeagueState, teamId: TeamId, strategyId: string): void {
   const team = state.teams[teamId];
-  team.lineup.strategyId = strategyById(strategyId).id;
+  const next = strategyById(strategyId).id;
+  if (next === team.lineup.strategyId) return;
+  // a hand-set lineup is kept per strategy and comes back when you switch back to it
+  const saved = (team.savedLineups ??= {});
+  if (!team.lineup.auto) saved[team.lineup.strategyId] = structuredClone(team.lineup.slots);
+  team.lineup.strategyId = next;
+  const back = saved[next];
+  const valid = back && back.every(sl => !sl.monId || (state.mons[sl.monId]?.teamId === teamId && state.mons[sl.monId].tier !== 'ir'));
+  if (back && valid) {
+    team.lineup.slots = structuredClone(back).map(sl => ({...sl, backups: sl.backups.filter(b => state.mons[b]?.teamId === teamId)}));
+    team.lineup.auto = false;
+    lu.normalizeTiers(remember(catalog), state, teamId);
+    return;
+  }
+  team.lineup.auto = true;
   lu.autoLineup(remember(catalog), state, teamId);
 }
 export function autoLineup(catalog: Catalog, state: LeagueState, teamId: TeamId): Lineup {

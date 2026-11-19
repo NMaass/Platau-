@@ -57,7 +57,7 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `info(label, popHtml)`, `peekLabel(label, popHtml)`, `prow(k, v)` | peeks (one floating layer, hover/focus/tap) |
 
 ## data-* actions (app.ts)
-`data-act="play|auto|swap|chooser|theme|export|import|pickteam|newleague"` (click),
+`data-act="play|until|auto|swap|chooser|theme|fastsim|export|import|pickteam|newleague"` (click; `until` opens Play until, `fastsim` is the Settings dev toggle read by `store.fastSim()`),
 `data-act="strategy|slotset|monset|tier|budget"` (change), `data-sort="<table>:<col>:<desc 0|1>"`,
 `data-lens="<uiKey>:<value>"`. Re-render after state changes with `act()` or `notify()`.
 

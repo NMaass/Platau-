@@ -1,7 +1,7 @@
 // Plateau entry: boot (catalog + league), shell, router, event delegation.
 import {ICONS} from './ui/icons.ts';
-import {esc, ic, $} from './ui/dom.ts';
-import {store, onChange, notify, act, S, C, loadCatalog, loadLast, save, exportSave, importSave, playWeek, setPool} from './ui/store.ts';
+import {esc, ic, $, plural, record} from './ui/dom.ts';
+import {store, onChange, notify, act, S, C, loadCatalog, loadLast, save, exportSave, importSave, playWeek, setPool, setFastSim} from './ui/store.ts';
 import {M, api, setFixtureMode, isFixtureMode} from './ui/model.ts';
 import {parse, type Route} from './ui/router.ts';
 import {ROUTES} from './ui/routes.ts';
@@ -10,7 +10,7 @@ import {installLayers, openDialog, updateDialog, hideFloat, closeDialog, confirm
 import {toggleSort} from './ui/components/table.ts';
 import {comingSoon} from './ui/components/page.ts';
 import {installSpriteFallback, probeIconSheet} from './ui/sprites.ts';
-import {viewWeek, viewOpponent, seriesResult, openFocus} from './ui/screens/week.ts';
+import {viewWeek, viewOpponent, seriesResult, openFocus, UNTIL, untilState, calendarPos, type Until} from './ui/screens/week.ts';
 import {viewRoster} from './ui/screens/roster.ts';
 import {viewLineup, openChooser} from './ui/screens/lineup.ts';
 import {viewMon} from './ui/screens/mon.ts';
@@ -100,7 +100,8 @@ async function play(): Promise<void> {
     return;
   }
   const me = S().userTeamId;
-  const se = S().schedule.find((x) => x.season === season && x.week === wk && (x.homeId === me || x.awayId === me) && x.games.length);
+  const played = phase === 'regular' || phase === 'playoffs';  // offseason steps keep week 17: don't re-show the final
+  const se = played ? S().schedule.find((x) => x.season === season && x.week === wk && (x.homeId === me || x.awayId === me) && x.games.length) : undefined;
   if (!se) {
     const now = S();
     const reasons = (now as unknown as {pauseReasons?: string[]}).pauseReasons ?? [];
@@ -117,6 +118,74 @@ async function play(): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------- play until
+/** Pick a stop point, then sim week after week in one progress dialog. Stops early on a pause reason
+ *  (a starter out 2+ weeks, a trade offer) and says why. Never plays past the start of the draft. */
+function openPlayUntil(): void {
+  const s = S();
+  const rows = UNTIL.map((u) => {
+    const st = untilState(s, u.key);
+    return `<li><button type="button" data-until="${u.key}"${st.target !== null ? '' : ' aria-disabled="true"'}>${ic('play')}<span><span class="nm">${esc(u.label)}</span><span class="where">${esc(st.text)}</span></span><span></span></button></li>`;
+  }).join('');
+  const d = openDialog({title: 'Play until', cap: phaseLabel(s.phase), body: `<p class="muted">Sims every week up to the stop you pick. It stops early if a starter is hurt for weeks or a club sends you a trade offer.</p><ul class="chooser" role="list">${rows}</ul>`,
+    actions: [{key: 'close', label: 'Cancel'}]});
+  d.querySelector('[data-body]')!.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLElement>('[data-until]');
+    if (!b || b.getAttribute('aria-disabled') === 'true') return;
+    void playUntil(b.dataset.until as Until);
+  });
+}
+
+async function playUntil(target: Until): Promise<void> {
+  if (target === 'week') { closeDialog(); await play(); return; }
+  const start = S();
+  const me = start.userTeamId, season0 = start.season;
+  const rec0 = recordOf(me);
+  const {label, done} = UNTIL.find((u) => u.key === target)!;
+  const goal = untilState(start, target).target;
+  if (goal === null) return;
+  const bar = (title: string, done: number, total: number, sub: string) => `<div class="l-stack"><p>${esc(title)}</p><div class="l-progress"><span class="fitbar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><i style="width:${total ? (done / total * 100).toFixed(1) : 0}%"></i></span><output>${done} / ${total}</output></div><p class="x-small">${esc(sub)}</p></div>`;
+  openDialog({title: `Playing until: ${esc(label)}`, cap: `Season ${season0}`, body: bar(phaseLabel(start.phase), 0, 0, 'Every series in the league is played in the background.'), actions: [], locked: true});
+  let steps = 0, reasons: string[] = [];
+  try {
+    for (let guard = 0; guard < 40; guard++) {
+      const s = S();
+      if (calendarPos(s) >= goal || s.phase === 'draft') break;
+      const step = phaseLabel(s.phase);
+      await playWeek((p) => {
+        const dlg = document.getElementById('dlg');
+        const i = dlg?.querySelector<HTMLElement>('.fitbar i'), o = dlg?.querySelector('output'), t = dlg?.querySelector('[data-body] p');
+        if (i) i.style.width = `${p.total ? (p.done / p.total * 100).toFixed(1) : 0}%`;
+        if (o) o.textContent = `${p.done} / ${p.total}`;
+        if (t) t.textContent = `${step} · ${p.label}`;
+      });
+      if (s.phase === 'regular' || s.phase === 'playoffs') steps++;
+      const now = S();
+      reasons = s.phase === 'regular' || s.phase === 'playoffs' ? api.pauseReasons(now) : [];
+      if (reasons.length) break;
+    }
+  } catch (e) {
+    console.error(e);
+    updateDialog({title: 'The sim stopped', body: `<p>${esc((e as Error).message)}</p>`, actions: [{key: 'close', label: 'Close', go: true}], locked: false});
+    return;
+  }
+  const now = S();
+  const rec = recordOf(me);
+  const n = rec.w - rec0.w + rec.l - rec0.l;
+  const played = now.season === season0 && n > 0 ? `${rec.w - rec0.w}–${rec.l - rec0.l} in ${plural(n, 'series', 'series')}` : '';
+  const reached = calendarPos(now) >= goal;
+  const stopped = (reached ? `<p>Reached ${esc(done)}.</p>` : `<p><b>Stopped early.</b></p>`)
+    + (reasons.length ? `<ul class="l-list">${reasons.map((r) => `<li><span>${esc(r)}</span></li>`).join('')}</ul>` : '');
+  const go = reasons.some((r) => /offer/i.test(r)) ? {key: 'go', label: `Offers ${ic('arrow')}`, href: '#offers'} : reasons.length ? {key: 'go', label: `Roster ${ic('arrow')}`, href: '#roster'} : null;
+  updateDialog({title: esc(now.phase === 'regular' ? `Week ${now.week} is next` : phaseLabel(now.phase)), cap: `Season ${now.season}`,
+    body: `${stopped}<dl class="l-kv">${steps ? `<dt>Simulated</dt><dd>${plural(steps, 'week')}${played ? ` · went ${played}` : ''}</dd>` : ''}<dt>Record</dt><dd>${esc(record(rec.w, rec.l))}</dd></dl>`,
+    actions: go ? [go, {key: 'close', label: 'Done', go: true}] : [{key: 'close', label: 'Done', go: true}], locked: false});
+}
+function recordOf(teamId: string): {w: number; l: number} {
+  const st = M.standings(S()).find((x) => x.teamId === teamId);
+  return {w: st?.wins ?? 0, l: st?.losses ?? 0};
+}
+
 // ---------------------------------------------------------------- events
 document.addEventListener('click', (e) => {
   const t = e.target as Element;
@@ -131,6 +200,8 @@ document.addEventListener('click', (e) => {
   const me = () => S().userTeamId;
   switch (b.dataset.act) {
     case 'play': void play(); break;
+    case 'until': openPlayUntil(); break;
+    case 'fastsim': setFastSim(b.dataset.v === '1'); render(); $(`[data-act="fastsim"][data-v="${b.dataset.v}"]`)?.focus(); break;
     case 'auto': act((s, c) => { s.teams[me()].lineup = M.autoLineup(c, s, me()); }); break;
     case 'swap': act((s) => M.assignSlot(s, me(), +b.dataset.slot!, b.dataset.mon!)); break;
     case 'focus': openFocus((ids) => act((s) => api.setPracticeFocus(s, me(), ids))); break;

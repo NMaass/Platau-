@@ -44,6 +44,8 @@ export function installLayers(): void {
   });
   dlg.addEventListener('cancel', (e) => { if (dlg.dataset.locked) e.preventDefault(); });
   dlg.addEventListener('close', () => {
+    // close() fires this event asynchronously; if another dialog was opened in the meantime, it is not ours to clear
+    if (dlg.open) return;
     const cb = onClose, r = returnTo;
     onClose = null; returnTo = null; current = null;
     dlg.innerHTML = '';

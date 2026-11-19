@@ -115,8 +115,8 @@ export async function playWeek(onProgress: (p: PlayProgress) => void): Promise<v
   }
   const maxGames = Math.max(s.settings.seriesBestOf, s.settings.finalBestOf);
   const quick = (api as unknown as {playWeekSync?: (c: Catalog, s: LeagueState) => void}).playWeekSync;
-  if (!pool && quick) {
-    onProgress({done: 0, total: 1, label: 'Quick sim (engine not loaded)'});
+  if ((!pool || fastSim()) && quick) {
+    onProgress({done: 0, total: 1, label: pool ? 'Fast sim (no battles)' : 'Quick sim (engine not loaded)'});
     await tick();
     quick(c, s);
     onProgress({done: 1, total: 1, label: 'Done'});
@@ -140,6 +140,9 @@ export async function playWeek(onProgress: (p: PlayProgress) => void): Promise<v
   notify();
 }
 const modelSims = (): boolean => implemented();
+/** Dev setting (Settings → Testing): sim weeks with model/quicksim.ts instead of the engine. Per browser. */
+export const fastSim = (): boolean => { try { return localStorage.getItem('plateau-fastsim') === '1'; } catch { return false; } };
+export const setFastSim = (on: boolean): void => { try { localStorage.setItem('plateau-fastsim', on ? '1' : '0'); } catch { /* private mode */ } };
 /** weekJobs is implemented once calling it doesn't throw the todo error. Probed once per page. */
 let probed: boolean | null = null;
 function implemented(): boolean {

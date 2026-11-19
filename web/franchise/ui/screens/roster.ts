@@ -40,7 +40,10 @@ export function viewRoster(): string {
   const s = S(), c = C(), me = s.userTeamId;
   const lens = (store.ui.rosterLens as string) ?? 'list';
   const mons = Object.values(s.mons).filter((m) => m.teamId === me);
-  const exp = mons.filter((m) => m.contract?.yearsLeft === 1);
+  // contracts tick down when the awards close; from then until next season, 0 years left = expiring now
+  const ticked = ['draft-lottery', 'draft', 'resign', 'free-agency'].includes(s.phase);
+  const expiring = (m: Mon) => !!m.contract && (ticked ? m.contract.yearsLeft <= 0 : m.contract.yearsLeft === 1);
+  const exp = mons.filter(expiring);
   const expSum = exp.reduce((t, m) => t + (m.contract?.salary ?? 0), 0);
   const who: Col<Mon> = {key: 'name', label: 'Pokémon', width: W[0], cell: (m) => `<span class="who">${monRef(m)}${injuryTag(m)}</span>`, sort: (m) => monName(m)};
   const rating = (m: Mon) => { const r = slotRoleOf(m); return r ? (M.roleRating(c, s, m, r) ?? 0) : M.bestRole(c, s, m).ovr; };
@@ -52,8 +55,8 @@ export function viewRoster(): string {
       {key: 'sal', label: 'Salary', width: W[4], num: true, cell: (m) => m.contract ? money(m.contract.salary) : '—', sort: (m) => m.contract?.salary ?? 0, desc: true}],
     contracts: [who,
       {key: 'sal', label: 'Salary', width: W[1], num: true, cell: (m) => m.contract ? money(m.contract.salary) : '—', sort: (m) => m.contract?.salary ?? 0, desc: true},
-      {key: 'yrs', label: 'Years left', width: W[2], cell: (m) => m.contract ? `<span class="l-row">${plural(m.contract.yearsLeft, 'year')}${m.contract.yearsLeft === 1 ? expiringTag() : ''}</span>` : '—', sort: (m) => m.contract?.yearsLeft ?? 0},
-      {key: 'ends', label: 'Ends', width: W[3], num: true, cell: (m) => m.contract ? String(s.season + m.contract.yearsLeft - 1) : '—', sort: (m) => m.contract?.yearsLeft ?? 0},
+      {key: 'yrs', label: 'Years left', width: W[2], cell: (m) => m.contract ? `<span class="l-row">${ticked && m.contract.yearsLeft <= 0 ? '' : plural(m.contract.yearsLeft, 'year')}${expiring(m) ? expiringTag() : ''}</span>` : '—', sort: (m) => m.contract?.yearsLeft ?? 0},
+      {key: 'ends', label: 'Ends', width: W[3], num: true, cell: (m) => m.contract ? String(s.season + m.contract.yearsLeft - (ticked ? 0 : 1)) : '—', sort: (m) => m.contract?.yearsLeft ?? 0},
       {key: 'share', label: 'Cap share', width: W[4], num: true, cell: (m) => m.contract ? (m.contract.salary / s.settings.cap * 100).toFixed(1) + '%' : '—', sort: (m) => m.contract?.salary ?? 0, desc: true}],
     growth: [who,
       {key: 'grade', label: 'EV grade', width: W[1], cell: gradePeek, sort: (m) => m.growth, desc: true},
@@ -69,7 +72,7 @@ export function viewRoster(): string {
     contracts: `<span class="capm"><span>Cap room</span><b>${money(cap - pay)}</b><span class="fitbar" role="img" aria-label="${money(pay)} of ${money(cap)} used"><i style="width:${Math.min(100, pay / cap * 100).toFixed(1)}%"></i></span><span>${money(pay)} of ${money(cap)} · ${money(expSum)} expires</span></span>`,
     growth: `<span>${closest ? `${esc(monName(closest.m))} is closest to a new grade: ${closest.d} Growth from ${closest.n}.` : 'Nobody is close to a new grade.'}</span>`,
   };
-  return head('Roster', `${plural(mons.filter((m) => m.tier !== 'ir').length, 'Pokémon', 'Pokémon')} · ${money(expSum)} expires after this season`) +
+  return head('Roster', `${plural(mons.filter((m) => m.tier !== 'ir').length, 'Pokémon', 'Pokémon')} · ${money(expSum)} ${ticked ? "expiring now" : "expires after this season"}`) +
     `<section class="l-panel flush" aria-label="Roster">${lensTabs('rosterLens', lens, [['list', 'List'], ['contracts', 'Contracts'], ['growth', 'Growth']])}
     <div class="lensbar">${bar[lens]}</div>
     ${table<Mon>({id: 'roster-' + lens, cols: cols[lens], rows: mons, groups: GROUPS, minWidth: 760, rowClass: (m) => m.injury && m.injury.kind !== 'day-to-day' ? 'off' : '', label: 'Roster'})}

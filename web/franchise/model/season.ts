@@ -331,10 +331,12 @@ export function finishWeek(catalog: Catalog, state: LeagueState): void {
   // injuries count down
   const healed = tickInjuries(state);
   for (const m of healed) if (m.teamId === user && m.tier === 'ir') inbox(state, 'health', `${spName(catalog, m)} is back from injured reserve`, 'Ready to play.', {kind: 'mon', id: m.id});
+  // a starter (in the lineup, or active before an IR injury moved it) hurt this week for 2+ weeks
+  const starters = new Set(state.teams[user].lineup.slots.map(sl => sl.monId).filter(Boolean));
   for (const id in state.mons) {
     const m = state.mons[id];
-    if (m.teamId === user && !m.retired && m.injury && m.injury.kind !== 'day-to-day' && m.injury.sinceWeek === state.week && m.injury.season === state.season && m.injury.weeksLeft >= 2 && m.tier === 'active') {
-      pause.push(`${spName(catalog, m)} is out ${m.injury.weeksLeft} weeks`);
+    if (m.teamId === user && !m.retired && m.injury && m.injury.kind !== 'day-to-day' && m.injury.sinceWeek === state.week && m.injury.season === state.season && m.injury.weeksLeft >= 2 && (m.tier === 'active' || starters.has(m.id))) {
+      pause.push(`${spName(catalog, m)} is out ${m.injury.weeksLeft} weeks${m.injury.kind === 'ir' ? ' (injured reserve)' : ''}`);
     }
   }
   // tiers, lineups, rosters (waiver priority = reverse standings)
@@ -454,6 +456,7 @@ function newSeason(catalog: Catalog, state: LeagueState, rng: Rng): void {
 
 export function advancePhase(catalog: Catalog, state: LeagueState): void {
   const rng = leagueRng(state);
+  if (state.phase !== 'regular' && state.phase !== 'playoffs') state.pauseReasons = [];  // only a played week pauses a sim
   switch (state.phase) {
     case 'preseason': {
       enforceRosters(catalog, state, rng);

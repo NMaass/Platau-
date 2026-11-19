@@ -111,3 +111,21 @@ test('lineup actions: strategy, assign, tiers, practice focus, cut', () => {
   const text = api.monExport(C, s, s.mons[bench.id], s.mons[bench.id].setId);
   assert.match(text, /Level: \d+/);
 });
+
+test('a hand-set lineup is saved per strategy and restored when switching back', async () => {
+  const {readFileSync} = await import('node:fs');
+  const api = await import('./api.ts');
+  const catalog = JSON.parse(readFileSync(new URL('../data/catalog.json', import.meta.url), 'utf8'));
+  const s = api.newLeague(catalog, {start: 'random', seed: 5, userTeamIndex: 2});
+  const me = s.userTeamId, team = s.teams[me];
+  const first = team.lineup.strategyId;
+  const bench = api.teamRoster(s, me).find((m) => m.tier === 'backup')!;
+  api.assignSlot(s, me, 0, bench.id);
+  const handSet = team.lineup.slots.map((x) => x.monId);
+  const other = api.STRATEGIES.find((x) => x.id !== first)!.id;
+  api.setStrategy(catalog, s, me, other);
+  assert.equal(team.lineup.auto, true);
+  api.setStrategy(catalog, s, me, first);
+  assert.equal(team.lineup.auto, false);
+  assert.deepEqual(team.lineup.slots.map((x) => x.monId), handSet);
+});
