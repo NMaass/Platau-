@@ -159,6 +159,8 @@ export interface Team {
   draftPicks: DraftPick[];
   practiceFocus?: MonId[];   // 2–3 picks that get extra practice XP this week
   tagSeason?: number;        // season the franchise tag was last used
+  /** this week's goal (model/goals.ts): bonus XP when met */
+  weeklyGoal?: {kind: 'win-series' | 'sweep' | 'kos' | 'hazards'; text: string; monId?: MonId; target: number; week: number};
 }
 
 export interface DraftPick { season: number; round: number; originalTeamId: TeamId; ownerTeamId: TeamId }
@@ -238,6 +240,8 @@ export interface LeagueState {
   nextId: number;
   log: Transaction[];
   faRound?: number;                   // free-agency rounds completed this offseason (0..3)
+  /** set by finishWeek: reasons a multi-week sim should stop (starter hurt long-term, strong offer) */
+  pauseReasons?: string[];
 }
 
 export interface Transaction { season: number; week: number; kind: string; text: string; teamIds: TeamId[]; monIds: MonId[] }
