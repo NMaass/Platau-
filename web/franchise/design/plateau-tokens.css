@@ -61,6 +61,8 @@
   --ctl-h:36px; --ctl-h-sm:32px; --ctl-w:132px; --ctl-h-touch:44px; --tab-h:44px; --row-h:52px;
   /* layout */
   --page-max:1240px; --side-w:200px; --gutter:16px; --card-min:260px; --dialog-w:560px; --label-w:112px;
+  /* fixed component widths (sized for the widest member of each set: AAA, "SAND | 100", "Hazard remover", "68–81") */
+  --grade-w:46px; --rb-r-w:52px; --rb-n-w:40px; --rb-full-w:124px; --rb-range-w:72px;
 }
 @media (max-width:640px){ :root{ --ctl-h:var(--ctl-h-touch); --ctl-h-sm:var(--ctl-h-touch); --t-h1:24px; --t-h2:20px } }
 
@@ -77,7 +79,7 @@ p{margin:0} ul,ol{list-style:none;margin:0;padding:0} dl,dd{margin:0} a{color:in
 /* ---- shared components (class names are reserved; do not redefine in screens) ---- */
 svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .cap{font-stretch:78%;font-weight:700;font-size:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}  /* small caps label */
-.grade{display:inline-grid;place-items:center;min-width:34px;height:24px;padding:0 6px;border-radius:3px;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1;border:1px solid currentColor}
+.grade{display:inline-grid;place-items:center;width:var(--grade-w);height:24px;padding:0;flex:none;border-radius:3px;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1;border:1px solid currentColor}
 .gF{background:var(--gr-F-bg);color:var(--gr-F)} .gD{background:var(--gr-D-bg);color:var(--gr-D)} .gC{background:var(--gr-C-bg);color:var(--gr-C)}
 .gB{background:var(--gr-B-bg);color:var(--gr-B)} .gA{background:var(--gr-A-bg);color:var(--gr-A)} .gAA{background:var(--gr-AA-bg);color:var(--gr-AA)}
 .gAAA{background:var(--foil);color:var(--gr-AAA);border-color:var(--rule-strong)}
@@ -131,10 +133,10 @@ span.peek:not(.ref){display:inline-block}
 .cnt.off{visibility:hidden}
 /* role badge: full role name | OVR */
 .rb{display:inline-flex;align-items:stretch;height:28px;border:1px solid var(--rule-strong);border-radius:3px;overflow:hidden;vertical-align:middle;line-height:1;white-space:nowrap;max-width:100%}
-.rb-r{display:flex;align-items:center;padding:0 var(--s2);background:var(--paper-2);color:var(--ink-2);font-stretch:85%;font-weight:700;font-size:var(--t-small);border-right:1px solid var(--rule-strong);min-width:0;overflow:hidden;text-overflow:ellipsis}
-.rb-n{display:grid;place-items:center;min-width:36px;padding:0 6px;background:var(--paper);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:var(--t-num);flex:none}
+.rb-r{display:flex;align-items:center;justify-content:center;width:var(--rb-r-w);padding:0 var(--s1);flex:none;background:var(--paper-2);color:var(--ink-2);font-stretch:85%;font-weight:700;font-size:var(--t-small);border-right:1px solid var(--rule-strong);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rb-n{display:grid;place-items:center;width:var(--rb-n-w);padding:0;background:var(--paper);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:var(--t-num);flex:none}
 .rb.elite .rb-n{color:var(--team-ink)}
-.rb.lg{height:32px}.rb.lg .rb-n{font-size:22px;min-width:44px}
+.rb.lg{height:32px}.rb.lg .rb-n{font-size:22px;width:48px}
 .peek .rb-n span{text-decoration:underline dotted 1.5px;text-decoration-color:var(--ink-3);text-underline-offset:3px}
 .noset{display:inline-flex;align-items:center;height:28px;padding:0 8px;border:1px dashed var(--rule-strong);border-radius:3px;font-size:var(--t-small);font-weight:650;color:var(--ink-2);white-space:nowrap}
 /* switch: role="switch" aria-checked; label sits beside it, text never changes */
@@ -297,3 +299,46 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 .l-card-title{font-family:var(--font-display);font-size:var(--t-h3);font-weight:700;line-height:var(--lh-tight);margin:0}
 /* peek label: dotted underline that says "hover or tap for more" */
 .peek>.lbl,.l-peek-lbl{text-decoration:underline dotted 1.5px;text-decoration-color:var(--ink-3);text-underline-offset:4px}
+
+/* ===== UI build additions (2026-11-19). Owned by web/franchise/ui; rules from docs/FRANCHISE.md ===== */
+/* a badge never stretches inside a grid/stack cell */
+.rb,.noset{width:max-content;justify-self:start}
+.l-stack>.peek,.l-row>.peek{justify-self:start}
+/* role badge variants: .full shows the role name (lineup cards, Pokemon page); .range shows "68-81" for prospects.
+   Every badge of a variant has one width, so a column of badges lines up and nothing widens a cell. */
+.rb.full .rb-r{width:var(--rb-full-w);justify-content:flex-start;padding:0 var(--s2);overflow:hidden;text-overflow:ellipsis}
+.rb.range .rb-n{width:var(--rb-range-w);font-size:var(--t-lead)}
+.rb.sm{height:24px}.rb.sm .rb-r{font-size:var(--t-label)}.rb.sm .rb-n{font-size:var(--t-lead);width:32px}
+.rb.ghost{opacity:.55}
+/* list item with ONE top alignment: label chip, text and action share the top edge (Before you play, feeds).
+   More breathing room than .l-list. Text's first line is nudged so its cap height meets the chip/button top. */
+.l-list.top>li{align-items:start;padding:var(--s4) 0;gap:var(--s4)}
+.l-list.top>li>.chip,.l-list.top>li>.btn,.l-list.top>li>.done,.l-list.top>li>.when{margin-top:0}
+/* sortable table header: whole cell is the button; arrow slot is reserved so sorting never shifts the label */
+.l-table th>button.sort{all:unset;display:inline-flex;align-items:center;gap:var(--s1);cursor:pointer;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;max-width:100%}
+.l-table th>button.sort:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.l-table th>button.sort::after{content:"";display:inline-block;width:10px;height:10px;flex:none}
+.l-table th[aria-sort="ascending"]>button.sort::after{content:"\25B4"}
+.l-table th[aria-sort="descending"]>button.sort::after{content:"\25BE"}
+.l-table th.num>button.sort{flex-direction:row-reverse}
+/* skeleton: a block with its final dimensions, shown while async content loads */
+.l-skel{background:linear-gradient(90deg,var(--paper-2) 0%,var(--rule) 50%,var(--paper-2) 100%);background-size:200% 100%;border-radius:var(--r);animation:l-skel 1.4s ease-in-out infinite}
+@keyframes l-skel{to{background-position:-200% 0}}
+/* fixed-size frame (replay, placeholders): --frame-ratio sets the shape (16:9, the replay viewer's); content can never resize it */
+.l-frame{position:relative;aspect-ratio:var(--frame-ratio,16/9);min-height:220px;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper-2);overflow:hidden}
+.l-frame>iframe{position:absolute;inset:0;width:100%;height:100% !important;border:0;display:block}
+.l-frame>.l-empty{position:absolute;inset:var(--s4);place-content:center;justify-items:center;text-align:center}
+/* progress (play week dialog): fixed height bar + fixed-width counter */
+.l-progress{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:var(--s3);align-items:center}
+.l-progress .fitbar{height:10px;border-radius:5px}
+.l-progress .fitbar i{background:var(--team);transition:width .2s}
+.l-progress output{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+/* form field: label above control */
+.l-field{display:grid;gap:var(--s1);min-width:0}
+.l-field>span{font-size:var(--t-small);font-weight:700;color:var(--ink-2)}
+.l-field input[type=text],.l-field input[type=number]{font:inherit;height:var(--ctl-h);padding:0 var(--s3);border:1px solid var(--rule-strong);border-radius:var(--r);background:var(--paper);color:var(--ink);min-width:0}
+/* segmented control (theme, speed): equal-width buttons */
+.l-seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:minmax(72px,1fr);border:1px solid var(--rule-strong);border-radius:var(--r);overflow:hidden}
+.l-seg>button{font:inherit;font-weight:700;font-size:var(--t-small);min-height:var(--ctl-h);border:0;background:var(--paper);color:var(--ink-2);cursor:pointer;padding:0 var(--s3)}
+.l-seg>button+button{border-left:1px solid var(--rule-strong)}
+.l-seg>button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
