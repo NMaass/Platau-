@@ -34,8 +34,11 @@ const needCatalog = (c?: Catalog): Catalog => {
 };
 
 // ---- league lifecycle
-export interface NewLeagueOptions { seed?: number; name?: string; userTeamIndex?: number; start: 'random' | 'fantasy-draft' }
+export interface NewLeagueOptions { seed?: number; name?: string; userTeamIndex?: number; start: 'random' | 'fantasy-draft' | 'draft' }
 export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState { return season.newLeague(remember(catalog), opts); }
+
+/** Mean rating of a club's best six (the New League preview's team strength). */
+export function teamStrength(catalog: Catalog, state: LeagueState, teamId: TeamId): number { return season.topSix(remember(catalog), teamMons(state, teamId)); }
 
 // ---- derived ratings (pure, cheap; the UI calls these per row)
 /** EV grade from Growth (and IV cap, injury: day-to-day plays one grade lower). */

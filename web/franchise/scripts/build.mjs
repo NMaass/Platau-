@@ -1,9 +1,9 @@
 // Builds Plateau into web/dist/franchise/: index.html, app.js, plateau-tokens.css,
-// screens.css, sim-worker.js (+ the engine wasm next to it) and data/catalog.json.
+// screens.css, assets/ (badge logos), sim-worker.js (+ the engine wasm next to it) and data/catalog.json.
 //   cd web && node franchise/scripts/build.mjs [--serve] [--minify]
 // --serve watches and serves web/ on :8976 -> http://127.0.0.1:8976/dist/franchise/
 import {build, context} from 'esbuild';
-import {copyFileSync, existsSync, mkdirSync, watch} from 'node:fs';
+import {copyFileSync, cpSync, existsSync, mkdirSync, watch} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
 const web = fileURLToPath(new URL('../../', import.meta.url));
@@ -16,6 +16,7 @@ function copyStatic() {
   copyFileSync(`${fr}index.html`, `${out}index.html`);
   copyFileSync(`${fr}design/plateau-tokens.css`, `${out}plateau-tokens.css`);
   copyFileSync(`${fr}ui/screens.css`, `${out}screens.css`);
+  cpSync(`${fr}assets`, `${out}assets`, {recursive: true});   // badge logos (assets/badges/<n>.png)
   const wasm = `${repo}engine/pkg/rollmons_engine_bg.wasm`;
   if (existsSync(wasm)) copyFileSync(wasm, `${out}rollmons_engine_bg.wasm`);
   else console.warn('engine wasm missing (build engine/ first); battles fall back to the quick sim');

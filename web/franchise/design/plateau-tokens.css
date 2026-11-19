@@ -62,6 +62,7 @@
   /* layout */
   --page-max:1240px; --side-w:200px; --gutter:16px; --card-min:260px; --dialog-w:560px; --label-w:112px;
   /* fixed component widths (sized for the widest member of each set: AAA, "SAND | 100", "Hazard remover", "68–81") */
+  --logo:32px; --logo-lg:56px;
   --grade-w:46px; --rb-r-w:52px; --rb-n-w:40px; --rb-full-w:124px; --rb-range-w:72px;
 }
 @media (max-width:640px){ :root{ --ctl-h:var(--ctl-h-touch); --ctl-h-sm:var(--ctl-h-touch); --t-h1:24px; --t-h2:20px } }
@@ -153,6 +154,10 @@ span.peek:not(.ref){display:inline-block}
 .spr img{width:72px;height:72px;image-rendering:pixelated;display:block}
 .spr.xl{width:112px;height:112px}.spr.xl img{width:96px;height:96px}
 .spr.md{width:56px;height:56px}.spr.md img{width:56px;height:56px}
+/* club logo = its gym badge: one fixed square everywhere a club is named (.lg only on the New League page) */
+.logo{display:inline-grid;place-items:center;flex:none;width:var(--logo);height:var(--logo)}
+.logo img{width:100%;height:100%;object-fit:contain;display:block}
+.logo.lg{width:var(--logo-lg);height:var(--logo-lg)}
 
 /* ===== Layout layer: primitives ===== */
 /* app shell: sidebar of rooms + main column; on phone the sidebar becomes .l-tabbar */
@@ -366,3 +371,25 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* toolbar above a table: switches/filters left, a count right; fixed height so toggling never moves the table */
 .l-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:var(--ctl-h-touch);flex-wrap:wrap}
 .l-toolbar label{display:inline-flex;align-items:center;gap:var(--s2);font-weight:650;font-size:var(--t-small);color:var(--ink-2);cursor:pointer}
+/* ===== Choice primitives (New League, 2026-11-19) ===== */
+/* selectable card: a <button aria-pressed> of one fixed height; the pressed one takes its own accent (--c) */
+:root{--pick-h:84px; --tile-h:112px}
+.l-pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s3);align-items:center;height:var(--pick-h);padding:var(--s3);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);cursor:pointer;font:inherit;color:inherit;text-align:left;min-width:0;box-shadow:inset 4px 0 0 var(--c,var(--rule))}
+.l-pick:hover{background:var(--paper-2)}
+.l-pick:focus-visible{outline:2px solid var(--c,var(--team));outline-offset:2px}
+.l-pick[aria-pressed="true"]{border-color:var(--c,var(--team));box-shadow:inset 4px 0 0 var(--c,var(--team)),inset 0 0 0 1px var(--c,var(--team));background:var(--paper-2)}
+.l-pick>span{min-width:0;display:grid;gap:2px}
+.l-pick b{font-family:var(--font-display);font-size:var(--t-h3);line-height:var(--lh-tight);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.l-pick small{font-size:var(--t-small);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.l-pick .type{height:20px;justify-self:start;margin-top:2px}
+/* equal fixed tiles in N columns (a starting six, a list of picks): every tile the same box whatever it holds */
+.l-tiles{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:var(--s2)}
+.l-tiles>*{height:var(--tile-h);min-width:0;display:grid;justify-items:center;align-content:center;gap:var(--s1);padding:var(--s1);border:1px solid var(--rule);border-radius:var(--r);background:var(--paper)}
+.l-tiles .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-small);font-weight:650}
+.l-tiles .big{font-family:var(--font-display);font-size:var(--t-h1);font-weight:800;line-height:1}
+/* a row of six row-icons, each with a one-line number under it (backups, practice squad, best on the board) */
+.l-icons{display:grid;grid-template-columns:repeat(6,40px);justify-content:space-between;gap:var(--s1)}
+.l-icons>span{display:grid;justify-items:center;gap:2px;font-size:var(--t-label);font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums;min-height:48px}
+/* side panel that stays in view beside a long list (desktop); a normal block when the columns stack */
+.l-sticky{position:sticky;top:var(--s4)}
+@media (max-width:1060px){ .l-sticky{position:static} }

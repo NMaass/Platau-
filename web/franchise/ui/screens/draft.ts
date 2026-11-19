@@ -43,7 +43,7 @@ function prospectRef(m: Mon): string {
 
 function prospectsOpen(): boolean {
   const s = S();
-  return !!s.draft && s.draft.prospects.length > 0 && s.phase !== 'resign' && s.phase !== 'free-agency';
+  return !!s.draft && !s.draft.startup && s.draft.prospects.length > 0 && s.phase !== 'resign' && s.phase !== 'free-agency';
 }
 
 // ---------------------------------------------------------------- scouting
@@ -102,14 +102,16 @@ function clockCard(): string {
   const next = mineLeft[0];
   const lottery = s.phase === 'draft-lottery';
   const done = !pick || !api.draftBoard(s).length;
+  const startup = !!d.startup;
   const myTurn = !lottery && !done && pick!.ownerTeamId === me;
   const title = lottery ? 'Lottery drawn' : done ? 'Draft complete' : `Pick ${overall} · ${myTurn ? 'you' : esc(teamName(pick!.ownerTeamId))}`;
   const line = lottery ? `You pick ${next ? ordinal(next.n) : 'no earlier than round 2'}. The draft starts when you begin it.`
-    : done ? 'Every pick is in. Undrafted prospects join free agency.'
+    : done ? (startup ? 'Every club has its 18. Continue to sign contracts and open the preseason.' : 'Every pick is in. Undrafted prospects join free agency.')
       : myTurn ? "You're on the clock. Pick from the board."
         : next ? `Your next pick is #${next.n}, ${plural(next.n - overall, 'pick')} away.` : 'You have no picks left in this draft.';
   const acts = lottery
     ? `<button type="button" class="btn go" data-fo="draftstart">${ic('play')}Start the draft</button>`
+    : startup && done ? `<button type="button" class="btn go" data-fo="startupdone">${ic('play')}Sign contracts</button>`
     : `<button type="button" class="btn${!myTurn && !done && next ? ' go' : ''}" data-fo="simmine"${done || myTurn || !next ? ' aria-disabled="true"' : ''}>Sim to my pick</button><button type="button" class="btn" data-fo="simend"${done ? ' aria-disabled="true"' : ''}>Sim to end</button>`;
   return `<section class="l-card${!done && !lottery ? ' x-live' : ''}" aria-label="Pick in progress"><div class="l-split"><div class="x-clock"><span class="x-ring">${ic(done ? 'check' : 'clock')}</span><div class="l-stack tight"><b class="l-card-title">${title}</b><span class="x-small l-reserve" aria-live="polite">${esc(line)}</span></div></div><div class="l-actions">${acts}</div></div></section>`;
 }
@@ -119,11 +121,12 @@ function orderTable(): string {
   const lot = new Map((d.lottery ?? []).map((l) => [l.teamId, l]));
   const taken = d.picks;
   const curRound = d.order[taken.length]?.round ?? 1;
-  const round = Math.min(3, Math.max(1, Number(store.ui.draftRound ?? curRound)));
+  const rounds = d.startup ? 18 : 3;
+  const round = Math.min(rounds, Math.max(1, Number(store.ui.draftRound ?? curRound)));
   const rows = d.order.map((p, i) => ({p, i})).filter((r) => r.p.round === round);
   const cols: Col<{p: DraftPick; i: number}>[] = [
-    {key: 'n', label: '#', width: '64px', num: true, cell: (r) => String(r.i + 1)},
-    {key: 'club', label: 'Club', width: '64px', cell: (r) => teamAbbr(r.p.ownerTeamId) + (r.p.originalTeamId !== r.p.ownerTeamId ? `<span class="sr">via ${esc(teamName(r.p.originalTeamId))}</span>` : '')},
+    {key: 'n', label: '#', width: '48px', num: true, cell: (r) => String(r.i + 1)},
+    {key: 'club', label: 'Club', width: '84px', cell: (r) => teamAbbr(r.p.ownerTeamId) + (r.p.originalTeamId !== r.p.ownerTeamId ? `<span class="sr">via ${esc(teamName(r.p.originalTeamId))}</span>` : '')},
     {key: 'sel', label: 'Selection', width: 'auto', cell: (r) => {
       const t = taken[r.i];
       if (t) return monRef(s.mons[t.monId]);
@@ -132,7 +135,10 @@ function orderTable(): string {
       return `<span class="x-small">${l ? `Lottery · ${l.odds}% odds` : r.p.originalTeamId !== r.p.ownerTeamId ? `via ${esc(s.teams[r.p.originalTeamId].abbr)}` : '—'}</span>`;
     }},
   ];
-  return lensTabs('draftRound', String(round), [['1', 'Round 1'], ['2', 'Round 2'], ['3', 'Round 3']]) + table({id: 'draft-order', cols, rows, minWidth: 300, rowClass: (r) => (r.p.ownerTeamId === me ? 'cur' : '') + (taken[r.i] ? ' x-dim' : ''), label: 'Draft order'});
+  // 3 rounds: tabs; the 18-round startup draft: previous / next with the round in a fixed-width label
+  const nav = rounds <= 3 ? lensTabs('draftRound', String(round), [['1', 'Round 1'], ['2', 'Round 2'], ['3', 'Round 3']])
+    : `<div class="l-toolbar l-pad"><button type="button" class="btn sm" data-lens="draftRound:${Math.max(1, round - 1)}"${round <= 1 ? ' aria-disabled="true"' : ''} aria-label="Previous round">${ic('back')}</button><b>Round ${round} of ${rounds}</b><button type="button" class="btn sm" data-lens="draftRound:${Math.min(rounds, round + 1)}"${round >= rounds ? ' aria-disabled="true"' : ''} aria-label="Next round">${ic('arrow')}</button></div>`;
+  return nav + table({id: 'draft-order', cols, rows, minWidth: 300, rowClass: (r) => (r.p.ownerTeamId === me ? 'cur' : '') + (taken[r.i] ? ' x-dim' : ''), label: 'Draft order'});
 }
 
 function lotteryTable(): string {
@@ -164,8 +170,8 @@ export function viewDraft(): string {
   const myTurn = s.phase === 'draft' && pick?.ownerTeamId === me && api.draftBoard(s).length > 0;
   const cols: Col<Mon>[] = [
     {key: 'rank', label: '#', width: '52px', num: true, cell: (m) => String(rank.get(m.id)), sort: (m) => rank.get(m.id)!},
-    {key: 'name', label: 'Prospect', width: 'auto', cell: (m) => `<span class="who">${prospectRef(m)}</span>`, sort: (m) => monName(m)},
-    {key: 'proj', label: 'Projected', width: '144px', cell: (m) => knownBadge(m), sort: knownMid, desc: true},
+    {key: 'name', label: d.startup ? 'Pokémon' : 'Prospect', width: 'auto', cell: (m) => `<span class="who">${prospectRef(m)}</span>`, sort: (m) => monName(m)},
+    {key: 'proj', label: d.startup ? 'Rating' : 'Projected', width: '144px', cell: (m) => knownBadge(m), sort: knownMid, desc: true},
     {key: 'age', label: 'Age', width: '56px', num: true, cell: (m) => String(m.age), sort: (m) => m.age},
     {key: 'sc', label: 'Scouted', width: '72px', num: true, cell: (m) => api.knownRating(c, s, me, m).exact ? 'Known' : `${pts(m)}/${full()}`, sort: (m) => pts(m), desc: true},
     {key: 'st', label: 'Status', width: '152px', cell: (m) => {
@@ -178,8 +184,10 @@ export function viewDraft(): string {
   const hide = !!store.ui.hideTaken;
   const rows = hide ? ms.filter((m) => !taken.has(m.id) && m.prospect !== undefined) : ms;
   const mine = d.order.map((p, i) => ({p, n: i + 1})).filter((x) => x.p.ownerTeamId === me);
-  const sub = s.phase === 'draft-lottery' ? `Season ${d.season} draft · the lottery is drawn` : review ? `Season ${d.season} draft · complete` : `Season ${d.season} draft · ${mine.length ? `your picks: ${mine.map((x) => '#' + x.n).join(', ')}` : 'you have no picks'}`;
-  const toolbar = `<div class="l-toolbar l-pad"><label><button type="button" class="switch" role="switch" aria-checked="${hide}" data-fo="hidetaken" aria-label="Hide taken"></button>Hide taken</label><span class="x-small">${plural(api.draftBoard(s).length, 'prospect')} left</span></div>`;
+  const nextMine = mine.find((x) => x.n > d.picks.length);
+  const sub = d.startup ? (review || !nextMine ? 'Startup draft · complete' : `Startup draft · 18 rounds · your next pick #${nextMine.n}`)
+    : s.phase === 'draft-lottery' ? `Season ${d.season} draft · the lottery is drawn` : review ? `Season ${d.season} draft · complete` : `Season ${d.season} draft · ${mine.length ? `your picks: ${mine.map((x) => '#' + x.n).join(', ')}` : 'you have no picks'}`;
+  const toolbar = `<div class="l-toolbar l-pad"><label><button type="button" class="switch" role="switch" aria-checked="${hide}" data-fo="hidetaken" aria-label="Hide taken"></button>Hide taken</label><span class="x-small">${d.startup ? `${api.draftBoard(s).length} Pokémon` : plural(api.draftBoard(s).length, 'prospect')} left</span></div>`;
   return head('Draft', esc(sub)) +
     (review ? '' : clockCard()) +
     `<div class="x-draft">
@@ -193,14 +201,14 @@ function draftDialog(monId: string): void {
   const n = (s.draft?.picks.length ?? 0) + 1;
   openDialog({
     title: `Draft ${esc(monName(m))} at #${n}?`, cap: `${s.draft!.season} draft`,
-    body: `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span></div><p class="muted">Rookies sign the rookie scale for their slot and start on the practice squad. Cap room now: ${money(s.settings.cap - api.payroll(s, me))}.</p>`,
+    body: `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span></div><p class="muted">${s.draft!.startup ? 'Contracts are signed for every club when the startup draft ends; the youngest six start on the practice squad.' : `Rookies sign the rookie scale for their slot and start on the practice squad. Cap room now: ${money(s.settings.cap - api.payroll(s, me))}.`}</p>`,
     actions: [{key: 'close', label: 'Keep looking'}, {key: 'yes', label: 'Draft', go: true}],
     onAction: (k) => {
       if (k !== 'yes') return;
       act((st, c) => api.draftPick(c, st, monId));
       const got = S().mons[monId];
       updateDialog({title: got.teamId === me ? `You drafted ${esc(monName(got))}` : 'Pick not made', cap: `Pick ${n}`, actions: [{key: 'close', label: 'Done', go: true}], onAction: undefined,
-        body: got.teamId === me ? `<p>${esc(monName(got))} joins your practice squad on a rookie deal${got.contract ? ` (${money(got.contract.salary)} × ${plural(got.contract.yearsLeft, 'year')})` : ''}.</p>` : '<p>That prospect is no longer available.</p>'});
+        body: got.teamId === me && S().draft?.startup ? `<p>${esc(monName(got))} joins the ${esc(S().teams[me].name)}.</p>` : got.teamId === me ? `<p>${esc(monName(got))} joins your practice squad on a rookie deal${got.contract ? ` (${money(got.contract.salary)} × ${plural(got.contract.yearsLeft, 'year')})` : ''}.</p>` : '<p>That prospect is no longer available.</p>'});
       return false;
     },
   });
@@ -235,6 +243,7 @@ export function afterDraft(): void {
         case 'simmine': simDialog(false); break;
         case 'simend': simDialog(true); break;
         case 'draftstart': act((st, c) => api.advancePhase(c, st)); break;
+        case 'startupdone': act((st, c) => api.advancePhase(c, st)); location.hash = '#roster'; break;
       }
     });
   });

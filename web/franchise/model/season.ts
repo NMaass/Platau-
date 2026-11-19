@@ -2,10 +2,10 @@
 // processing and the offseason phases.
 // preseason -> regular (weeks 1..14) -> playoffs (15..17) -> awards ->
 // draft-lottery -> draft -> resign -> free-agency (3 rounds) -> next preseason.
-import type {BattleJob, BattleJobResult, BattleResult, Catalog, LeagueSettings, LeagueState, Mon, MonBox, MonId, Series, Team, TeamId} from '../types.ts';
+import type {BattleJob, BattleJobResult, BattleResult, Catalog, DraftPick, LeagueSettings, LeagueState, Mon, MonBox, MonId, Series, Team, TeamId} from '../types.ts';
 import {hash01, leagueRng, type Rng} from './rng.ts';
 import {TEAM_SEEDS, teamIdAt} from './teams.ts';
-import {initPool, drawFamily, returnToPool, type PoolCounts} from './pool.ts';
+import {initPool, drawFamily, familyTypes, returnToPool, type FamilyInfo, type PoolCounts} from './pool.ts';
 import {createMon} from './mons.ts';
 import {STRATEGIES} from './strategies.ts';
 import {ROSTER, STARTERS, applyPlan, autoLineup, canBattle, fieldedLineup, normalizeTiers, planLineup, removeFromLineup, type LineupPlan} from './lineup.ts';
@@ -43,7 +43,9 @@ export const DEFAULT_SETTINGS: LeagueSettings = {
 export const START = {perTeam: 18, legendaries: 9, ageMin: 21, ageMax: 33, payrollTarget: [0.85, 0.95] as [number, number], aiOfferChance: 0.3, aiTradeChance: 0.35};
 
 export interface NewLeagueOptions {
-  seed?: number; name?: string; userTeamIndex?: number; start: 'random' | 'fantasy-draft';
+  /** 'random' = pre-made rosters (lean to each gym's type); 'draft' = the league starts in a startup draft
+   *  (empty rosters, 18 snake rounds, the user picks); 'fantasy-draft' = that draft, auto-picked to the end. */
+  seed?: number; name?: string; userTeamIndex?: number; start: 'random' | 'fantasy-draft' | 'draft';
   settings?: Partial<LeagueSettings>; pool?: PoolCounts;
 }
 
@@ -60,11 +62,11 @@ export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState
     teams: {}, mons: {}, schedule: [], history: [], inbox: [], offers: [], pool: initPool(catalog, opts.pool), nextId: 1, log: [],
   };
   const rng = leagueRng(state);
-  const ids = STRATEGIES.map(s => s.id);
   TEAM_SEEDS.forEach((t, i) => {
-    const fav1 = rng.pick(ids), fav2 = rng.pick(ids.filter(x => x !== fav1));
+    const [fav1, fav2] = t.favorites;
     const team: Team = {
       id: teamIdAt(i), city: t.city, name: t.name, abbr: t.abbr, color: t.color, trainer: t.trainer,
+      gymType: t.gymType, badge: t.badge, leader: t.leader,
       conference: (i >> 3) as 0 | 1, division: ((i >> 2) & 1) as 0 | 1, human: i === userIdx,
       favoriteStrategies: [fav1, fav2], lineup: {strategyId: fav1, slots: [], auto: true},
       scoutingPoints: settings.scoutingPointsPerWeek, deadMoney: [], draftPicks: [],
@@ -72,19 +74,30 @@ export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState
     state.teams[team.id] = team;
   });
   const teamIds = Object.keys(state.teams);
-  if (opts.start === 'fantasy-draft') fantasyDraft(catalog, state, rng, teamIds);
-  else randomRosters(catalog, state, rng, teamIds);
+  ensurePicks(state, 1);
+  state.schedule = buildSchedule(state, teamIds);
+  const me = state.teams[state.userTeamId];
+  if (opts.start === 'draft' || opts.start === 'fantasy-draft') {
+    startupDraft(catalog, state, rng, teamIds);
+    inbox(state, 'league', `Welcome to the ${me.city} ${me.name}`,
+      'Every club starts with an empty roster. Draft 18 Pokémon from the board, then set your strategy and lineup.');
+    if (opts.start === 'fantasy-draft') advancePhase(catalog, state);
+    return state;
+  }
+  randomRosters(catalog, state, rng, teamIds);
+  startRosters(catalog, state, rng, teamIds);
+  inbox(state, 'league', `Welcome to the ${me.city} ${me.name}`, 'Set your strategy and lineup, then start the season.');
+  return state;
+}
+
+/** Contracts, strategies, practice focus and the season 1 draft class, once every club has its 18. */
+function startRosters(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: TeamId[]): void {
   for (const t of teamIds) {
     assignContracts(catalog, state, rng, t);
     chooseStrategy(catalog, state, t, true);
   }
   state.teams[state.userTeamId].practiceFocus = defaultFocus(catalog, teamMons(state, state.userTeamId));
-  ensurePicks(state, 1);
   generateClass(catalog, state, rng, 1);
-  state.schedule = buildSchedule(state, teamIds);
-  inbox(state, 'league', `Welcome to the ${state.teams[state.userTeamId].city} ${state.teams[state.userTeamId].name}`,
-    'Set your strategy and lineup, then start the season.');
-  return state;
 }
 
 function staggeredAges(rng: Rng, n: number): number[] {
@@ -93,48 +106,107 @@ function staggeredAges(rng: Rng, n: number): number[] {
     .map(a => Math.max(START.ageMin, Math.min(START.ageMax, a))));
 }
 
+/** Knobs for pre-made rosters: how many of the 18 are drawn from the gym type, and how even the clubs must be
+ *  (mean of each club's best six ratings; filler Pokémon of similar age are swapped until the spread is under `spread`). */
+export const THEME = {typed: 9, spread: 2, swaps: 400};
+
+export const hasType = (catalog: Catalog, m: Mon, type: string | undefined): boolean =>
+  !!type && (catalog.species[m.speciesId]?.types ?? []).includes(type);
+
+/** Mean of the best six ratings: the strength the New League preview and the roster balancing use. */
+export function topSix(catalog: Catalog, mons: Mon[]): number {
+  const o = mons.map(m => bestRole(catalog, m).ovr).sort((a, b) => b - a).slice(0, 6);
+  return o.length ? o.reduce((a, b) => a + b, 0) / 6 : 0;
+}
+
 function randomRosters(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: TeamId[]): void {
   const legendTeams = rng.shuffle([...teamIds]).slice(0, START.legendaries);
   for (const t of teamIds) {
+    const type = state.teams[t].gymType;
+    const prefer = type ? (f: FamilyInfo) => familyTypes(catalog, f).has(type) : undefined;
     const ages = staggeredAges(rng, START.perTeam);
-    const mons: Mon[] = [];
     ages.forEach((age, k) => {
       const legend = k === 0 && legendTeams.includes(t);
-      const fam = (legend ? drawFamily(catalog, state, rng, 'legendary') : null) ?? drawFamily(catalog, state, rng, 'nonlegendary')!;
+      // every other draw leans to the gym type (about half the roster), the rest fill the strategy roles
+      const typed = k % 2 === 1 && Math.floor(k / 2) < THEME.typed;
+      const fam = (legend ? drawFamily(catalog, state, rng, 'legendary') : null) ?? drawFamily(catalog, state, rng, 'nonlegendary', typed ? prefer : undefined)!;
       const m = createMon(catalog, state, rng, {family: fam, age: legend ? Math.max(age, 24) : age, teamId: t, tier: 'backup'});
       if (m.age <= 21) m.rookieSeason = 1;
-      mons.push(m);
     });
-    // practice squad = the youngest six
-    [...mons].sort((a, b) => a.age - b.age || a.id.localeCompare(b.id)).slice(0, 6).forEach(m => { m.tier = 'practice'; });
+  }
+  balanceRosters(catalog, state, teamIds);
+  for (const t of teamIds) setPracticeSquad(state, t);
+}
+
+/** Practice squad = the youngest six; everyone else starts as a backup (lineups promote the starters). */
+function setPracticeSquad(state: LeagueState, teamId: TeamId): void {
+  const mons = teamMons(state, teamId);
+  for (const m of mons) m.tier = 'backup';
+  [...mons].sort((a, b) => a.age - b.age || a.id.localeCompare(b.id)).slice(0, 6).forEach(m => { m.tier = 'practice'; });
+}
+
+/** Even out the clubs: swap filler Pokémon (not legendary, not of either gym's type, within 2 years of age)
+ *  between the strongest and the weakest club while that narrows their gap. */
+function balanceRosters(catalog: Catalog, state: LeagueState, teamIds: TeamId[]): void {
+  const legend = (m: Mon) => catalog.species[m.speciesId]?.rarity === 'legendary' || catalog.species[m.speciesId]?.rarity === 'mythical';
+  // a swap must not cost either club a Pokémon of its gym type
+  const keepsTypes = (a: Mon, ta: TeamId, b: Mon, tb: TeamId) =>
+    (!hasType(catalog, a, state.teams[ta].gymType) || hasType(catalog, b, state.teams[ta].gymType))
+    && (!hasType(catalog, b, state.teams[tb].gymType) || hasType(catalog, a, state.teams[tb].gymType));
+  for (let guard = 0; guard < THEME.swaps; guard++) {
+    const str = teamIds.map(t => ({t, v: topSix(catalog, teamMons(state, t))})).sort((a, b) => b.v - a.v);
+    let done = true;
+    // try the strongest against the weakest first, then the next pairs out
+    outer: for (let i = 0; i < 3; i++) for (let j = str.length - 1; j > str.length - 4; j--) {
+      const hi = str[i], lo = str[j];
+      if (hi.v - lo.v <= THEME.spread) break outer;
+      const A = teamMons(state, hi.t), B = teamMons(state, lo.t);
+      let best: {a: Mon; b: Mon; gap: number} | null = null;
+      for (const a of A) {
+        if (legend(a)) continue;
+        for (const b of B) {
+          if (legend(b) || Math.abs(a.age - b.age) > 2 || !keepsTypes(a, hi.t, b, lo.t)) continue;
+          if (bestRole(catalog, a).ovr <= bestRole(catalog, b).ovr) continue;
+          const A2 = A.map(x => x === a ? b : x), B2 = B.map(x => x === b ? a : x);
+          const gap = Math.abs(topSix(catalog, A2) - topSix(catalog, B2));
+          if (gap < hi.v - lo.v && (!best || gap < best.gap)) best = {a, b, gap};
+        }
+      }
+      if (best) { best.a.teamId = lo.t; best.b.teamId = hi.t; done = false; break outer; }
+    }
+    if (done) break;
   }
 }
 
-function fantasyDraft(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: TeamId[]): void {
+// ---------------------------------------------------------------- startup draft
+/** The league-start draft: the whole starting pool (18 per club) on the board, 18 snake rounds in a random order. */
+function startupDraft(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: TeamId[]): void {
   const n = teamIds.length * START.perTeam;
   const ages = staggeredAges(rng, n);
-  const pool: Mon[] = ages.map((age, k) => {
+  const ids = ages.map((age, k) => {
     const fam = (k < START.legendaries ? drawFamily(catalog, state, rng, 'legendary') : null) ?? drawFamily(catalog, state, rng, 'nonlegendary')!;
-    return createMon(catalog, state, rng, {family: fam, age, teamId: null, tier: 'backup'});
+    const m = createMon(catalog, state, rng, {family: fam, age: k < START.legendaries ? Math.max(age, 24) : age, teamId: null, tier: 'backup'});
+    m.prospect = 0;
+    return m.id;
   });
-  const order = rng.shuffle([...teamIds]);
-  for (let round = 0; round < START.perTeam; round++) {
-    const seq = round % 2 ? [...order].reverse() : order;
-    for (const t of seq) {
-      let best = 0, bestV = -Infinity;
-      pool.forEach((m, i) => {
-        const v = bestRole(catalog, m).ovr + (m.age <= 24 ? 3 : 0) - (m.age >= 31 ? 4 : 0);
-        if (v > bestV) { bestV = v; best = i; }
-      });
-      const [m] = pool.splice(best, 1);
-      m.teamId = t;
-      m.draft = {season: 0, round: round + 1, pick: round * teamIds.length + seq.indexOf(t) + 1, teamId: t};
-    }
-  }
+  const first = rng.shuffle([...teamIds]);
+  const order: DraftPick[] = [];
+  for (let r = 1; r <= START.perTeam; r++) for (const t of r % 2 ? first : [...first].reverse()) order.push({season: 0, round: r, originalTeamId: t, ownerTeamId: t});
+  state.draft = {season: 0, order, prospects: ids, picks: [], startup: true};
+  state.phase = 'draft';
+}
+
+/** After the last startup pick: practice squads, contracts, strategies, the season 1 class; on to the preseason. */
+function finishStartupDraft(catalog: Catalog, state: LeagueState, rng: Rng): void {
+  const teamIds = Object.keys(state.teams);
   for (const t of teamIds) {
-    const mons = teamMons(state, t);
-    [...mons].sort((a, b) => a.age - b.age || a.id.localeCompare(b.id)).slice(0, 6).forEach(m => { m.tier = 'practice'; });
+    for (const m of teamMons(state, t)) if (m.age <= 21) m.rookieSeason = 1;
+    setPracticeSquad(state, t);
   }
+  startRosters(catalog, state, rng, teamIds);
+  state.phase = 'preseason';
+  state.week = 0;
+  inbox(state, 'league', 'The startup draft is done', 'Contracts are signed. Set your strategy and lineup, then start the season.');
 }
 
 /** Market-value contracts with 1–5 years left, scaled so the payroll lands between floor and cap
@@ -187,11 +259,12 @@ export function chooseStrategy(catalog: Catalog, state: LeagueState, teamId: Tea
   const team = state.teams[teamId];
   if (team.human && !team.lineup.auto) { normalizeTiers(catalog, state, teamId); return; }
   // the user keeps the strategy they play, except at league start: then the one their roster fits best
+  // (with the club's favourites, like every club, so the New League preview shows exactly this lineup)
   if (team.human && !atStart) { autoLineup(catalog, state, teamId); return; }
   let best: {sid: string; plan: LineupPlan; score: number} | null = null;
   for (const st of STRATEGIES) {
     const plan = planLineup(catalog, state, teamId, st.id);
-    const fav = team.human ? 0 : st.id === team.favoriteStrategies[0] ? STRATEGY_PICK.favourite1 : st.id === team.favoriteStrategies[1] ? STRATEGY_PICK.favourite2 : 0;
+    const fav = team.human && !atStart ? 0 : st.id === team.favoriteStrategies[0] ? STRATEGY_PICK.favourite1 : st.id === team.favoriteStrategies[1] ? STRATEGY_PICK.favourite2 : 0;
     const filled = plan.slots.filter(sl => sl.monId).length;
     const score = plan.ratingSum / STARTERS - (STARTERS - plan.onRole) * STRATEGY_PICK.offRolePenalty - (STARTERS - filled) * 100 + fav
       + (st.id === team.lineup.strategyId ? 1 : 0);   // a little stickiness week to week
@@ -527,6 +600,7 @@ export function advancePhase(catalog: Catalog, state: LeagueState): void {
     }
     case 'draft-lottery': state.phase = 'draft'; return;
     case 'draft': {
+      if (state.draft?.startup) { completeDraft(catalog, state); finishStartupDraft(catalog, state, rng); return; }
       completeDraft(catalog, state);
       state.phase = 'resign';
       const expiring = teamMons(state, state.userTeamId).filter(m => m.contract && m.contract.yearsLeft <= 0);

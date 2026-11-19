@@ -9,6 +9,7 @@ import {head, panel, lensTabs, empty} from '../components/page.ts';
 import {table, type Col} from '../components/table.ts';
 import {info, openDialog} from '../components/layer.ts';
 import {monRef, teamCell, teamAbbr, teamName, speciesOf} from '../components/mon.ts';
+import {teamLogo} from '../sprites.ts';
 import {divisionName, phaseLabel} from '../shell.ts';
 import {spr} from '../sprites.ts';
 import {fixChip, once} from '../components/front.ts';
@@ -83,7 +84,7 @@ function teamRow(id: TeamId | null, seed: number | null, wins: number | null, wo
   if (!id) return `<div><span class="x-seed"></span><span class="x-tbd">${seed === -1 ? 'Bye' : 'To be decided'}</span><span></span></div>`;
   const me = S().userTeamId;
   const t = S().teams[id];
-  return `<div class="${id === me ? 'cur' : ''}"><span class="x-seed">${seed ?? ''}</span><span class="x-team"><span class="x-abbr${id === me ? ' x-me' : ''}" aria-hidden="true">${esc(t.abbr)}</span><span>${esc(t.name)}</span><span class="sr">${esc(teamName(id))}</span></span><b class="x-num" ${won === false ? 'style="opacity:.55"' : ''}>${wins ?? ''}</b></div>`;
+  return `<div class="${id === me ? 'cur' : ''}"><span class="x-seed">${seed ?? ''}</span><span class="x-team">${teamLogo(t)}<span>${esc(t.name)}</span><span class="sr">${esc(teamName(id))}</span></span><b class="x-num" ${won === false ? 'style="opacity:.55"' : ''}>${wins ?? ''}</b></div>`;
 }
 function match(se: Series | null, a: [TeamId | null, number | null], b: [TeamId | null, number | null], watch = true): string {
   const wa = se && a[0] ? seriesScore(se, a[0])[0] : null, wb = se && b[0] ? seriesScore(se, b[0])[0] : null;

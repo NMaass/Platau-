@@ -4,7 +4,7 @@ import {ROLE_LABEL} from '../../catalog/roles.ts';
 import {esc, money} from '../dom.ts';
 import {C, S} from '../store.ts';
 import {M, api, isFixtureMode} from '../model.ts';
-import {ico} from '../sprites.ts';
+import {ico, teamLogo} from '../sprites.ts';
 import {prow} from './layer.ts';
 import {roleBadge, gradeChip, typeChips} from './badges.ts';
 import {GRADE_PCT} from '../fallback.ts';
@@ -73,14 +73,15 @@ export function monRef(m: Mon, o: {icon?: boolean; inline?: boolean; noLink?: bo
 }
 export const nameLink = (m: Mon): string => monRef(m, {icon: false, inline: true});
 
-/** Team abbreviation box (fixed 40x26), with the full name for screen readers. */
+/** Compact club label: badge logo + 3-letter abbreviation (fixed width), full name for screen readers. */
 export function teamAbbr(id: TeamId): string {
   const t = team(id), me = id === S().userTeamId;
-  return `<span class="x-team"><span class="x-abbr${me ? ' x-me' : ''}" aria-hidden="true">${esc(t.abbr)}</span><span class="sr">${esc(teamName(id))}</span></span>`;
+  return `<span class="x-team">${teamLogo(t)}<span class="x-abbr${me ? ' x-me' : ''}" aria-hidden="true">${esc(t.abbr)}</span><span class="sr">${esc(teamName(id))}</span></span>`;
 }
+/** Club in a row: badge logo + full name. */
 export function teamCell(id: TeamId): string {
   const t = team(id), me = id === S().userTeamId;
-  return `<span class="x-team"><span class="x-abbr${me ? ' x-me' : ''}" aria-hidden="true">${esc(t.abbr)}</span><span>${esc(teamName(id))}</span></span>`;
+  return `<span class="x-team${me ? ' x-me' : ''}">${teamLogo(t)}<span>${esc(teamName(id))}</span></span>`;
 }
 
 export const nextGrade = (m: Mon): Grade | null => {

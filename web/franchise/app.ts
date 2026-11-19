@@ -15,7 +15,7 @@ import {viewRoster} from './ui/screens/roster.ts';
 import {viewLineup, openChooser} from './ui/screens/lineup.ts';
 import {viewMon} from './ui/screens/mon.ts';
 import {viewBattle, afterBattle, leaveBattle} from './ui/screens/battle.ts';
-import {viewSettings, viewNewLeague, applyTheme} from './ui/screens/settings.ts';
+import {viewSettings, viewNewLeague, applyTheme, newPreview, newMode, newTeamIndex, rerollNewLeague, takePreview} from './ui/screens/settings.ts';
 import {fixtureCatalog, fixtureLeague} from './ui/dev-fixture.ts';
 import {createSimPool} from './sim/pool.ts';
 import {teamName, speciesOf, monName, monBadge} from './ui/components/mon.ts';
@@ -231,7 +231,9 @@ document.addEventListener('click', (e) => {
     case 'theme': try { localStorage.setItem('plateau-theme', b.dataset.theme!); } catch { /* private mode */ } applyTheme(b.dataset.theme); render(); break;
     case 'export': exportSave(); break;
     case 'import': $<HTMLInputElement>('#importFile')?.click(); break;
-    case 'pickteam': store.ui.newTeam = +b.dataset.i!; render(); $(`[data-act="pickteam"][data-i="${b.dataset.i}"]`)?.focus(); break;
+    case 'pickteam': keepName(); store.ui.newTeam = +b.dataset.i!; render(); $(`[data-act="pickteam"][data-i="${b.dataset.i}"]`)?.focus(); if (matchMedia('(max-width:1060px)').matches) openNewPreview(); break;
+    case 'newmode': keepName(); store.ui.newMode = b.dataset.v; render(); $(`[data-act="newmode"][data-v="${b.dataset.v}"]`)?.focus(); break;
+    case 'newreroll': keepName(); rerollNewLeague(); render(); $('[data-act="newreroll"]')?.focus(); break;
     case 'newleague': void newLeague(); break;
   }
 });
@@ -262,13 +264,27 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+const keepName = (): void => { const v = $<HTMLInputElement>('#leagueName')?.value; if (v !== undefined) store.ui.newName = v; };
+
+/** Phone / narrow: the picked club's preview in the dialog, with Start right there. */
+function openNewPreview(): void {
+  openDialog({title: 'Preview', cap: newMode() === 'draft' ? 'Draft' : 'Pre-made teams', body: newPreview(),
+    actions: [{key: 'close', label: 'Back'}, {key: 'start', label: `${ic('play')}Start league`, go: true}],
+    onAction: (k) => { if (k === 'start') void newLeague(); }});
+}
+
 async function newLeague(): Promise<void> {
-  const idx = (store.ui.newTeam as number | undefined) ?? 0;
-  const name = ($<HTMLInputElement>('#leagueName')?.value || 'Indigo League').trim();
-  let catalog = store.catalog ?? await loadCatalog();
+  keepName();
+  const idx = newTeamIndex();
+  const name = ((store.ui.newName as string | undefined) || 'Indigo League').trim();
+  const draft = newMode() === 'draft';
+  if (!store.catalog) store.catalog = await loadCatalog();
+  let catalog = store.catalog;
   try {
     if (!catalog) throw new Error('not implemented: catalog');
-    const st = api.newLeague(catalog, {start: 'random', userTeamIndex: idx, name, seed: Math.floor(Math.random() * 2 ** 31)});
+    // the previewed league is the one that starts
+    const st = takePreview() ?? api.newLeague(catalog, {start: draft ? 'draft' : 'random', userTeamIndex: idx, name, seed: Math.floor(Math.random() * 2 ** 31)});
+    st.name = name; st.createdAt = Date.now();
     setFixtureMode(false);
     store.catalog = catalog; store.state = st;
   } catch (e) {
@@ -279,7 +295,8 @@ async function newLeague(): Promise<void> {
     openDialog({title: 'Started a dev league', body: `<p>The league model isn't finished yet, so this is the hand-built development league. It is not saved.</p>`});
   }
   await save();
-  location.hash = '#week';
+  closeDialog();
+  location.hash = store.state?.phase === 'draft' ? '#draft' : '#week';
   notify();
 }
 

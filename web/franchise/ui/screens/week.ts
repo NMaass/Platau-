@@ -9,7 +9,7 @@ import {head, itemList, panel, empty, type Item} from '../components/page.ts';
 import {eventChip, roleBadge, rangeBadge} from '../components/badges.ts';
 import {monRef, monBadge, monName, speciesOf, team, teamName, teamAbbr} from '../components/mon.ts';
 import {openDialog} from '../components/layer.ts';
-import {spr, ico} from '../sprites.ts';
+import {spr, ico, teamLogo} from '../sprites.ts';
 import {strategies} from '../model.ts';
 import {phaseLabel} from '../shell.ts';
 
@@ -67,7 +67,7 @@ function opponentCard(se: Series | null): string {
   const ace = lu.map((x) => s.mons[x.monId]).sort((a, b) => M.bestRole(C(), s, b).ovr - M.bestRole(C(), s, a).ovr)[0];
   const home = se.homeId === s.userTeamId;
   return `<section class="l-panel l-section" aria-labelledby="h-opp">
-    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, 'md')}<div><span class="cap">This week's opponent</span><h2 id="h-opp">${esc(teamName(opp))}</h2><p class="muted">${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(t.lineup.strategyId))} · ${home ? 'home' : 'away'}</p></div></div>
+    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, 'md')}<div><span class="cap">This week's opponent</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2><p class="muted">${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(t.lineup.strategyId))} · ${home ? 'home' : 'away'}</p></div></div>
     <div class="l-facts">
       <div><span class="cap">Series · best of ${se.bestOf}</span>${pips(se)}</div>
       <div><span class="cap">Likely team</span>${likelyTeam(opp)}</div>
@@ -193,14 +193,18 @@ export function viewWeek(): string {
   const opp = se ? oppOf(se, s.userTeamId) : null;
   const playLabel = se ? `Play week ${s.week}` : s.phase === 'regular' || s.phase === 'playoffs' ? 'Play week' : 'Continue';
   const actions = `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a><button class="btn" type="button" data-act="until">Play until…</button><button class="btn go" type="button" data-act="play">${ic('play')}${esc(playLabel)}</button>`;
-  const title = s.phase === 'regular' ? `Week ${s.week}` : phaseLabel(s.phase);
+  const title = s.phase === 'regular' ? `Week ${s.week}` : s.draft?.startup && s.phase === 'draft' ? 'Startup draft' : phaseLabel(s.phase);
   const PO: Record<string, string> = {round1: 'Round 1', conference: 'Conference final', final: 'Plateau final'};
   const sub = se && opp ? `${se.playoff ? PO[se.playoff] : `of ${s.settings.weeks}`} · ${se.homeId === s.userTeamId ? 'vs' : 'at'} ${esc(teamName(opp))} · best of ${se.bestOf}` : `Season ${s.season}`;
   const before = itemList([...adv.map((a) => ({
     chip: eventChip(ADV[a.kind][0], ADV[a.kind][1], a.label),
     text: esc(a.text),
     action: `<a class="btn sm" href="${esc(a.action.route)}">${esc(a.action.label)} ${ic('arrow')}</a>`,
-  })), practiceItem()], {label: 'Before you play'});
+  })), ...(s.draft?.startup && s.phase === 'draft' ? [{
+    chip: eventChip('scout', 'scout', 'Draft'),
+    text: 'The startup draft is on: every club drafts 18 Pokémon from one board.',
+    action: `<a class="btn sm" href="#draft">Draft board ${ic('arrow')}</a>`,
+  }] : [practiceItem()])], {label: 'Before you play'});
   return head(title, sub, actions) + `<div class="l-cols side-first">
     ${panel('adv', 'Before you play', before)}
     ${opponentCard(se)}
@@ -232,7 +236,7 @@ export function viewOpponent(): string {
     const [w, l] = seriesScore(x, opp);
     return `<li><span class="chip ${w > l ? 'c-growth' : 'c-health'}">${w > l ? 'Won' : 'Lost'} ${record(w, l)}</span><span>Week ${x.week} ${x.homeId === opp ? 'vs' : 'at'} ${esc(teamName(oppOf(x, opp)))}</span><span></span></li>`;
   }).join('');
-  return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`${esc(teamName(opp))}`, `Scouting report · ${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(t.lineup.strategyId))}`, `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
+  return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, `Scouting report · ${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(t.lineup.strategyId))}`, `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
     panel('likely', 'Likely team', `<div class="l-grid scout-grid">${cards}</div>`) +
     panel('recent', 'Recent results', recent ? `<ul class="l-list top recent">${recent}</ul>` : `<p class="muted">No results yet.</p>`);
 }

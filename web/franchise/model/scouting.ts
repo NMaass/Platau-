@@ -21,7 +21,8 @@ export function scoutPoints(state: LeagueState, viewer: TeamId, mon: Mon): numbe
 }
 
 export function knowsExactly(state: LeagueState, viewer: TeamId, mon: Mon): boolean {
-  return mon.teamId === viewer || careerBattles(mon) >= REVEAL_BATTLES || scoutPoints(state, viewer, mon) >= state.settings.fullScoutCost;
+  // the startup draft's board (prospect season 0) is established Pokémon: everyone knows them
+  return mon.teamId === viewer || mon.prospect === 0 || careerBattles(mon) >= REVEAL_BATTLES || scoutPoints(state, viewer, mon) >= state.settings.fullScoutCost;
 }
 
 /** Equal-width range around (or, ~10% of the time, beside) the truth. Pure.

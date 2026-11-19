@@ -1,11 +1,12 @@
 // App shell: calm paper sidebar (club, rooms, next series, settings), phone header
-// and tab bar, room sub-tabs. Team colour is an accent only (crest, active nav, go button).
+// and tab bar, room sub-tabs. Team colour is an accent only (logo = gym badge, active nav, go button).
 import {esc, ic, record} from './dom.ts';
 import {ROOMS, roomOf} from './router.ts';
 import {DIVISION_NAMES} from '../model/teams.ts';
 import {S, store} from './store.ts';
 import {M, isFixtureMode} from './model.ts';
 import {team, teamName} from './components/mon.ts';
+import {teamLogo} from './sprites.ts';
 
 export const divisionName = (conf: number, div: number): string => DIVISION_NAMES[conf as 0 | 1]?.[div as 0 | 1] ?? `Division ${div + 1}`;
 
@@ -40,14 +41,13 @@ export function applyTeamColour(): void {
   root.dataset.club = '1';
 }
 
-function crest(abbr: string): string { return `<span class="crest" aria-hidden="true">${esc(abbr.slice(0, 1))}</span>`; }
 
 export function renderShell(path: string): void {
   const {room, tab} = roomOf(path);
   const side = document.getElementById('side')!, mh = document.getElementById('mhead')!, sub = document.getElementById('subnav')!, bar = document.getElementById('tabbar')!;
   if (!store.state) {
-    side.innerHTML = `<div class="club">${crest('P')}<div><b>Plateau</b><span>No league yet</span></div></div><nav aria-label="Rooms"><a href="#new" aria-current="page">${ic('plus')}New league</a></nav>`;
-    mh.innerHTML = `${crest('P')}<b>Plateau</b>`; sub.innerHTML = ''; bar.innerHTML = '';
+    side.innerHTML = `<div class="club"><span class="logo" aria-hidden="true">${ic('trophy')}</span><div><b>Plateau</b><span>No league yet</span></div></div><nav aria-label="Rooms"><a href="#new" aria-current="page">${ic('plus')}New league</a></nav>`;
+    mh.innerHTML = `<span class="logo" aria-hidden="true">${ic('trophy')}</span><b>Plateau</b>`; sub.innerHTML = ''; bar.innerHTML = '';
     return;
   }
   const s = S(), t = team(s.userTeamId), rec = userRecord();
@@ -60,11 +60,11 @@ export function renderShell(path: string): void {
   })() : `<span>${esc(phaseLabel(s.phase))}</span>`;
   const roomTabs = (store.ui.roomTab ??= {}) as Record<string, string>;
   if (tab) roomTabs[room] = tab;
-  side.innerHTML = `<div class="club">${crest(t.abbr)}<div><b>${esc(teamName(t.id))}</b><span>${esc(divisionName(t.conference, t.division))} · <span class="nowrap">${record(rec.w, rec.l)}</span></span></div></div>
+  side.innerHTML = `<div class="club">${teamLogo(t)}<div><b>${esc(teamName(t.id))}</b><span>${esc(divisionName(t.conference, t.division))} · <span class="nowrap">${record(rec.w, rec.l)}</span></span></div></div>
     <nav aria-label="Rooms">${ROOMS.map((r) => `<a href="#${roomTabs[r.k] ?? r.tabs[0][0]}"${r.k === room ? ' aria-current="page"' : ''}>${ic(r.icon)}${r.label}${r.k === 'team' ? cnt : ''}</a>`).join('')}</nav>
     <div class="nextup"><span class="cap">Next</span>${next}</div>
     <nav aria-label="App" class="side-foot"><a href="#settings"${room === 'settings' ? ' aria-current="page"' : ''}>${ic('gear')}Settings${isFixtureMode() ? '<span class="cnt" style="background:var(--ev-scout-bg);color:var(--ev-scout)">dev</span>' : ''}</a></nav>`;
-  mh.innerHTML = `${crest(t.abbr)}<b>${esc(t.name)}</b><span class="rec">${record(rec.w, rec.l)}</span><a class="x" href="#settings" aria-label="Settings">${ic('gear')}</a>`;
+  mh.innerHTML = `${teamLogo(t)}<b>${esc(t.name)}</b><span class="rec">${record(rec.w, rec.l)}</span><a class="x" href="#settings" aria-label="Settings">${ic('gear')}</a>`;
   const r = ROOMS.find((x) => x.k === room);
   sub.innerHTML = r ? `<nav class="l-tabs subnav" aria-label="${r.label}">${r.tabs.map(([k, l]) => `<a href="#${k}"${k === tab ? ' aria-current="page"' : ''}>${l}${k === 'lineup' ? cnt : ''}</a>`).join('')}</nav>` : '';
   const TB: [string, string, string, string][] = [['week', 'week', 'week', 'This week'], ['roster', 'roster', 'roster', 'Roster'], ['lineup', 'lineup', 'lineup', 'Lineup'], ['moves', roomTabs.moves ?? 'trades', 'swap', 'Moves'], ['league', roomTabs.league ?? 'standings', 'trophy', 'League']];

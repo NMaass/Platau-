@@ -4,6 +4,7 @@
 // image never moves anything.
 import type {CatalogSpecies} from '../types.ts';
 import {esc} from './dom.ts';
+import {badgeUrl, seedOf} from '../model/teams.ts';
 
 import {spriteUrl as sdUrl, fallbackSpriteUrl, trainerSpriteUrl as sdTrainer, ICON_SHEET_URL, iconSheetPosition} from '../catalog/sprites.ts';
 
@@ -47,4 +48,11 @@ export function installSpriteFallback(): void {
     const fb = img.dataset.fb;
     if (fb) { delete img.dataset.fb; img.src = fb; } else img.style.visibility = 'hidden';
   }, true);
+}
+
+/** A club's logo: its gym badge in the fixed `.logo` square (older saves without a badge use their slot's badge). */
+export function teamLogo(t: {id: string; badge?: number} | undefined, lg = false): string {
+  const n = t?.badge ?? (t ? seedOf(t.id)?.badge : undefined);
+  const cls = 'logo' + (lg ? ' lg' : '');
+  return n ? `<span class="${cls}" aria-hidden="true"><img src="${esc(badgeUrl(n))}" alt="" width="64" height="64"></span>` : `<span class="${cls}" aria-hidden="true"></span>`;
 }

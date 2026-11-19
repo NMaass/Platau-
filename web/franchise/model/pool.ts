@@ -37,6 +37,20 @@ export function families(catalog: Catalog): Map<string, FamilyInfo> {
   return m;
 }
 
+const typeCache = new WeakMap<Catalog, Map<string, Set<string>>>();
+/** Types of a family's fully evolved members (what its Pokémon grow into). */
+export function familyTypes(catalog: Catalog, f: FamilyInfo): Set<string> {
+  let m = typeCache.get(catalog);
+  if (!m) { m = new Map(); typeCache.set(catalog, m); }
+  let t = m.get(f.id);
+  if (!t) {
+    const finals = f.members.filter(id => !catalog.species[id].evolvesTo.some(e => catalog.species[e.id]?.sets.length));
+    t = new Set(finals.flatMap(id => catalog.species[id].types));
+    m.set(f.id, t);
+  }
+  return t;
+}
+
 export function familyOf(catalog: Catalog, speciesId: string): FamilyInfo | undefined {
   const sp = catalog.species[speciesId];
   return sp ? families(catalog).get(sp.family) : undefined;
@@ -49,7 +63,7 @@ export function initPool(catalog: Catalog, counts: PoolCounts = DEFAULT_POOL_COU
 }
 
 /** Draw one family from the pool (weighted by remaining count). Refills commons if the pool runs dry. */
-export function drawFamily(catalog: Catalog, state: LeagueState, rng: Rng, bucket: 'legendary' | 'nonlegendary'): string | null {
+export function drawFamily(catalog: Catalog, state: LeagueState, rng: Rng, bucket: 'legendary' | 'nonlegendary', prefer?: (f: FamilyInfo) => boolean): string | null {
   const fams = families(catalog);
   const eligible = (): string[] => Object.keys(state.pool).filter(id => {
     const f = fams.get(id);
@@ -57,6 +71,8 @@ export function drawFamily(catalog: Catalog, state: LeagueState, rng: Rng, bucke
     return bucket === 'legendary' ? f.bucket === 'legendary' : f.bucket !== 'legendary';
   });
   let ids = eligible();
+  // a preference (e.g. the gym type) narrows the draw when anything left matches it
+  if (prefer) { const pref = ids.filter(id => prefer(fams.get(id)!)); if (pref.length) ids = pref; }
   if (!ids.length && bucket === 'nonlegendary') {
     for (const f of fams.values()) if (f.bucket === 'common') state.pool[f.id] = (state.pool[f.id] ?? 0) + 5;
     ids = eligible();

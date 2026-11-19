@@ -1,7 +1,8 @@
 # Plateau
 
 A browser-only, single-player Pokémon franchise GM sim (Football GM / Pokémon All22 style). You run one of
-16 clubs over many seasons: set a strategy and lineup, scout, trade, draft, re-sign and sign free agents.
+16 clubs, the gym cities of Generations 1–4 (Kanto and Johto in the Indigo Conference, Hoenn and Sinnoh in the
+Lily of the Valley Conference; each club's logo is its gym badge and it leans to its gym's type), over many seasons: set a strategy and lineup, scout, trade, draft, re-sign and sign free agents.
 Every battle is a real Showdown battle, played in Web Workers by Rollmon's engine (poke-engine via wasm +
 `@pkmn/sim`); replays open on click. No server: saves live in IndexedDB, with JSON export/import.
 
@@ -24,6 +25,16 @@ deciding games with the quick sim.
 `model/quicksim.ts` instead of battles, so a season takes seconds. No replays for those weeks.
 **Play until…** (This week) sims to the next week, the trade deadline, the end of the regular season, the end of
 the Indigo Plateau or the draft, and stops early when a starter is hurt for 2+ weeks or a club sends an offer.
+
+## Starting a league
+New league is one page: Pre-made teams or Draft, the 16 gyms as cards by region, and a preview of the picked club.
+- **Pre-made**: every club gets 18 from the rarity pool, about half of them of its gym type; filler Pokémon are
+  swapped until the clubs' best-six strength is within 2 points. The preview shows the actual league that starts
+  (generated once per seed; Reroll draws another).
+- **Draft**: the league opens on a startup draft: empty rosters, 18 snake rounds, the whole starting pool (288,
+  every rating known) as the board. AI clubs draft for their favourite strategy's open slots and their gym type.
+  After the last pick, Sign contracts assigns contracts and practice squads and opens the preseason.
+  `newLeague({start: 'draft'})`; `'fantasy-draft'` is the same draft auto-picked to the end.
 
 ## Tests
 ```sh
@@ -65,12 +76,14 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
 | `model/freeagency.ts`, `model/cap.ts`, `model/trades.ts` | FA rounds and ask drop, market salary curve, AI trade acceptance |
 | `model/quicksim.ts` `QUICKSIM_SCALE` | how decisive rating gaps are in the quick sim |
 | `model/pool.ts`, `model/awards.ts` | rarity pool counts; fame values (hall of fame) |
+| `model/teams.ts`, `model/season.ts` `THEME`, `model/draft.ts` `STARTUP_AI` | the 16 gym clubs (badge, type, leader, favourite strategies); pre-made rosters: picks drawn from the gym type, balance spread; startup-draft AI bonuses |
 
 ## Known gaps
 - The replay viewer and Showdown sprites hotlink play.pokemonshowdown.com (PokeAPI sprite fallback); offline or
   blocked, replays don't paint. Fast-sim weeks have no replays.
-- Little Cup is simplified (no battles: half the clubs' rookies get bonus Growth). Fantasy-draft start exists in
-  the model but not in the New league screen.
+- Little Cup is simplified (no battles: half the clubs' rookies get bonus Growth).
+- Trainer sprites (gym leaders) hotlink Showdown too; blocked, their boxes stay empty. Badge logos are local
+  (`assets/badges/<n>.png`, PokeAPI badge sprites, copied into `dist/` by `build.mjs`).
 - Auto lineups solve the slot assignment (on-role first, then rating); a slot is off-role only when no one on
   the roster has a set for it, and then it plays its best set (dashed badge). The user's club keeps its strategy.
 - Salary floor: a club under it at the start of the regular season pays the shortfall as dead money (inbox note).

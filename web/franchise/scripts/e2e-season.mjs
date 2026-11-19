@@ -150,6 +150,7 @@ try {
   await page.waitForSelector('[data-act="newleague"]');
   await page.click('[data-act="pickteam"][data-i="9"]');
   await page.click('[data-act="newleague"]');
+  await page.waitForFunction(() => location.hash === '#week');
   await page.waitForSelector('#view h1');
 
   step('turn on fast sim');

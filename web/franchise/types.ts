@@ -150,6 +150,12 @@ export interface Team {
   city: string; name: string; abbr: string;
   color: string;          // accent hex
   trainer: string;        // Showdown trainer sprite id
+  /** gym type the club leans to (rosters, AI draft); older saves have none */
+  gymType?: string;
+  /** badge number 1..32: the club's logo (assets/badges/<n>.png) */
+  badge?: number;
+  /** gym leader's display name */
+  leader?: string;
   conference: 0 | 1; division: 0 | 1;
   human: boolean;
   favoriteStrategies: [string, string];
@@ -256,6 +262,8 @@ export interface DraftState {
   prospects: MonId[];
   picks: {pick: DraftPick; monId: MonId}[];
   lottery?: {teamId: TeamId; odds: number; result: number}[];
+  /** the league-start draft (season 0, 18 snake rounds, the whole starting pool as the board) */
+  startup?: boolean;
 }
 
 export interface SeasonSummary {

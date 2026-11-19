@@ -9,6 +9,8 @@ import {rookieContract} from './cap.ts';
 import {reverseStandings, rankTeams} from './standings.ts';
 import {playoffTeams} from './playoffs.ts';
 import {projectedOvr, needBoost} from './value.ts';
+import {allRoles} from './ratings.ts';
+import {strategyById} from './strategies.ts';
 import {logTx} from './util.ts';
 import {inbox} from './inbox.ts';
 import {knownRating} from './scouting.ts';
@@ -108,11 +110,49 @@ export function availableProspects(state: LeagueState): Mon[] {
 
 /** AI (or auto) choice: perceived projected rating + need for its strategies. */
 export function aiChoice(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon | undefined {
+  if (state.draft?.startup) return startupChoice(catalog, state, teamId);
   const avail = availableProspects(state);
   let best: Mon | undefined, bestScore = -Infinity;
   for (const m of avail) {
     const k = knownRating(catalog, state, teamId, m);
     const score = projectedOvr(catalog, state, teamId, m) + (k.lo + k.hi) / 2 * 0.2 + needBoost(catalog, state, teamId, m) * 10;
+    if (score > bestScore || (score === bestScore && best && m.id < best.id)) { best = m; bestScore = score; }
+  }
+  return best;
+}
+
+/** Startup-draft knobs: need bonus while a favourite strategy's slot is open, gym-type bonus up to `typed` picks. */
+export const STARTUP_AI = {need: 6, needUntil: 12, type: 4, typed: 9, young: 2, old: -3};
+
+const rolesCache = new WeakMap<Mon, {role: string; ovr: number}[]>();
+const rolesOf = (catalog: Catalog, m: Mon) => { let r = rolesCache.get(m); if (!r) { r = allRoles(catalog, m); rolesCache.set(m, r); } return r; };
+
+/** Startup draft (every rating known): best rating, plus the open slots of the club's favourite strategy
+ *  and, for about half the roster, the gym's type. */
+export function startupChoice(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon | undefined {
+  const team = state.teams[teamId];
+  const mine = Object.values(state.mons).filter(m => m.teamId === teamId);
+  const strat = strategyById(team.favoriteStrategies[0]);
+  // greedy: which favourite-strategy slots does the roster already fill on-role?
+  const used = new Set<Mon>();
+  const open: string[][] = [];
+  for (const slot of strat.slots) {
+    let best: Mon | undefined, bo = -1;
+    for (const m of mine) {
+      if (used.has(m)) continue;
+      const o = Math.max(-1, ...rolesOf(catalog, m).filter(r => slot.includes(r.role as never)).map(r => r.ovr));
+      if (o > bo) { bo = o; best = m; }
+    }
+    if (best && bo >= 0) used.add(best); else open.push(slot as string[]);
+  }
+  const typed = mine.filter(m => catalog.species[m.speciesId]?.types.includes(team.gymType ?? '')).length;
+  let best: Mon | undefined, bestScore = -Infinity;
+  for (const m of availableProspects(state)) {
+    const roles = rolesOf(catalog, m);
+    const ovr = roles[0]?.ovr ?? 0;
+    let score = ovr + (m.age <= 24 ? STARTUP_AI.young : m.age >= 31 ? STARTUP_AI.old : 0);
+    if (mine.length < STARTUP_AI.needUntil && open.some(sl => roles.some(r => sl.includes(r.role) && r.ovr >= ovr - 8))) score += STARTUP_AI.need;
+    if (typed < STARTUP_AI.typed && team.gymType && catalog.species[m.speciesId]?.types.includes(team.gymType)) score += STARTUP_AI.type;
     if (score > bestScore || (score === bestScore && best && m.id < best.id)) { best = m; bestScore = score; }
   }
   return best;
@@ -130,6 +170,12 @@ export function makePick(catalog: Catalog, state: LeagueState, monId: MonId): {o
   const teamId = pick.ownerTeamId;
   mon.teamId = teamId;
   mon.prospect = undefined;
+  if (d.startup) {
+    // contracts and practice squads are set when the startup draft ends (season.ts)
+    mon.tier = 'backup';
+    mon.draft = {season: 0, round: pick.round, pick: overall, teamId};
+    return {ok: true, reason: `Drafted at #${overall}`};
+  }
   mon.tier = 'practice';
   mon.contract = rookieContract(state, pick.round, inRound, overall);
   mon.draft = {season: d.season, round: pick.round, pick: overall, teamId};

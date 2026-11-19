@@ -1,6 +1,7 @@
 // End-to-end check of the real Plateau app (no ?fixture): build, serve web/ statically,
 // start a league, lower the think budgets, play the preseason step and one week with
-// the engine, then visit every route (core + ui/routes.ts) at 1280 and 390 px.
+// the engine, then visit every route (core + ui/routes.ts) at 1280 and 390 px;
+// then start a Draft league and finish its startup draft with Sim to end.
 // Fails on any console error, page error, or horizontal scroll at 390 px.
 //   cd web && node franchise/scripts/e2e.mjs [--no-build] [--shots <dir>] [--headed]
 // Needs Playwright (require('playwright') resolvable) with Chromium installed.
@@ -100,6 +101,7 @@ try {
   await page.waitForSelector('[data-act="newleague"]');
   await page.click('[data-act="pickteam"][data-i="5"]');
   await page.click('[data-act="newleague"]');
+  await page.waitForFunction(() => location.hash === '#week');
   await page.waitForSelector('#view h1');
 
   step('lower think budgets');
@@ -144,6 +146,39 @@ try {
       await shot(`${r.replace(/[^\w-]+/g, '_').slice(0, 40)}-${w}`);
     }
   }
+
+  // Draft start: the league opens on the startup draft (empty rosters); Sim to end, then sign contracts
+  await page.setViewportSize({width: 1280, height: 900});
+  step('new league: Draft');
+  await page.goto(BASE + '#new'); await settle();
+  await page.click('[data-act="newmode"][data-v="draft"]');
+  await page.click('[data-act="pickteam"][data-i="12"]');
+  const slot = await page.$eval('#h-np', (h) => h.textContent);
+  if (!/Eterna/.test(slot ?? '')) problems.push(`[draft start] preview shows "${slot}", expected Eterna`);
+  await page.click('[data-act="newleague"]');
+  await page.waitForFunction(() => location.hash === '#draft');
+  await page.waitForSelector('[data-fo="simend"]');
+  await checkRendered('#draft (startup)');
+  for (const [w, h] of [[390, 844], [1280, 900]]) {
+    await page.setViewportSize({width: w, height: h});
+    for (const r of ['week', 'roster', 'lineup', 'standings', 'draft']) {
+      step(`startup draft #${r} @${w}`);
+      await page.goto(BASE + '#' + r); await settle();
+      await checkRendered(`startup #${r} @${w}`);
+      if (w === 390) await checkScroll(`startup #${r} @${w}`);
+    }
+  }
+  step('startup draft: sim to end');
+  await page.click('[data-fo="simend"]'); await settle();
+  await page.keyboard.press('Escape'); await settle();
+  await page.click('[data-fo="startupdone"]');
+  await page.waitForFunction(() => location.hash === '#roster'); await settle();
+  await checkRendered('#roster after the startup draft');
+  const n = await page.$$eval('#view a[href^="#mon-"]', (a) => new Set(a.map((x) => x.getAttribute('href'))).size);
+  if (n !== 18) problems.push(`[startup draft] roster has ${n} Pokémon after the draft, expected 18`);
+  await page.goto(BASE + '#week'); await settle();
+  const ph = await page.$eval('#view h1', (h) => h.textContent);
+  if (!/preseason/i.test(ph ?? '')) problems.push(`[startup draft] expected the preseason after the draft, got "${ph}"`);
 } catch (e) {
   problems.push(`[${where}] ${e.message}`);
 } finally {

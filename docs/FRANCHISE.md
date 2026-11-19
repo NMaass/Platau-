@@ -51,7 +51,10 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
   range on the Pokémon page/peek only, not in rows.
 
 ## League and season
-- 16 teams, 2 conferences × 2 divisions of 4. 14-week regular season; each week every team plays
+- 16 teams = the gym cities of Gens 1–4 (`model/teams.ts`): Indigo Conference (Kanto, Johto) and Lily of the
+  Valley Conference (Hoenn, Sinnoh), the divisions are the regions. Each club is named for its badge (logo = the
+  badge art), leans to its gym's type and has its gym leader as trainer. Start: Pre-made teams or Draft (startup draft).
+- 2 conferences × 2 divisions of 4. 14-week regular season; each week every team plays
   one **series (best of 3 battles)**. Schedule: division rivals twice (6), other division in the
   conference once (4), 4 cross-conference.
 - **Indigo Plateau** (playoffs): 6 teams, per conference the 2 division winners + 1 wild card; the
