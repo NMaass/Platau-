@@ -1,14 +1,15 @@
 // Home / This week: Before you play, this week's series card, last week's results
 // (series MVP + template summary + replay links), since last week feed.
-import type {Series, TeamId, InboxItem} from '../../types.ts';
+import type {Series, TeamId, InboxItem, Mon} from '../../types.ts';
 import {ROLE_LABEL} from '../../catalog/roles.ts';
-import {esc, ic, record} from '../dom.ts';
+import {esc, ic, record, listJoin} from '../dom.ts';
 import {C, S} from '../store.ts';
 import {M} from '../model.ts';
-import {head, itemList, panel, empty} from '../components/page.ts';
+import {head, itemList, panel, empty, type Item} from '../components/page.ts';
 import {eventChip, roleBadge, rangeBadge} from '../components/badges.ts';
-import {monRef, speciesOf, team, teamName, teamAbbr} from '../components/mon.ts';
-import {spr} from '../sprites.ts';
+import {monRef, monBadge, monName, speciesOf, team, teamName, teamAbbr} from '../components/mon.ts';
+import {openDialog} from '../components/layer.ts';
+import {spr, ico} from '../sprites.ts';
 import {strategies} from '../model.ts';
 import {phaseLabel} from '../shell.ts';
 
@@ -86,7 +87,7 @@ export function seriesResult(se: Series, o: {headless?: boolean} = {}): string {
   const mvpKos = mvp ? se.games.reduce((t, g) => t + (g.box[mvp.id]?.kos ?? 0), 0) : 0;
   const games = se.games.map((g, i) => {
     const won = g.winnerTeamId === a;
-    const left = (t: TeamId) => Object.values(g.box).filter((x) => x.teamId === t && !x.fainted).length;
+    const left = (t: TeamId) => Object.values(g.box).filter((x) => x.teamId === t && x.played && !x.fainted).length;
     const la = left(a), lb = left(b);
     return `<li><span class="cap">Game ${i + 1}</span><span class="chip ${won ? 'c-growth' : 'c-health'}" title="Pokémon left standing">${ic(won ? 'check' : 'x')}${won ? 'Won' : 'Lost'} ${la}–${lb}</span><span class="l-clamp" style="--lines:2">${esc(g.summary || '')}</span><a class="btn sm" href="#battle-${esc(se.id)}-${i + 1}" aria-label="Watch game ${i + 1}">${ic('film')}Watch</a></li>`;
   }).join('');
@@ -113,7 +114,8 @@ function lastWeek(): string {
 
 function feed(): string {
   const s = S();
-  const items = s.inbox.slice(0, 6);
+  // newest first, only what arrived since the last week was played
+  const items = [...s.inbox].reverse().filter((it) => it.season === s.season && it.week >= s.week - 1).slice(0, 6);
   if (!items.length) return '';
   return panel('feed', 'Since last week', itemList(items.map((it) => ({
     chip: eventChip(it.category, FEED[it.category], FEED_WORD[it.category]),
@@ -121,6 +123,36 @@ function feed(): string {
     action: `<span class="when">Wk ${it.week}</span>`,
   })), {cls: 'feed'}));
 }
+
+// ---------------------------------------------------------------- practice focus
+const FOCUS_MAX = 3;
+const focusable = (): Mon[] => Object.values(S().mons).filter((m) => m.teamId === S().userTeamId).filter((m) => !m.injury || m.injury.kind === 'day-to-day');
+/** "Before you play" row: who gets extra practice XP this week (2–3 picks). Always the last row. */
+function practiceItem(): Item {
+  const s = S(), picks = (s.teams[s.userTeamId].practiceFocus ?? []).map((id) => s.mons[id]).filter(Boolean);
+  const text = picks.length ? `Extra XP for ${listJoin(picks.map((m) => esc(monName(m))))}. Everyone healthy gets base XP.` : 'Pick up to 3 Pokémon for extra XP this week. Everyone healthy gets base XP.';
+  return {chip: eventChip('growth', 'up', 'Practice'), text, action: `<button class="btn sm" type="button" data-act="focus">Choose ${ic('arrow')}</button>`};
+}
+/** Dialog: toggle up to 3 Pokémon, then save with setPracticeFocus. */
+export function openFocus(onSave: (ids: string[]) => void): void {
+  const s = S(), cur = new Set(s.teams[s.userTeamId].practiceFocus ?? []);
+  const order = {practice: 0, backup: 1, active: 2, ir: 3} as Record<string, number>;
+  const list = focusable().sort((a, b) => (order[a.tier] - order[b.tier]) || a.age - b.age);
+  const row = (m: Mon) => `<li><button type="button" data-pick="${esc(m.id)}" aria-pressed="${cur.has(m.id)}">${ico(speciesOf(m))}<span><span class="nm">${esc(monName(m))}</span><span class="where">${esc(TIER_WORD[m.tier] ?? m.tier)} · age ${m.age}</span></span>${monBadge(m, null, {sm: true, noPeek: true})}</button></li>`;
+  const cap = () => `${cur.size} of ${FOCUS_MAX} picked`;
+  const d = openDialog({title: 'Practice focus', cap: cap(), body: `<p class="muted">Extra XP this week for up to ${FOCUS_MAX} picks.</p><ul class="chooser" role="list">${list.map(row).join('')}</ul>`,
+    actions: [{key: 'close', label: 'Cancel'}, {key: 'save', label: 'Save', go: true}],
+    onAction: (k) => { if (k === 'save') onSave([...cur]); }});
+  d.querySelector('[data-body]')!.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLElement>('[data-pick]');
+    if (!b) return;
+    const id = b.dataset.pick!;
+    if (cur.has(id)) cur.delete(id); else if (cur.size < FOCUS_MAX) cur.add(id); else return;
+    b.setAttribute('aria-pressed', String(cur.has(id)));
+    const c = d.querySelector('.l-dialog-head .cap'); if (c) c.textContent = cap();
+  });
+}
+const TIER_WORD: Record<string, string> = {active: 'Active', backup: 'Backup', practice: 'Practice squad', ir: 'Injured reserve'};
 
 export function viewWeek(): string {
   const s = S(), c = C();
@@ -131,11 +163,11 @@ export function viewWeek(): string {
   const actions = `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a><button class="btn go" type="button" data-act="play">${ic('play')}${esc(playLabel)}</button>`;
   const title = s.phase === 'regular' ? `Week ${s.week}` : phaseLabel(s.phase);
   const sub = se && opp ? `of ${s.settings.weeks} · ${se.homeId === s.userTeamId ? 'vs' : 'at'} ${esc(teamName(opp))} · best of ${se.bestOf}` : `Season ${s.season}`;
-  const before = adv.length ? itemList(adv.map((a) => ({
+  const before = itemList([...adv.map((a) => ({
     chip: eventChip(ADV[a.kind][0], ADV[a.kind][1], a.label),
     text: esc(a.text),
     action: `<a class="btn sm" href="${esc(a.action.route)}">${esc(a.action.label)} ${ic('arrow')}</a>`,
-  })), {label: 'Before you play'}) : `<p class="muted">Nothing to check. Play when ready.</p>`;
+  })), practiceItem()], {label: 'Before you play'});
   return head(title, sub, actions) + `<div class="l-cols side-first">
     ${panel('adv', 'Before you play', before)}
     ${opponentCard(se)}

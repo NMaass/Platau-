@@ -60,7 +60,7 @@ export function renderShell(path: string): void {
   })() : `<span>${esc(phaseLabel(s.phase))}</span>`;
   const roomTabs = (store.ui.roomTab ??= {}) as Record<string, string>;
   if (tab) roomTabs[room] = tab;
-  side.innerHTML = `<div class="club">${crest(t.abbr)}<div><b>${esc(teamName(t.id))}</b><span>${esc(divisionName(t.conference, t.division))} · ${record(rec.w, rec.l)}</span></div></div>
+  side.innerHTML = `<div class="club">${crest(t.abbr)}<div><b>${esc(teamName(t.id))}</b><span>${esc(divisionName(t.conference, t.division))} · <span class="nowrap">${record(rec.w, rec.l)}</span></span></div></div>
     <nav aria-label="Rooms">${ROOMS.map((r) => `<a href="#${roomTabs[r.k] ?? r.tabs[0][0]}"${r.k === room ? ' aria-current="page"' : ''}>${ic(r.icon)}${r.label}${r.k === 'team' ? cnt : ''}</a>`).join('')}</nav>
     <div class="nextup"><span class="cap">Next</span>${next}</div>
     <nav aria-label="App" class="side-foot"><a href="#settings"${room === 'settings' ? ' aria-current="page"' : ''}>${ic('gear')}Settings${isFixtureMode() ? '<span class="cnt" style="background:var(--ev-scout-bg);color:var(--ev-scout)">dev</span>' : ''}</a></nav>`;

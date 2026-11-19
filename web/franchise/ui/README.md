@@ -48,6 +48,11 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `lensTabs(key, cur, [[k,label]])` | lens tabs; click sets `store.ui[key]` |
 | `itemList(items)` | "Before you play"/feed rows: label chip, text, action share ONE top edge (`.l-list.top`) |
 | `skel(w, h)`, `empty(title, text, action)`, `comingSoon(title, what)` | placeholders with final size |
+| `front.ts` `closed(title, sub, text, links)` | fixed-size "opens later" panel for screens outside their phase (same box every time) |
+| `fixChip(cat, icon, word)` | status chip of one width (`.chip.fix`, `--chip-w`): clinch, interest, verdict, lottery move |
+| `capStrip(teamId)`, `rosterUsed`, `beforeAfter(rows)` | cap room strip; before → after money lines |
+| `knownBadge(mon)`, `knownMid(mon)` | what your club knows: exact badge or fixed-width range badge; sort value |
+| `tradeMeter(ev)`, `pickLabel(p)`, `pickKey(p)`, `once(key, fn)` | will-they-accept meter; draft pick label/key; install a delegated listener once |
 | `layer.ts` `openDialog({title, cap, body, actions, onAction, onClose, wide, locked})` | the one shared dialog; `updateDialog`, `closeDialog`, `confirmDialog` |
 | `info(label, popHtml)`, `peekLabel(label, popHtml)`, `prow(k, v)` | peeks (one floating layer, hover/focus/tap) |
 
@@ -62,5 +67,11 @@ Register it, no edits to app.ts needed:
 import {ROUTES} from '../routes.ts';
 ROUTES.standings = {view: (r) => head('Standings') + panel(...), after: (r) => {/* DOM wiring */}};
 ```
-Routes already stubbed with a fixed "coming soon" panel: trades, freeagents, offers, scouting,
-draft, standings, playoffs, schedule, history. Import the screen module from `app.ts` so it bundles.
+League / front office screens live in `screens/league.ts` (standings, playoffs, schedule, history),
+`screens/draft.ts` (scouting, draft), `screens/moves.ts` (trades, offers, free agents) and are registered in
+`routes.ts`. Their buttons use `data-fo="..."`, handled by one delegated listener per module (`once`).
+Design-system primitives added for them: `.chip.fix`, `.l-cellacts` (two equal buttons in a cell), `.l-toolbar`.
+
+Dev: `node franchise/ui/dev/make-save.ts <phase|weekN> out.json [seed]` builds a quick-sim league at a phase
+(draft, resign, free-agency, awards, playoffs, week6, ...); `NODE_PATH=$(npm root -g) node franchise/ui/dev/shots.mjs
+<url> <outDir> save.json:route,route` imports it through Settings → Import and screenshots 1280/390 × light/dark.

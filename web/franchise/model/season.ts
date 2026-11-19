@@ -76,7 +76,7 @@ export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState
   else randomRosters(catalog, state, rng, teamIds);
   for (const t of teamIds) {
     assignContracts(catalog, state, rng, t);
-    chooseStrategy(catalog, state, t);
+    chooseStrategy(catalog, state, t, true);
   }
   ensurePicks(state, 1);
   generateClass(catalog, state, rng, 1);
@@ -156,12 +156,13 @@ function assignContracts(catalog: Catalog, state: LeagueState, rng: Rng, teamId:
 }
 
 /** AI: play whichever favourite strategy gives the stronger lineup. */
-export function chooseStrategy(catalog: Catalog, state: LeagueState, teamId: TeamId): void {
+export function chooseStrategy(catalog: Catalog, state: LeagueState, teamId: TeamId, atStart = false): void {
   const team = state.teams[teamId];
   if (team.human && !team.lineup.auto) { normalizeTiers(catalog, state, teamId); return; }
-  if (team.human) { autoLineup(catalog, state, teamId); return; }
+  // the user keeps the strategy they play, except at league start: then the one their roster fits best
+  if (team.human && !atStart) { autoLineup(catalog, state, teamId); return; }
   let best = team.favoriteStrategies[0], bestScore = -Infinity;
-  for (const sid of team.favoriteStrategies) {
+  for (const sid of team.human ? STRATEGIES.map(x => x.id) : team.favoriteStrategies) {
     team.lineup.strategyId = sid;
     const lu = autoLineup(catalog, state, teamId);
     const strat = strategyById(sid);
@@ -169,7 +170,7 @@ export function chooseStrategy(catalog: Catalog, state: LeagueState, teamId: Tea
       const m = sl.monId ? state.mons[sl.monId] : undefined;
       if (!m) return s;
       const fits = strat.slots[i].includes(sl.role);
-      return s + bestRole(catalog, m).ovr - (fits ? 0 : 10);
+      return s + bestRole(catalog, m).ovr - (fits ? 0 : 30);
     }, 0);
     if (score > bestScore) { bestScore = score; best = sid; }
   }

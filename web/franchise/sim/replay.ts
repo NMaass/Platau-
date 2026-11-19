@@ -10,7 +10,7 @@
 import {esc, lazyLoadReplay, PLAYER_ROOT, replayDoc, withBossAvatar} from '../../replay/embed.ts';
 
 export interface ReplaySide { name: string; trainer: string }
-export interface ReplayOptions { log: string[]; p1: ReplaySide; p2: ReplaySide; title?: string; game?: string }
+export interface ReplayOptions { log: string[]; p1: ReplaySide; p2: ReplaySide; title?: string; game?: string; /** side shown near (left in the header); default p1 */ viewpoint?: 'p1' | 'p2' }
 
 export const VIEW_W = 640;
 export const VIEW_H = 360;
@@ -78,7 +78,7 @@ export function mountReplay(container: HTMLElement, opts: ReplayOptions): Mounte
         <span class="cap" data-r="status">${esc(opts.game ?? '')}${opts.game ? ' · ' : ''}<span data-r="turn">Loading</span></span>
       </div>
     </div>
-    <div class="l-split">${side(opts.p1, 'start')}<span class="cap">vs</span>${side(opts.p2, 'end')}</div>
+    <div class="l-versus" data-r="sides">${side(opts.p1, 'start')}<span class="cap">vs</span>${side(opts.p2, 'end')}</div>
     <div data-r="box" style="position:relative;width:100%;aspect-ratio:${VIEW_W}/${VIEW_H};overflow:hidden;border-radius:var(--r);background:var(--spr-bg)"></div>
     <div class="l-actions" role="group" aria-label="Playback">
       <button class="btn sm" type="button" data-a="back" aria-label="Previous turn">Back</button>
@@ -97,6 +97,15 @@ export function mountReplay(container: HTMLElement, opts: ReplayOptions): Mounte
   const box = root.querySelector<HTMLElement>('[data-r="box"]')!;
   const turnEl = root.querySelector<HTMLElement>('[data-r="turn"]')!;
   const toggle = root.querySelector<HTMLButtonElement>('[data-a="toggle"]')!;
+  const sidesEl = root.querySelector<HTMLElement>('[data-r="sides"]')!;
+  // header order follows the viewer's viewpoint: the near side is on the left
+  let flipped = false;
+  const setFlip = (on: boolean) => {
+    flipped = on;
+    sidesEl.innerHTML = on ? `${side(opts.p2, 'start')}<span class="cap">vs</span>${side(opts.p1, 'end')}` : `${side(opts.p1, 'start')}<span class="cap">vs</span>${side(opts.p2, 'end')}`;
+  };
+  let wantFlip = opts.viewpoint === 'p2';
+  if (wantFlip) setFlip(true);
   const f = document.createElement('iframe');
   f.title = `${opts.p1.name} vs ${opts.p2.name} replay`;
   f.style.cssText = `position:absolute;left:0;top:0;width:${VIEW_W}px;height:${VIEW_H}px;border:0;transform-origin:0 0;background:transparent`;
@@ -119,6 +128,7 @@ export function mountReplay(container: HTMLElement, opts: ReplayOptions): Mounte
   const refresh = () => {
     const b = battle();
     if (!b) return;
+    if (wantFlip) { wantFlip = false; try { b.switchViewpoint(); } catch { /* older client */ } }
     toggle.textContent = b.paused ? 'Play' : 'Pause';
     turnEl.textContent = b.turn > 0 ? `Turn ${b.turn}` : 'Team preview';
   };
@@ -142,7 +152,7 @@ export function mountReplay(container: HTMLElement, opts: ReplayOptions): Mounte
       case 'back': b.seekBy(-1); break;
       case 'fwd': b.seekBy(1); break;
       case 'end': b.seekTurn(Infinity); break;
-      case 'switch': b.switchViewpoint(); break;
+      case 'switch': b.switchViewpoint(); setFlip(!flipped); break;
     }
     refresh();
   });

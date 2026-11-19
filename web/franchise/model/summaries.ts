@@ -37,7 +37,9 @@ export function gameSummary(catalog: Catalog, state: LeagueState, winner: TeamId
   const mine = Object.entries(box).filter(([, b]) => b.teamId === winner && b.played);
   const left = mine.filter(([, b]) => !b.fainted).length;
   const top = mine.sort((a, b) => impact(b[1]) - impact(a[1]))[0];
-  const lead = top ? ` ${name(catalog, state, top[0])} led with ${top[1].kos} KO${top[1].kos === 1 ? '' : 's'}.` : '';
+  const lead = !top ? '' : top[1].kos > 0
+    ? ` ${name(catalog, state, top[0])} led with ${top[1].kos} KO${top[1].kos === 1 ? '' : 's'}.`
+    : ` ${name(catalog, state, top[0])} led with ${Math.round(top[1].damageDealt)}% damage dealt.`;
   return `${team(state, winner)} win in ${turns} turns with ${left} left standing.${lead}`;
 }
 

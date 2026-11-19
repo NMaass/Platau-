@@ -3,7 +3,7 @@ import type {Mon, Role, Team, TeamId, CatalogSet, CatalogSpecies, Grade} from '.
 import {ROLE_LABEL} from '../../catalog/roles.ts';
 import {esc, money} from '../dom.ts';
 import {C, S} from '../store.ts';
-import {M} from '../model.ts';
+import {M, api, isFixtureMode} from '../model.ts';
 import {ico} from '../sprites.ts';
 import {prow} from './layer.ts';
 import {roleBadge, gradeChip, typeChips} from './badges.ts';
@@ -37,13 +37,25 @@ export function monBadge(m: Mon, role?: Role | null, o: {full?: boolean; sm?: bo
   return roleBadge(r, ovr, {...o, pop: o.noPeek || !r || ovr == null ? undefined : ratingPop(m, r, ovr)});
 }
 
+/** Potential as a range (peek and Pokémon page only, never in rows). */
+function potentialText(m: Mon): string {
+  if (isFixtureMode()) return '';
+  try { const p = api.knownPotential(S(), S().userTeamId, m); return p.lo === p.hi ? gradeChip(p.lo) : `${gradeChip(p.lo)} <span class="dash">to</span> ${gradeChip(p.hi)}`; } catch { return ''; }
+}
+
 /** Icon + name, linking to the Pokémon page, with a peek (role, grade, age, contract, status). */
 export function monRef(m: Mon, o: {icon?: boolean; inline?: boolean; noLink?: boolean} = {}): string {
   const sp = speciesOf(m), name = monName(m);
-  const b = M.bestRole(C(), S(), m), g = M.evGrade(S(), m);
+  const g = M.evGrade(S(), m);
+  // other clubs' Pokémon show only what scouting knows
+  let roleTxt: string;
+  if (isMine(m)) { const b = M.bestRole(C(), S(), m); roleTxt = `${esc(ROLE_LABEL[b.role])} · ${b.ovr}`; }
+  else { const k = M.knownRating(C(), S(), S().userTeamId, m); roleTxt = `${esc(ROLE_LABEL[k.role])} · ${k.exact || k.lo === k.hi ? (M.roleRating(C(), S(), m, k.role) ?? k.hi) : `${k.lo}–${k.hi}`}`; }
+  const pot = potentialText(m);
   const rows = [
-    prow('Role', `${esc(ROLE_LABEL[b.role])} · ${b.ovr}`),
+    prow('Role', roleTxt),
     isMine(m) ? prow('EV grade', `${gradeChip(g)} <span class="muted">Growth ${m.growth}</span>`) : '',
+    pot ? prow('Potential', pot) : '',
     prow('Age', `${m.age} · ${stage(m.age)}`),
     m.contract ? prow('Contract', `${money(m.contract.salary)} · ${m.contract.yearsLeft} ${m.contract.yearsLeft === 1 ? 'yr' : 'yrs'}`) : '',
     m.injury ? prow('Status', esc(m.injury.description)) : '',

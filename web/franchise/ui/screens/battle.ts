@@ -59,15 +59,19 @@ function boxTable(bx: Record<string, MonBox>): string {
 }
 
 let mounted: MountedReplay | null = null;
-/** Called after the view is in the DOM. */
+let mountedArg = '';
+/** Called after every render of the battle view. A re-render of the same game (any notify())
+ *  puts the existing viewer back into the new host instead of leaving it blank. */
 export function afterBattle(arg: string): void {
-  mounted?.destroy(); mounted = null;
   const host = document.getElementById('replay-host');
+  if (mounted && mountedArg === arg && host) { if (mounted.root.parentElement !== host) host.appendChild(mounted.root); return; }
+  mounted?.destroy(); mounted = null; mountedArg = '';
   if (!host) return;
   const {seriesId, game} = parseBattleArg(arg);
   const se = findSeries(seriesId), g = se?.games[game - 1];
   if (!se || !g?.log) return;
   const h = team(se.homeId), a = team(se.awayId);
-  mounted = mountReplay(host, {log: g.log, p1: {name: teamName(h.id), trainer: h.trainer}, p2: {name: teamName(a.id), trainer: a.trainer}, game: `Game ${game}`});
+  mountedArg = arg;
+  mounted = mountReplay(host, {log: g.log, p1: {name: teamName(h.id), trainer: h.trainer}, p2: {name: teamName(a.id), trainer: a.trainer}, game: `Game ${game}`, viewpoint: se.awayId === S().userTeamId ? 'p2' : 'p1'});
 }
-export function leaveBattle(): void { mounted?.destroy(); mounted = null; }
+export function leaveBattle(): void { mounted?.destroy(); mounted = null; mountedArg = ''; }

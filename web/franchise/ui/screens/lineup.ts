@@ -27,7 +27,7 @@ function fit(m: Mon, roles: Role[]): {role: Role; ovr: number} | null {
 function backupsFor(i: number): Mon[] {
   const s = S(), L = s.teams[s.userTeamId].lineup;
   const starters = new Set(L.slots.map((x) => x.monId));
-  const listed = L.slots[i].backups.map((id) => s.mons[id]).filter((m) => m && !starters.has(m.id) && !out(m));
+  const listed = L.slots[i].backups.map((id) => s.mons[id]).filter((m) => m && !starters.has(m.id) && !out(m) && fit(m, slotRoles(i)));
   if (listed.length >= 2) return listed.slice(0, 2);
   const roles = slotRoles(i);
   const more = Object.values(s.mons).filter((m) => m.teamId === s.userTeamId && (m.tier === 'active' || m.tier === 'backup') && !starters.has(m.id) && !out(m) && !listed.includes(m) && fit(m, roles))
@@ -47,7 +47,7 @@ export function viewLineup(): string {
     const bkHtml = [0, 1].map((k) => {
       const b = bks[k];
       if (!b) return `<span class="bk-none">${k === 0 ? 'No backup' : '—'}</span>`;
-      const f = fit(b, roles)!;
+      const f = fit(b, roles) ?? M.bestRole(C(), s, b);
       return `<button class="bk" type="button" data-act="swap" data-slot="${i}" data-mon="${esc(b.id)}" aria-label="Swap in ${esc(monName(b))}">${ico(speciesOf(b))}<span class="bn">${esc(monName(b))}</span>${roleBadge(f.role, f.ovr, {sm: true})}</button>`;
     }).join('');
     if (!sl.monId) {

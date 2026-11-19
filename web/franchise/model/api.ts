@@ -153,6 +153,10 @@ export function draftPick(catalog: Catalog, state: LeagueState, monId: MonId): v
 export function simDraftToUser(catalog: Catalog, state: LeagueState): void {
   if (state.phase === 'draft') dr.simToUser(remember(catalog), state);
 }
+/** Finish the draft (the user's remaining picks by the auto-picker); stays in the draft phase so the board can be reviewed. */
+export function simDraftToEnd(catalog: Catalog, state: LeagueState): void {
+  if (state.phase === 'draft') dr.completeDraft(remember(catalog), state);
+}
 export function evaluateTrade(catalog: Catalog, state: LeagueState, offer: Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>): {accept: boolean; score: number; reason: string} { return tr.evaluateTrade(remember(catalog), state, offer); }
 export function proposeTrade(catalog: Catalog, state: LeagueState, offer: Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>): {accepted: boolean; reason: string} { return tr.proposeTrade(remember(catalog), state, offer); }
 export function respondOffer(catalog: Catalog, state: LeagueState, offerId: string, accept: boolean): void { tr.respondOffer(remember(catalog), state, offerId, accept); }

@@ -3,6 +3,7 @@ import type {Catalog, LeagueState, Role, MonId, Series} from '../types.ts';
 import {ROLE_LABEL} from '../catalog/roles.ts';
 import {canBattle, fieldedLineup} from './lineup.ts';
 import {knowsExactly} from './scouting.ts';
+import {roleRating} from './ratings.ts';
 import {capPayroll} from './cap.ts';
 import {rosterCount, teamMons} from './util.ts';
 import {seriesOfWeek} from './schedule.ts';
@@ -35,6 +36,8 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
       out.push({id: `dtd-${m.id}`, kind: 'injury', label: 'Injury', text: `${name(m.id)} is day-to-day and plays one grade lower.`, action: {label: 'Review', route: '#lineup'}});
     } else if (m.tier === 'practice') {
       out.push({id: `prac-${m.id}`, kind: 'lineup', label: 'Lineup', text: `${name(m.id)} is on the practice squad and can't battle.`, action: {label: 'Fix lineup', route: '#lineup'}});
+    } else if (roleRating(catalog, m, sl.role) == null) {
+      out.push({id: `off-${i}`, kind: 'lineup', label: 'Lineup', text: `${name(m.id)} has no ${ROLE_LABEL[sl.role]} set and plays off-role.`, action: {label: 'Fix lineup', route: '#lineup'}});
     }
   });
   if (state.phase === 'preseason' || state.phase === 'regular') {

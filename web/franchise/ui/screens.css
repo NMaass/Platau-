@@ -337,7 +337,9 @@ body.booting #app{visibility:hidden}
 .chooser{display:grid;gap:var(--s1)}
 .chooser li button{width:100%;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:var(--s3);align-items:center;min-height:48px;padding:var(--s1) var(--s3) var(--s1) var(--s1);border:0;border-radius:var(--r);background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit}
 .chooser li button:hover:not([aria-disabled="true"]){background:var(--paper-2)}
-.chooser li button[aria-current="true"]{background:var(--team-tint)}
+.chooser li button[aria-current="true"],.chooser li button[aria-pressed="true"]{background:var(--team-tint)}
+.chooser li button[aria-pressed]{box-shadow:inset 3px 0 0 transparent}
+.chooser li button[aria-pressed="true"]{box-shadow:inset 3px 0 0 var(--team)}
 .chooser li button[aria-disabled="true"]{cursor:not-allowed;color:var(--ink-3)}
 .chooser .nm{font-weight:700;display:block;line-height:var(--lh-tight)}
 .chooser .where{display:block;font-size:var(--t-small);color:var(--ink-2)}
@@ -378,3 +380,13 @@ body.booting #app{visibility:hidden}
   .lbar .btn{justify-self:end;margin-left:0}
 }
 .pick-team .crest{box-shadow:inset 0 0 0 3px var(--paper),inset 0 0 0 4px var(--c)}
+/* ===== League / front office (league.ts, draft.ts, moves.ts) ===== */
+.x-match .x-mfoot{grid-template-columns:minmax(0,1fr) auto;background:var(--paper-2);min-height:calc(var(--ctl-h-sm) + 2 * var(--s1))}
+.x-match>div>b{text-align:right}
+.x-wk{display:inline-block;min-width:144px;text-align:center;font-family:var(--font-display);font-size:var(--t-h3)}
+.x-picks{max-height:320px;overflow-y:auto}
+.x-picks li{display:grid;grid-template-columns:40px 40px minmax(0,1fr);flex-wrap:nowrap}
+.x-conf .x-meter{width:56px}
+.x-draft{grid-template-columns:minmax(280px,1fr) minmax(0,2.4fr)}
+@media (max-width:980px){.x-draft{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:980px){.x-draft>:first-child{order:2}}

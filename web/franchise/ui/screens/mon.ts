@@ -7,7 +7,7 @@ import {C, S, store} from '../store.ts';
 import {M, api, isFixtureMode} from '../model.ts';
 import {head, panel, empty} from '../components/page.ts';
 import {monBadge, speciesOf, monName, isMine, stage, teamName, setOf, ratingPop} from '../components/mon.ts';
-import {gradeChip, ivSummary, injuryTag, typeChips, roleBadge} from '../components/badges.ts';
+import {gradeChip, ivSummary, injuryTag, typeChips, roleBadge, rangeBadge} from '../components/badges.ts';
 import {info, prow} from '../components/layer.ts';
 import {table} from '../components/table.ts';
 import {spr} from '../sprites.ts';
@@ -39,6 +39,9 @@ export function viewMon(id: string): string {
   ].filter(Boolean);
   // roles table
   const rs = M.roles(c, s, m);
+  // other clubs' Pokémon: only what scouting knows (exact for veterans/fully scouted, else a range)
+  const kr = mine ? null : M.knownRating(c, s, s.userTeamId, m);
+  const hidden = !!kr && !kr.exact;
   const rolesBlock = rs.length ? table({
     id: 'mon-roles', rows: rs, minWidth: 440, defaultSort: {key: 'ovr', dir: 'desc'},
     rowClass: (r) => r.role === slotRole ? 'cur' : '',
@@ -46,7 +49,7 @@ export function viewMon(id: string): string {
       {key: 'role', label: 'Role', width: '36%', cell: (r) => esc(ROLE_LABEL[r.role]), sort: (r) => ROLE_LABEL[r.role]},
       {key: 'tier', label: 'Best tier', width: '18%', cell: (r) => `<span class="tierb">${esc(sp?.roleBase[r.role]?.tier ?? '—')}</span>`},
       {key: 'set', label: 'Set', width: '28%', cell: (r) => esc(sp?.sets.find((x) => x.id === r.setId)?.name ?? '—')},
-      {key: 'ovr', label: 'OVR', width: '18%', num: true, cell: (r) => `<span class="peek" tabindex="0" aria-label="${esc(ROLE_LABEL[r.role])} ${r.ovr}"><span class="rb${r.ovr >= 90 ? ' elite' : ''}"><span class="rb-n"><span>${r.ovr}</span></span></span><span class="pop">${ratingPop(m, r.role, r.ovr)}</span></span>`, sort: (r) => r.ovr, desc: true},
+      {key: 'ovr', label: 'OVR', width: '18%', num: true, cell: (r) => hidden ? (r.role === kr!.role ? `<span class="rb range"><span class="rb-n">${kr!.lo}–${kr!.hi}</span></span>` : '<span class="dash">?</span>') : `<span class="peek" tabindex="0" aria-label="${esc(ROLE_LABEL[r.role])} ${r.ovr}"><span class="rb${r.ovr >= 90 ? ' elite' : ''}"><span class="rb-n"><span>${r.ovr}</span></span></span><span class="pop">${ratingPop(m, r.role, r.ovr)}</span></span>`, sort: (r) => hidden ? (r.role === kr!.role ? 1 : 0) : r.ovr, desc: true},
     ],
   }) : empty('No set fills a role', `${esc(monName(m))} has no competitive set yet, so it can't fill a lineup slot.`);
   // moveset
@@ -73,7 +76,7 @@ export function viewMon(id: string): string {
     </dl>`;
   // contract + injury
   const ct = m.contract;
-  const contract = ct ? `<dl class="l-kv"><dt>Salary</dt><dd>${money(ct.salary)}</dd><dt>Years left</dt><dd>${plural(ct.yearsLeft, 'year')} (through ${s.season + ct.yearsLeft - 1})</dd><dt>Guaranteed</dt><dd>${plural(ct.guaranteedYears, 'year')}</dd>${ct.rookie ? `<dt>Rookie deal</dt><dd>Round ${ct.rookie.round}, pick ${ct.rookie.pick}</dd>` : ''}${ct.tagged ? '<dt>Tag</dt><dd>Franchise tag</dd>' : ''}<dt>Cap share</dt><dd>${(ct.salary / s.settings.cap * 100).toFixed(1)}%</dd></dl>` : `<p class="muted">No contract.</p>`;
+  const contract = ct ? `<dl class="l-kv"><dt>Salary</dt><dd>${money(ct.salary)}</dd><dt>Years left</dt><dd>${plural(ct.yearsLeft, 'year')} (through season ${s.season + ct.yearsLeft - 1})</dd><dt>Guaranteed</dt><dd>${plural(ct.guaranteedYears, 'year')}</dd>${ct.rookie ? `<dt>Rookie deal</dt><dd>Round ${ct.rookie.round}, pick ${ct.rookie.pick}</dd>` : ''}${ct.tagged ? '<dt>Tag</dt><dd>Franchise tag</dd>' : ''}<dt>Cap share</dt><dd>${(ct.salary / s.settings.cap * 100).toFixed(1)}%</dd></dl>` : `<p class="muted">No contract.</p>`;
   const injury = m.injury ? `<div class="l-row">${injuryTag(m)}<span>${esc(m.injury.description)} · since week ${m.injury.sinceWeek}</span></div>${m.injury.severe ? `<p class="muted">Severe: ${m.injury.severe.ivLost ? `lost an IV grade in ${STAT_LBL[m.injury.severe.ivLost]}` : ''}${m.injury.severe.gradeCap ? ` EV grade capped at ${m.injury.severe.gradeCap}` : ''}</p>` : ''}` : '';
   // season lines
   const lines = m.stats.slice().sort((a, b) => a.season - b.season);
@@ -91,7 +94,10 @@ export function viewMon(id: string): string {
     ],
   }) : `<div class="l-pad"><p class="muted">No games played yet.</p></div>`;
   const awards = m.awards.length ? `<ul class="l-grid awards">${m.awards.map((a) => `<li class="award"><span class="chip c-honour" aria-hidden="true">${ic('trophy')}</span><div><b>${esc(a.award)}</b><span>${a.season} · ${esc(s.teams[a.teamId]?.name ?? '')}</span></div></li>`).join('')}</ul>` : `<p class="muted">No awards yet.</p>`;
-  const headBadge = monBadge(m, slotRole, {full: true});
+  const headBadge = hidden ? rangeBadge(kr!.role, kr!.lo, kr!.hi, {full: true}) : monBadge(m, slotRole, {full: true});
+  const [olo, ohi] = mine ? [plo, phi] : potentialRange(m, g);
+  const scoutPanel = !kr ? '' : `<dl class="l-kv"><dt>Rating</dt><dd>${kr!.exact ? roleBadge(kr!.role, M.roleRating(c, s, m, kr!.role) ?? kr!.hi) : rangeBadge(kr!.role, kr!.lo, kr!.hi)}</dd><dt>IVs</dt><dd>${ivSummary(m, sp, M.ivHeadline(m))}</dd>
+    <dt>Potential</dt><dd class="l-row">${gradeChip(olo)}${olo === ohi ? '' : `<span class="dash">to</span>${gradeChip(ohi)}`}</dd></dl>`;
   return `<a class="back" href="${esc(back)}">${ic('back')}Back</a>
   <header class="mh">${spr(sp, 'xl')}
     <div class="l-stack tight"><h1 tabindex="-1">${esc(monName(m))}</h1>
@@ -104,7 +110,7 @@ export function viewMon(id: string): string {
       ${panel('mv', 'Moveset', moveset)}
     </div>
     <div class="l-stack loose">
-      ${mine ? panel('dev', 'Development', dev) : panel('dev', 'Scouting', `<dl class="l-kv"><dt>Rating</dt><dd>${(() => { const k = M.knownRating(c, s, s.userTeamId, m); return roleBadge(k.role, k.hi, {}); })()}</dd><dt>IVs</dt><dd>${ivSummary(m, sp, M.ivHeadline(m))}</dd></dl>`)}
+      ${mine ? panel('dev', 'Development', dev) : panel('dev', 'Scouting', scoutPanel)}
       ${panel('ct', 'Contract', contract + injury)}
     </div>
   </div>

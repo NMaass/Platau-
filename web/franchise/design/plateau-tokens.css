@@ -73,6 +73,7 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font-u
 h1,h2,h3{margin:0;font-family:var(--font-display);color:var(--ink);line-height:var(--lh-tight)}
 p{margin:0} ul,ol{list-style:none;margin:0;padding:0} dl,dd{margin:0} a{color:inherit} button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.nowrap{white-space:nowrap}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .muted{color:var(--ink-2)} .dash{color:var(--ink-3)}
 
@@ -186,13 +187,20 @@ span.peek:not(.ref){display:inline-block}
 /* two-column body: 7/5 split, collapses to one column. .side-first: 2nd child spans the right column, so on phone it comes 2nd */
 .l-cols{display:grid;gap:var(--s5);grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:start}
 .l-cols>*{min-width:0}
-.l-cols.side-first{grid-auto-flow:row dense}
-.l-cols.side-first>:nth-child(2){grid-column:2;grid-row:1/span 2}
-.l-cols.side-first>:not(:nth-child(2)){grid-column:1}
+/* The side item spans every row and ends in a 1fr row that only it crosses, so its height never
+   stretches the left rows (no gaps between left panels). Left spacing is a margin, so empty rows add nothing. */
+.l-cols.side-first{grid-auto-flow:row dense;row-gap:0;grid-template-rows:repeat(8,auto) 1fr}
+.l-cols.side-first>:nth-child(2){grid-column:2;grid-row:1/-1}
+.l-cols.side-first>:not(:nth-child(2)){grid-column:1;margin-bottom:var(--s5)}
+.l-cols.side-first>:last-child:not(:nth-child(2)){margin-bottom:0}
 /* stacks and rows */
 .l-stack{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)} .l-stack>*{min-width:0} .l-stack.tight{gap:var(--s2)} .l-stack.loose{gap:var(--s5)}
 .l-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0}          /* inline things share one centre line */
 .l-split{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);min-width:0}
+/* two sides facing each other (battle frame): never wraps; long names ellipsise; right side is mirrored */
+.l-versus{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--s3);min-width:0}
+.l-versus>*{min-width:0}.l-versus>:last-child{justify-content:flex-end;flex-wrap:nowrap}.l-versus>:first-child{flex-wrap:nowrap}
+.l-versus .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* equal-size cards; set --card-min on the grid to change the column minimum */
 .l-grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--card-min)),1fr));grid-auto-rows:1fr}
 .l-grid>*{min-width:0}
@@ -264,7 +272,7 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 .l-peek-layer .types{display:flex;gap:var(--s1)}
 
 /* ---- responsive behaviour of the primitives ---- */
-@media (max-width:1060px){ .l-cols{grid-template-columns:minmax(0,1fr)} .l-cols.side-first>*{grid-column:auto !important;grid-row:auto !important} }
+@media (max-width:1060px){ .l-cols{grid-template-columns:minmax(0,1fr)} .l-cols.side-first{grid-template-rows:none;row-gap:var(--s5)} .l-cols.side-first>*{grid-column:auto !important;grid-row:auto !important;margin-bottom:0 !important} }
 @media (max-width:759px){
   .l-shell{grid-template-columns:minmax(0,1fr);gap:0;padding-top:0}
   .l-side{display:none}
@@ -303,6 +311,9 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* ===== UI build additions (2026-11-19). Owned by web/franchise/ui; rules from docs/FRANCHISE.md ===== */
 /* a badge never stretches inside a grid/stack cell */
 .rb,.noset{width:max-content;justify-self:start}
+/* "No set" stands in for a role badge: same box as "ATK | 88" so a column never changes width */
+.noset{width:calc(var(--rb-r-w) + var(--rb-n-w) + 2px);justify-content:center}
+.noset.full{width:calc(var(--rb-full-w) + var(--rb-n-w) + 2px)}.noset.sm{height:24px;width:calc(var(--rb-r-w) + 34px)}
 .l-stack>.peek,.l-row>.peek{justify-self:start}
 /* role badge variants: .full shows the role name (lineup cards, Pokemon page); .range shows "68-81" for prospects.
    Every badge of a variant has one width, so a column of badges lines up and nothing widens a cell. */
@@ -342,3 +353,13 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 .l-seg>button{font:inherit;font-weight:700;font-size:var(--t-small);min-height:var(--ctl-h);border:0;background:var(--paper);color:var(--ink-2);cursor:pointer;padding:0 var(--s3)}
 .l-seg>button+button{border-left:1px solid var(--rule-strong)}
 .l-seg>button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+/* ===== League / front-office primitives (2026-11-19) ===== */
+/* status chip of one width (clinch, interest, verdict, lottery move): sized for the longest word ("Clinched spot") */
+:root{--chip-w:128px}
+.chip.fix{width:var(--chip-w);justify-content:center;overflow:hidden;text-overflow:ellipsis}
+/* two equal buttons in one table cell (Scout · 1 / Full · 5) */
+.l-cellacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+.l-cellacts>.btn{min-width:0;padding:0 var(--s2)}
+/* toolbar above a table: switches/filters left, a count right; fixed height so toggling never moves the table */
+.l-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:var(--ctl-h-touch);flex-wrap:wrap}
+.l-toolbar label{display:inline-flex;align-items:center;gap:var(--s2);font-weight:650;font-size:var(--t-small);color:var(--ink-2);cursor:pointer}

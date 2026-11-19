@@ -6,11 +6,11 @@ import {M, api, setFixtureMode, isFixtureMode} from './ui/model.ts';
 import {parse, type Route} from './ui/router.ts';
 import {ROUTES} from './ui/routes.ts';
 import {shellHtml, renderShell, applyTeamColour, phaseLabel} from './ui/shell.ts';
-import {installLayers, openDialog, updateDialog, hideFloat, closeDialog} from './ui/components/layer.ts';
+import {installLayers, openDialog, updateDialog, hideFloat, closeDialog, confirmDialog} from './ui/components/layer.ts';
 import {toggleSort} from './ui/components/table.ts';
 import {comingSoon} from './ui/components/page.ts';
 import {installSpriteFallback, probeIconSheet} from './ui/sprites.ts';
-import {viewWeek, viewOpponent, seriesResult} from './ui/screens/week.ts';
+import {viewWeek, viewOpponent, seriesResult, openFocus} from './ui/screens/week.ts';
 import {viewRoster} from './ui/screens/roster.ts';
 import {viewLineup, openChooser} from './ui/screens/lineup.ts';
 import {viewMon} from './ui/screens/mon.ts';
@@ -65,7 +65,7 @@ function render(): void {
     view.innerHTML = `<div class="l-empty"><b>Something went wrong on this page.</b><span>${esc((e as Error).message)}</span><a class="btn" href="#week">Back to This week</a></div>`;
   }
   hideFloat();
-  if (r.path === 'battle' && routeChanged) afterBattle(r.arg);
+  if (r.path === 'battle') afterBattle(r.arg);
   ROUTES[r.path]?.after?.(r);
   if (routeChanged) { scrollTo(0, 0); view.querySelector<HTMLElement>('h1')?.focus({preventScroll: true}); } else scrollTo(0, y);
 }
@@ -73,6 +73,16 @@ function render(): void {
 // ---------------------------------------------------------------- play the week
 async function play(): Promise<void> {
   const s = S();
+  // Continuing out of the draft auto-picks every remaining pick of the user's: say so first.
+  if (s.phase === 'draft' && s.draft && !isFixtureMode()) {
+    const left = s.draft.order.slice(s.draft.picks.length).filter((p) => p.ownerTeamId === s.userTeamId);
+    if (left.length) {
+      const rounds = [...new Set(left.map((p) => p.round))].join(', ');
+      const ok = await confirmDialog(`Auto-pick ${left.length} ${left.length === 1 ? 'pick' : 'picks'}?`,
+        `You still own ${left.length} ${left.length === 1 ? 'pick' : 'picks'} in this draft (round ${esc(rounds)}). Continuing finishes the draft and picks the best available prospect for you each time.`, 'Auto-pick and continue');
+      if (!ok) return;
+    }
+  }
   const wk = s.week, season = s.season, phase = s.phase;
   const bar = (done: number, total: number, label: string) => `<div class="l-stack"><p>${esc(label)}</p><div class="l-progress"><span class="fitbar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><i style="width:${total ? (done / total * 100).toFixed(1) : 0}%"></i></span><output>${done} / ${total}</output></div><p class="x-small">Every series in the league is played in the background.</p></div>`;
   openDialog({title: phase === 'regular' || phase === 'playoffs' ? `Simulating week ${wk}` : esc(phaseLabel(phase)), cap: `Season ${season}`, body: bar(0, 0, 'Preparing battles'), actions: [], locked: true});
@@ -123,6 +133,7 @@ document.addEventListener('click', (e) => {
     case 'play': void play(); break;
     case 'auto': act((s, c) => { s.teams[me()].lineup = M.autoLineup(c, s, me()); }); break;
     case 'swap': act((s) => M.assignSlot(s, me(), +b.dataset.slot!, b.dataset.mon!)); break;
+    case 'focus': openFocus((ids) => act((s) => api.setPracticeFocus(s, me(), ids))); break;
     case 'chooser': openChooser(+b.dataset.slot!, (id) => act((s) => M.assignSlot(s, me(), +b.dataset.slot!, id))); break;
     case 'theme': try { localStorage.setItem('plateau-theme', b.dataset.theme!); } catch { /* private mode */ } applyTheme(b.dataset.theme); render(); break;
     case 'export': exportSave(); break;

@@ -159,3 +159,17 @@ test('trades: over-the-cap trades that add salary are refused; deadline closes t
   assert.match(evaluateTrade(C, s, offer).reason, /deadline/);
   assert.equal(typeof ev.score, 'number');
 });
+
+test('scouting: each extra point narrows the range inside the previous one (misses included)', () => {
+  for (let i = 0; i < 2000; i++) {
+    const truth = 35 + (i % 30);   // away from the 1..99 clamp
+    let prev = scoutRange(7, 't4', `m${i}`, truth, 0);
+    const inside0 = truth >= prev.lo && truth <= prev.hi;
+    for (let pts = 1; pts < RANGE_WIDTH.length; pts++) {
+      const r = scoutRange(7, 't4', `m${i}`, truth, pts);
+      assert.ok(r.lo >= prev.lo && r.hi <= prev.hi, `m${i} pts ${pts}: ${prev.lo}-${prev.hi} -> ${r.lo}-${r.hi}`);
+      assert.equal(truth >= r.lo && truth <= r.hi, inside0, 'a miss is decided once per team and mon');
+      prev = r;
+    }
+  }
+});

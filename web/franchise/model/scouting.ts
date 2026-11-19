@@ -24,19 +24,32 @@ export function knowsExactly(state: LeagueState, viewer: TeamId, mon: Mon): bool
   return mon.teamId === viewer || careerBattles(mon) >= REVEAL_BATTLES || scoutPoints(state, viewer, mon) >= state.settings.fullScoutCost;
 }
 
-/** Equal-width range around (or, ~10% of the time, beside) the truth. Pure. */
+/** Equal-width range around (or, ~10% of the time, beside) the truth. Pure.
+ *  Whether a team's read on a mon misses (and on which side), and where the truth sits inside the
+ *  range, are decided ONCE per (team, mon), so every extra point narrows the range inside the previous one. */
 export function scoutRange(seed: number, viewer: TeamId, monId: string, truth: number, points: number, lo = 1, hi = 99): {lo: number; hi: number} {
-  const w = RANGE_WIDTH[Math.min(points, RANGE_WIDTH.length - 1)];
-  const u = hash01(seed, 'pos', viewer, monId, points);
-  const miss = hash01(seed, 'miss', viewer, monId, points) < MISS_RATE;
-  let a: number;
-  if (!miss) a = truth - u * w;
-  else if (hash01(seed, 'side', viewer, monId, points) < 0.5) a = truth - w - 1 - u * 4;   // range entirely below truth
-  else a = truth + 1 + u * 4;                                                               // entirely above
-  let l = Math.round(a), h = l + w;
-  if (l < lo) { h += lo - l; l = lo; }
-  if (h > hi) { l -= h - hi; h = hi; }
-  return {lo: l, hi: h};
+  const u = hash01(seed, 'pos', viewer, monId);
+  const miss = hash01(seed, 'miss', viewer, monId) < MISS_RATE;
+  const below = hash01(seed, 'side', viewer, monId) < 0.5;
+  const gap = 1 + Math.round(u * 4);
+  let pl = -Infinity, ph = Infinity;
+  let out = {lo, hi};
+  for (let p = 0; p <= Math.min(points, RANGE_WIDTH.length - 1); p++) {
+    const w = RANGE_WIDTH[p];
+    let l: number;
+    if (!miss) l = Math.round(truth - u * w);
+    else if (below) l = truth - gap - w;           // range entirely below truth
+    else l = truth + gap;                          // entirely above
+    // keep inside the previous (wider) range
+    if (l < pl) l = pl;
+    if (l + w > ph) l = ph - w;
+    let h = l + w;
+    if (l < lo) { h += lo - l; l = lo; }
+    if (h > hi) { l -= h - hi; h = hi; }
+    pl = l; ph = h;
+    out = {lo: l, hi: h};
+  }
+  return out;
 }
 
 export function knownRating(catalog: Catalog, state: LeagueState, viewer: TeamId, mon: Mon): {role: Role; lo: number; hi: number; exact: boolean} {
@@ -52,8 +65,9 @@ export function knownPotential(state: LeagueState, viewer: TeamId, mon: Mon): {l
   if (pts >= state.settings.fullScoutCost) return {lo: mon.potential, hi: mon.potential, exact: true};
   const width = pts >= 3 ? 1 : pts >= 1 ? 2 : 3;
   const t = gi(mon.potential);
-  const u = hash01(state.seed, 'pot', viewer, mon.id, pts);
-  const miss = hash01(state.seed, 'potmiss', viewer, mon.id, pts) < MISS_RATE;
+  // decided once per (team, mon), so more scouting narrows inside the previous range
+  const u = hash01(state.seed, 'pot', viewer, mon.id);
+  const miss = hash01(state.seed, 'potmiss', viewer, mon.id) < MISS_RATE;
   let lo = miss ? t + (u < 0.5 ? -width - 1 : 1) : t - Math.floor(u * (width + 1));
   lo = Math.max(0, Math.min(GRADES.length - 1 - width, lo));
   return {lo: gradeAt(lo), hi: gradeAt(lo + width), exact: false};
