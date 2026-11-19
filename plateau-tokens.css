@@ -1,0 +1,395 @@
+/* Plateau v3 design system: tokens, shared components, layout layer.
+   Source of truth. The prototype inlines this whole file between "@tokens:begin" and "@tokens:end".
+   Card-back world, softened for readability (WCAG 2.2 AA checked).
+   Body text >= 13px, labels >= 12px, ink is soft charcoal, borders mostly 1px rules.
+   Team colour is an ACCENT only (crest, active nav, primary button, own rows) - never a large field.
+   Grade chips: each grade has its own fg/bg pair (all >= 6:1 in light, >= 7.5:1 in dark; AAA ink on foil >= 5.7:1). */
+:root{
+  --ground:#E6E4DE; --paper:#F7F6F2; --paper-2:#EFEDE7; --rule:#D3D0C7; --rule-strong:#8A867E;
+  --ink:#2B2A30; --ink-2:#57555E; --ink-3:#65626B;
+  --team:#B5381B; --on-team:#FFFFFF; --team-ink:#9E2F16; --team-tint:#F6E3DB; --team-2:#E2AE14; --on-team-2:#2B2006;
+  /* event / state categories: fg is text+icon colour, bg is chip fill. Always paired with an icon + word. */
+  --ev-health:#A3241B;  --ev-health-bg:#F8E1DD;   /* injured, returned, IR */
+  --ev-growth:#2B6A2B;  --ev-growth-bg:#E1EFDC;   /* graded up, evolved, goal met, done */
+  --ev-decline:#7E5000; --ev-decline-bg:#F7EAC8;  /* declining, expiring, slot broken */
+  --ev-deal:#1F5A99;    --ev-deal-bg:#DEE9F6;     /* offer, signed, claimed, promoted */
+  --ev-league:#5A3B98;  --ev-league-bg:#E9E2F5;   /* series won/lost, clinched, eliminated */
+  --ev-honour:#6A5200;  --ev-honour-bg:#F2EBCB;   /* award, record, inducted, retired */
+  --ev-scout:#0F655C;   --ev-scout-bg:#DAEEEB;    /* report ready, lottery, pick made */
+  --gr-F:#8E1F16; --gr-F-bg:#F7DCD8; --gr-D:#8A3D05; --gr-D-bg:#F9E2CF; --gr-C:#6B4C00; --gr-C-bg:#F4E6BC;
+  --gr-B:#22602A; --gr-B-bg:#DCEDD6; --gr-A:#0B5A52; --gr-A-bg:#D3ECE7; --gr-AA:#1B4E8C; --gr-AA-bg:#DAE6F6; --gr-AAA:#2B2A30;
+  --spr-bg:#EDEBE4;
+  --foil:linear-gradient(115deg,#d9dde3 0%,#f3e9c9 22%,#d7e9e4 44%,#e6d6ee 66%,#f1f0e6 86%,#d9dde3 100%);
+  --font-display:"Rokkitt",Rockwell,"Roboto Slab",Georgia,serif;
+  --font-ui:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --r:4px; --r-lg:6px; --shadow:0 1px 2px rgba(30,28,34,.06),0 6px 18px -8px rgba(30,28,34,.18);
+  --scrim:rgba(20,18,24,.45);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#18171B; --paper:#1E1D22; --paper-2:#26252B; --rule:#36343C; --rule-strong:#6B6872;
+  --ink:#E4E1DA; --ink-2:#ADAAB2; --ink-3:#8F8C96;
+  --team:#E8704F; --on-team:#1A0E09; --team-ink:#F08B6D; --team-tint:#3A231B; --team-2:#F0C23C; --on-team-2:#1A1305;
+  --ev-health:#F2958C;  --ev-health-bg:#3A1F1C; --ev-growth:#8FD08A; --ev-growth-bg:#1F3220; --ev-decline:#E9BC63; --ev-decline-bg:#3A2F14;
+  --ev-deal:#8DB8EE; --ev-deal-bg:#1B2A3D; --ev-league:#BDA6F0; --ev-league-bg:#2B2440; --ev-honour:#E3CC6E; --ev-honour-bg:#35301A;
+  --ev-scout:#7FD3C7; --ev-scout-bg:#163330;
+  --gr-F:#F7B0A8; --gr-F-bg:#4A1E1A; --gr-D:#F6BE8E; --gr-D-bg:#4A2A14; --gr-C:#EDD08A; --gr-C-bg:#42361A;
+  --gr-B:#9ED89A; --gr-B-bg:#1F3A22; --gr-A:#86D9CD; --gr-A-bg:#143A36; --gr-AA:#A5C8F2; --gr-AA-bg:#1B2E4A; --gr-AAA:#141318;
+  --spr-bg:#2A2930;
+  --foil:linear-gradient(115deg,#8a909a 0%,#c4b37e 22%,#8ab0a8 44%,#ad97ba 66%,#c0bdb0 86%,#8a909a 100%);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); --scrim:rgba(0,0,0,.6); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --ground:#18171B; --paper:#1E1D22; --paper-2:#26252B; --rule:#36343C; --rule-strong:#6B6872;
+  --ink:#E4E1DA; --ink-2:#ADAAB2; --ink-3:#8F8C96;
+  --team:#E8704F; --on-team:#1A0E09; --team-ink:#F08B6D; --team-tint:#3A231B; --team-2:#F0C23C; --on-team-2:#1A1305;
+  --ev-health:#F2958C;  --ev-health-bg:#3A1F1C; --ev-growth:#8FD08A; --ev-growth-bg:#1F3220; --ev-decline:#E9BC63; --ev-decline-bg:#3A2F14;
+  --ev-deal:#8DB8EE; --ev-deal-bg:#1B2A3D; --ev-league:#BDA6F0; --ev-league-bg:#2B2440; --ev-honour:#E3CC6E; --ev-honour-bg:#35301A;
+  --ev-scout:#7FD3C7; --ev-scout-bg:#163330;
+  --gr-F:#F7B0A8; --gr-F-bg:#4A1E1A; --gr-D:#F6BE8E; --gr-D-bg:#4A2A14; --gr-C:#EDD08A; --gr-C-bg:#42361A;
+  --gr-B:#9ED89A; --gr-B-bg:#1F3A22; --gr-A:#86D9CD; --gr-A-bg:#143A36; --gr-AA:#A5C8F2; --gr-AA-bg:#1B2E4A; --gr-AAA:#141318;
+  --spr-bg:#2A2930;
+  --foil:linear-gradient(115deg,#8a909a 0%,#c4b37e 22%,#8ab0a8 44%,#ad97ba 66%,#c0bdb0 86%,#8a909a 100%);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); --scrim:rgba(0,0,0,.6); color-scheme:dark }
+
+/* ===== Layout layer: scales. Screens are compositions of the primitives below; screens must not invent spacing, widths or dialog rules. ===== */
+:root{
+  /* spacing scale: the only gaps/paddings/margins allowed */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  /* type scale */
+  --t-label:12px; --t-small:13px; --t-body:14px; --t-lead:16px; --t-h3:18px; --t-h2:22px; --t-h1:28px; --t-num:18px;
+  --lh-tight:1.2; --lh-body:1.45;
+  /* control sizes: every button/input in a group shares one height and one min width */
+  --ctl-h:36px; --ctl-h-sm:32px; --ctl-w:132px; --ctl-h-touch:44px; --tab-h:44px; --row-h:52px;
+  /* layout */
+  --page-max:1240px; --side-w:200px; --gutter:16px; --card-min:260px; --dialog-w:560px; --label-w:112px;
+  /* fixed component widths (sized for the widest member of each set: AAA, "SAND | 100", "Hazard remover", "68–81") */
+  --logo:32px; --logo-lg:56px;
+  --grade-w:46px; --rb-r-w:52px; --rb-n-w:40px; --rb-full-w:124px; --rb-range-w:72px;
+}
+@media (max-width:640px){ :root{ --ctl-h:var(--ctl-h-touch); --ctl-h-sm:var(--ctl-h-touch); --t-h1:24px; --t-h2:20px } }
+
+/* ---- base ---- */
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground)}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font-ui);font-size:var(--t-body);line-height:var(--lh-body);font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%;overflow-x:hidden}
+h1,h2,h3{margin:0;font-family:var(--font-display);color:var(--ink);line-height:var(--lh-tight)}
+p{margin:0} ul,ol{list-style:none;margin:0;padding:0} dl,dd{margin:0} a{color:inherit} button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.nowrap{white-space:nowrap}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--ink-2)} .dash{color:var(--ink-3)}
+
+/* ---- shared components (class names are reserved; do not redefine in screens) ---- */
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.cap{font-stretch:78%;font-weight:700;font-size:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}  /* small caps label */
+.grade{display:inline-grid;place-items:center;width:var(--grade-w);height:24px;padding:0;flex:none;border-radius:3px;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1;border:1px solid currentColor}
+.gF{background:var(--gr-F-bg);color:var(--gr-F)} .gD{background:var(--gr-D-bg);color:var(--gr-D)} .gC{background:var(--gr-C-bg);color:var(--gr-C)}
+.gB{background:var(--gr-B-bg);color:var(--gr-B)} .gA{background:var(--gr-A-bg);color:var(--gr-A)} .gAA{background:var(--gr-AA-bg);color:var(--gr-AA)}
+.gAAA{background:var(--foil);color:var(--gr-AAA);border-color:var(--rule-strong)}
+/* event chip: icon + word, category colour (.c-health .c-growth .c-decline .c-deal .c-league .c-honour .c-scout). */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:3px 8px;border-radius:3px;font-size:12.5px;font-weight:650;line-height:1.2;white-space:nowrap}
+.chip svg.i{width:14px;height:14px;stroke-width:2}
+.c-health{color:var(--ev-health);background:var(--ev-health-bg)} .c-growth{color:var(--ev-growth);background:var(--ev-growth-bg)}
+.c-decline{color:var(--ev-decline);background:var(--ev-decline-bg)} .c-deal{color:var(--ev-deal);background:var(--ev-deal-bg)}
+.c-league{color:var(--ev-league);background:var(--ev-league-bg)} .c-honour{color:var(--ev-honour);background:var(--ev-honour-bg)}
+.c-scout{color:var(--ev-scout);background:var(--ev-scout-bg)}
+/* status tag (injury / contract designation): icon + word */
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-label);font-weight:700;height:22px;padding:0 7px 0 5px;border-radius:3px;white-space:nowrap;flex:none}
+.tag svg.i{width:13px;height:13px;stroke-width:2.25}
+.t-dtd,.t-exp{color:var(--ev-decline);background:var(--ev-decline-bg)} .t-out,.t-ir{color:var(--ev-health);background:var(--ev-health-bg)} .t-focus{color:var(--ev-growth);background:var(--ev-growth-bg)}
+/* type chip */
+.type{display:inline-flex;align-items:center;height:24px;font-size:var(--t-label);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 7px;border-radius:3px;color:#fff;line-height:1;white-space:nowrap}
+.ty-dragon{background:#5B32C9}.ty-ground{background:#7A5A1C}.ty-steel{background:#5A5A70}.ty-dark{background:#4B3B2E}.ty-water{background:#2F5FB8}.ty-fire{background:#B04A16}.ty-bug{background:#56620E}.ty-ghost{background:#5B4380}.ty-fairy{background:#A54A78}.ty-flying{background:#5E50B0}
+.ty-electric{background:#7A5E00}.ty-fighting{background:#A1352B}.ty-poison{background:#7A3F8C}.ty-ice{background:#2A6F7A}.ty-rock{background:#6B5B16}.ty-grass{background:#2F6B22}.ty-normal{background:#6A6458}.ty-psychic{background:#A3365F}
+/* buttons: .btn, .btn.go (primary), .btn.sm (row actions); aria-pressed / aria-disabled states */
+.btn{font:inherit;font-weight:700;font-size:var(--t-body);line-height:1.2;border-radius:var(--r);min-height:var(--ctl-h);padding:0 14px;border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink);cursor:pointer;display:inline-flex;gap:var(--s2);align-items:center;justify-content:center;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--paper-2)}
+.btn.go{background:var(--team);color:var(--on-team);border-color:var(--team)}
+.btn.go:hover{filter:brightness(1.06);background:var(--team)}
+.btn[aria-pressed="true"]{background:var(--team-tint);color:var(--team-ink);border-color:var(--team-ink)}
+.btn[aria-disabled="true"]{color:var(--ink-3);border-color:var(--rule);cursor:not-allowed;background:var(--paper)}
+.btn.sm{min-height:var(--ctl-h-sm);padding:0 12px;font-size:var(--t-small)}
+.x{width:36px;height:36px;display:grid;place-items:center;border:1px solid transparent;border-radius:var(--r);background:transparent;cursor:pointer;color:var(--ink-2);flex:none}  /* icon close button */
+.x:hover{background:var(--paper-2)}
+select{font:inherit;font-weight:650;font-size:var(--t-body);height:var(--ctl-h);padding:0 32px 0 12px;border:1px solid var(--rule-strong);border-radius:var(--r);background-color:var(--paper);color:var(--ink);appearance:none;max-width:100%;min-width:0;text-overflow:ellipsis;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+/* name link (inline) */
+.name{font-weight:700;color:var(--ink);text-decoration:none;border-bottom:1.5px solid transparent}
+.name:hover{border-bottom-color:var(--team)}
+/* ref: icon + name of any Pokémon (own or other club). Always a .peek. Name truncates, icon never shrinks. */
+.ref{display:inline-flex;align-items:center;gap:var(--s2);min-width:0;max-width:100%;min-height:32px;color:var(--ink);text-decoration:none;font-weight:700}
+.ref>.nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1.5px solid transparent}
+.ref:hover>.nm,a.ref:focus-visible>.nm{border-bottom-color:var(--team)}
+span.ref>.nm{border-bottom:1.5px dotted var(--rule-strong)}
+.ref.inline{display:inline;min-height:0}  /* name inside running text */
+.ref.inline>.nm{white-space:inherit}
+/* peek: hover/focus/tap explanation. The .pop child is never shown in place; one floating layer (.l-peek-layer, #float) shows it. */
+.peek{position:relative;cursor:help}
+a.peek,button.peek{cursor:pointer}
+span.peek:not(.ref){display:inline-block}
+.peek>.pop{display:none !important}
+.info{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink-2);font-family:var(--font-display);font-weight:800;font-size:14px;font-style:normal;line-height:1;cursor:help;vertical-align:middle;padding:0;text-transform:none;letter-spacing:0;flex:none}  /* (i) peek trigger */
+.info:hover{background:var(--paper-2);color:var(--ink)}
+.fitbar{height:6px;border-radius:3px;background:var(--paper-2);overflow:hidden}  /* thin meter */
+.fitbar i{display:block;height:100%;background:var(--ink-2)}
+.cnt{min-width:22px;height:20px;padding:0 6px;border-radius:10px;display:inline-grid;place-items:center;font-size:var(--t-label);font-weight:700;background:var(--ev-health-bg);color:var(--ev-health)}  /* count badge; .off keeps its space */
+.cnt.off{visibility:hidden}
+/* role badge: full role name | OVR */
+.rb{display:inline-flex;align-items:stretch;height:28px;border:1px solid var(--rule-strong);border-radius:3px;overflow:hidden;vertical-align:middle;line-height:1;white-space:nowrap;max-width:100%}
+.rb-r{display:flex;align-items:center;justify-content:center;width:var(--rb-r-w);padding:0 var(--s1);flex:none;background:var(--paper-2);color:var(--ink-2);font-stretch:85%;font-weight:700;font-size:var(--t-small);border-right:1px solid var(--rule-strong);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rb-n{display:grid;place-items:center;width:var(--rb-n-w);padding:0;background:var(--paper);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:var(--t-num);flex:none}
+.rb.elite .rb-n{color:var(--team-ink)}
+.rb.lg{height:32px}.rb.lg .rb-n{font-size:22px;width:48px}
+.peek .rb-n span{text-decoration:underline dotted 1.5px;text-decoration-color:var(--ink-3);text-underline-offset:3px}
+.noset{display:inline-flex;align-items:center;height:28px;padding:0 8px;border:1px dashed var(--rule-strong);border-radius:3px;font-size:var(--t-small);font-weight:650;color:var(--ink-2);white-space:nowrap}
+/* switch: role="switch" aria-checked; label sits beside it, text never changes */
+.switch{position:relative;width:44px;height:26px;border-radius:13px;border:1px solid var(--rule-strong);background:var(--paper-2);cursor:pointer;padding:0;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--ink-2);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--team);border-color:var(--team)}
+.switch[aria-checked="true"]::after{transform:translateX(18px);background:var(--on-team)}
+/* sprites */
+.ico{display:inline-block;width:40px;height:30px;flex:none;overflow:hidden;position:relative}
+.ico img{display:block;width:40px;height:30px;image-rendering:pixelated}
+.ico img.fb{width:40px;height:40px;margin-top:-6px}
+.spr{display:grid;place-items:center;flex:none;width:72px;height:72px;border-radius:var(--r-lg);background:var(--spr-bg);border:1px solid var(--rule);overflow:hidden}
+.spr img{width:72px;height:72px;image-rendering:pixelated;display:block}
+.spr.xl{width:112px;height:112px}.spr.xl img{width:96px;height:96px}
+.spr.md{width:56px;height:56px}.spr.md img{width:56px;height:56px}
+/* club logo = its gym badge: one fixed square everywhere a club is named (.lg only on the New League page) */
+.logo{display:inline-grid;place-items:center;flex:none;width:var(--logo);height:var(--logo)}
+.logo img{width:100%;height:100%;object-fit:contain;display:block}
+.logo.lg{width:var(--logo-lg);height:var(--logo-lg)}
+
+/* ===== Layout layer: primitives ===== */
+/* app shell: sidebar of rooms + main column; on phone the sidebar becomes .l-tabbar */
+.l-shell{max-width:var(--page-max);margin-inline:auto;padding:var(--s4) var(--gutter);display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:var(--s6);align-items:start}
+.l-shell>*{min-width:0}
+/* sidebar: club + room links */
+.l-side{position:sticky;top:var(--s4);background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s4) var(--s3);display:grid;gap:var(--s4);align-content:start;min-height:calc(100vh - 2*var(--s4))}
+.l-side nav{display:grid;gap:var(--s1)}
+.l-side nav a{display:flex;align-items:center;gap:var(--s3);min-height:var(--ctl-h);padding:0 var(--s3);border-radius:var(--r);color:var(--ink-2);text-decoration:none;font-weight:650}
+.l-side nav a:hover{background:var(--paper-2);color:var(--ink)}
+.l-side nav a[aria-current="page"]{background:var(--team-tint);color:var(--team-ink)}
+.l-side nav a .cnt{margin-left:auto}
+/* phone tab bar: max 5 items, fixed to the bottom */
+.l-tabbar{display:none}
+/* page: vertical stack of sub-tabs, head, sections. Same rhythm on every page */
+.l-page{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr);min-width:0;padding-bottom:var(--s7)}
+.l-page>*{min-width:0}
+/* page head: title (+ one sub line) left, .l-actions right; fixed min height so pages line up */
+.l-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--s2) var(--s5);min-height:64px}
+.l-head>div{display:grid;gap:var(--s2);min-width:0}
+.l-head h1{font-size:var(--t-h1);font-weight:800;line-height:var(--lh-tight)}
+.l-head h1:focus{outline:none}
+.l-head .sub{color:var(--ink-2)}
+/* section: title -> content is always --s3 */
+.l-section{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)}
+.l-section>*{min-width:0}
+.l-section>h2,.l-section>.l-split>h2{font-size:var(--t-h2);font-weight:700;line-height:var(--lh-tight)}
+/* panel: boxed section (use with .l-section). .flush = no padding, children handle their own (tables, tabs) */
+.l-panel{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s5);min-width:0}
+.l-panel.flush{padding:0;overflow:hidden}
+.l-panel.flush>h2,.l-panel.flush>.l-pad{padding:var(--s5) var(--s5) 0}
+/* two-column body: 7/5 split, collapses to one column. .side-first: 2nd child spans the right column, so on phone it comes 2nd */
+.l-cols{display:grid;gap:var(--s5);grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:start}
+.l-cols>*{min-width:0}
+/* The side item spans every row and ends in a 1fr row that only it crosses, so its height never
+   stretches the left rows (no gaps between left panels). Left spacing is a margin, so empty rows add nothing. */
+.l-cols.side-first{grid-auto-flow:row dense;row-gap:0;grid-template-rows:repeat(8,auto) 1fr}
+.l-cols.side-first>:nth-child(2){grid-column:2;grid-row:1/-1}
+.l-cols.side-first>:not(:nth-child(2)){grid-column:1;margin-bottom:var(--s5)}
+.l-cols.side-first>:last-child:not(:nth-child(2)){margin-bottom:0}
+/* stacks and rows */
+.l-stack{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)} .l-stack>*{min-width:0} .l-stack.tight{gap:var(--s2)} .l-stack.loose{gap:var(--s5)}
+.l-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0}          /* inline things share one centre line */
+.l-split{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);min-width:0}
+/* two sides facing each other (battle frame): never wraps; long names ellipsise; right side is mirrored */
+.l-versus{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--s3);min-width:0}
+.l-versus>*{min-width:0}.l-versus>:last-child{justify-content:flex-end;flex-wrap:nowrap}.l-versus>:first-child{flex-wrap:nowrap}
+.l-versus .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* equal-size cards; set --card-min on the grid to change the column minimum */
+.l-grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--card-min)),1fr));grid-auto-rows:1fr}
+.l-grid>*{min-width:0}
+/* wrap list of small refs (icon + name); never overflows */
+.l-wrap{display:grid;gap:var(--s1) var(--s3);grid-template-columns:repeat(auto-fill,minmax(min(100%,136px),1fr))}
+.l-wrap>*{min-width:0}
+/* equal-width buttons; on phone they share the row equally */
+.l-actions{display:grid;gap:var(--s2);grid-auto-flow:column;grid-auto-columns:minmax(var(--ctl-w),1fr);justify-content:start}
+.l-actions>.btn{min-height:var(--ctl-h)}
+/* list rows: --cols sets the grid, every row text-baseline aligned so chips, text and buttons line up */
+.l-list>li{display:grid;grid-template-columns:var(--cols,minmax(0,1fr) auto);gap:var(--s3);align-items:baseline;padding:var(--s3) 0;border-top:1px solid var(--rule);min-height:var(--row-h)}
+.l-list>li>*{min-width:0}
+/* three columns: name, badge, a fixed-width figure (money) on the right (e.g. the release list) */
+.l-list.trio>li{--cols:minmax(0,1fr) auto 6em;align-items:center}.l-list.trio>li>:last-child{text-align:right;font-variant-numeric:tabular-nums}
+/* label/value pairs; label column is --label-w */
+.l-kv{display:grid;grid-template-columns:var(--label-w) minmax(0,1fr);gap:var(--s3) var(--s4);align-items:center}
+.l-kv>dt,.l-kv>.k{color:var(--ink-2)}
+.l-kv>dd,.l-kv>.v{min-width:0}
+/* labelled facts stacked: .cap label above value */
+.l-facts{display:grid;gap:var(--s4)}
+.l-facts>div{display:grid;gap:var(--s2);min-width:0}
+/* sub-tabs: links, same position on every page of a room; weight never changes so nothing jumps */
+.l-tabs{display:flex;gap:var(--s5);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;min-width:0}
+.l-tabs::-webkit-scrollbar{display:none}
+.l-tabs>a,.l-tabs>button,.l-tabs>span>a{position:relative;display:inline-flex;align-items:center;gap:var(--s2);min-height:var(--tab-h);padding:0;border:0;background:none;font-weight:700;font-size:var(--t-body);color:var(--ink-2);text-decoration:none;white-space:nowrap;cursor:pointer;flex:none}
+.l-tabs>span{display:contents}
+.l-tabs a:hover,.l-tabs button:hover{color:var(--ink)}
+.l-tabs [aria-current="page"],.l-tabs [aria-selected="true"]{color:var(--ink)}
+.l-tabs [aria-current="page"]::after,.l-tabs [aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:2px 2px 0 0;background:var(--team)}
+.l-tabs :focus-visible{outline-offset:-3px}
+.l-panel>.l-tabs{padding:0 var(--s5)}
+/* tables: fixed columns from one <colgroup>, scroll inside own box, headers never move between lenses */
+.l-table-wrap{overflow-x:auto;min-width:0;position:relative} /* positioned so .sr text in cells can't escape the scroll box */
+.l-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:var(--t-body)}
+.l-table th,.l-table td{height:var(--row-h);padding:0 var(--s3);text-align:left;vertical-align:middle;border-bottom:1px solid var(--rule);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.l-table th:first-child,.l-table td:first-child{padding-left:var(--s5)}
+.l-table th:last-child,.l-table td:last-child{padding-right:var(--s5)}
+.l-table thead th{height:44px;font-stretch:78%;font-size:var(--t-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border-bottom-color:var(--rule-strong)}
+.l-table .num{text-align:right}
+.l-table tbody th.grp{height:40px;font-family:var(--font-display);font-size:var(--t-h3);font-weight:700;color:var(--ink);background:var(--paper-2)}
+.l-table tbody th.grp span{font-family:var(--font-ui);font-size:var(--t-small);font-weight:500;color:var(--ink-2);margin-left:var(--s2)}
+.l-table tr.cur td{background:var(--team-tint)}
+.l-table tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--team)}
+.l-table tr.off td{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--rule) 60%,transparent) 7px 8px)}  /* unavailable row */
+.l-table tr.tot td{border-top:3px double var(--rule-strong);border-bottom:0;font-weight:800}
+/* card */
+.l-card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s4);display:grid;gap:var(--s3);align-content:start;min-width:0}
+/* empty / placeholder block */
+.l-empty{display:grid;gap:var(--s2);justify-items:start;padding:var(--s4);border:1px dashed var(--rule-strong);border-radius:var(--r-lg);background:var(--paper-2);color:var(--ink-2)}
+.l-empty b{color:var(--ink)}
+/* reserved space for dynamic text so nothing shifts; set --lines */
+.l-reserve{min-height:calc(var(--t-body) * var(--lh-body) * var(--lines,1))}
+/* clamp text to --lines lines, height reserved */
+.l-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,2);overflow:hidden;min-height:calc(1em * var(--lh-body) * var(--lines,2))}
+/* dialog: always centred and inside the viewport; head / scrolling body / foot */
+dialog.l-dialog{position:fixed;inset:0;margin:auto;width:min(var(--dialog-w),calc(100% - 2*var(--gutter)));max-width:none;max-height:min(760px,calc(100% - 2*var(--gutter)));height:fit-content;padding:0;border:1px solid var(--rule-strong);border-radius:var(--r-lg);background:var(--paper);color:var(--ink);box-shadow:var(--shadow);overflow:hidden}
+dialog.l-dialog[open]{display:flex;flex-direction:column}
+dialog.l-dialog::backdrop{background:var(--scrim)}
+.l-dialog-head{display:flex;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);border-bottom:1px solid var(--rule);flex:none}
+.l-dialog-head h2{font-size:var(--t-h2);font-weight:800}
+.l-dialog-head .x{margin-left:auto}
+.l-dialog-body{padding:var(--s5);display:grid;gap:var(--s4);overflow:auto;min-height:0;flex:1 1 auto}
+.l-dialog-foot{display:flex;justify-content:flex-end;padding:var(--s3) var(--s5) var(--s4);border-top:1px solid var(--rule);flex:none}
+/* floating peek layer (#float): one per page, positioned by script inside the viewport */
+.l-peek-layer{position:fixed;z-index:60;width:min(300px,calc(100vw - 2*var(--gutter)));background:var(--paper);color:var(--ink);border:1px solid var(--rule-strong);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s3);font-size:13.5px;line-height:var(--lh-body);display:grid;gap:var(--s2);pointer-events:none}
+.l-peek-layer[hidden]{display:none}
+.l-peek-layer .row{display:flex;justify-content:space-between;gap:var(--s3)}
+.l-peek-layer .row>span:first-child{color:var(--ink-2)}
+.l-peek-layer .row b{font-family:var(--font-display);font-size:17px}
+.l-peek-layer .tot{border-top:1px solid var(--rule);padding-top:var(--s2)}
+.l-peek-layer .types{display:flex;gap:var(--s1)}
+
+/* ---- responsive behaviour of the primitives ---- */
+@media (max-width:1060px){ .l-cols{grid-template-columns:minmax(0,1fr)} .l-cols.side-first{grid-template-rows:none;row-gap:var(--s5)} .l-cols.side-first>*{grid-column:auto !important;grid-row:auto !important;margin-bottom:0 !important} }
+@media (max-width:759px){
+  .l-shell{grid-template-columns:minmax(0,1fr);gap:0;padding-top:0}
+  .l-side{display:none}
+  .l-page{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .l-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--paper);border-top:1px solid var(--rule);padding:var(--s1) max(var(--s2),env(safe-area-inset-right)) calc(var(--s1) + env(safe-area-inset-bottom)) max(var(--s2),env(safe-area-inset-left))}
+  .l-tabbar a{flex:1 1 0;min-width:0;display:grid;justify-items:center;align-content:center;gap:2px;min-height:52px;text-decoration:none;color:var(--ink-2);font-size:var(--t-label);font-weight:650;border-radius:var(--r);position:relative;white-space:nowrap}
+  .l-tabbar a svg.i{width:20px;height:20px}
+  .l-tabbar a[aria-current="page"]{color:var(--team-ink)}
+  .l-tabbar a[aria-current="page"]::before{content:"";position:absolute;top:-5px;left:28%;right:28%;height:3px;border-radius:0 0 2px 2px;background:var(--team)}
+  .l-panel{padding:var(--s4)}
+  .l-panel.flush>h2,.l-panel.flush>.l-pad{padding:var(--s4) var(--s4) 0}
+  .l-panel>.l-tabs{padding:0 var(--s4)}
+  .l-table th:first-child,.l-table td:first-child{padding-left:var(--s4)}
+  .l-table th:last-child,.l-table td:last-child{padding-right:var(--s4)}
+}
+@media (max-width:640px){
+  .l-head{grid-template-columns:minmax(0,1fr);min-height:0}
+  .l-actions{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);justify-content:stretch}
+  .l-kv{grid-template-columns:minmax(0,1fr);row-gap:var(--s1)}
+  .l-kv>dd,.l-kv>.v{margin-bottom:var(--s2)}
+  .l-list.wrap>li{grid-template-columns:minmax(0,1fr) auto}
+  .l-list.wrap>li>:first-child{grid-column:1;grid-row:1;justify-self:start}
+  .l-list.wrap>li>:last-child{grid-column:2;grid-row:1}
+  .l-list.wrap>li>:nth-child(2):not(:last-child){grid-column:1/-1;grid-row:2}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* ---- additions ---- */
+.l-row.even>*{height:28px}  /* inline chips/badges/tags in one row share one height and centre line */
+.l-row.even>.type,.l-row.even>.tag{padding-inline:var(--s2)}
+
+/* card title: the first-read heading inside .l-card */
+.l-card-title{font-family:var(--font-display);font-size:var(--t-h3);font-weight:700;line-height:var(--lh-tight);margin:0}
+/* peek label: dotted underline that says "hover or tap for more" */
+.peek>.lbl,.l-peek-lbl{text-decoration:underline dotted 1.5px;text-decoration-color:var(--ink-3);text-underline-offset:4px}
+
+/* ===== UI build additions (2026-11-19). Owned by web/franchise/ui; rules from docs/FRANCHISE.md ===== */
+/* a badge never stretches inside a grid/stack cell */
+.rb,.noset{width:max-content;justify-self:start}
+/* "No set" stands in for a role badge: same box as "ATK | 88" so a column never changes width */
+.noset{width:calc(var(--rb-r-w) + var(--rb-n-w) + 2px);justify-content:center}
+.noset.full{width:calc(var(--rb-full-w) + var(--rb-n-w) + 2px)}.noset.sm{height:24px;width:calc(var(--rb-r-w) + 34px)}
+.l-stack>.peek,.l-row>.peek{justify-self:start}
+/* role badge variants: .full shows the role name (lineup cards, Pokemon page); .range shows "68-81" for prospects.
+   Every badge of a variant has one width, so a column of badges lines up and nothing widens a cell. */
+.rb.full .rb-r{width:var(--rb-full-w);justify-content:flex-start;padding:0 var(--s2);overflow:hidden;text-overflow:ellipsis}
+.rb.range .rb-n{width:var(--rb-range-w);font-size:var(--t-lead)}
+.rb.sm{height:24px}.rb.sm .rb-r{font-size:var(--t-label)}.rb.sm .rb-n{font-size:var(--t-lead);width:32px}
+.rb.ghost{opacity:.55}
+.rb.off{border-style:dashed}.rb.off .rb-r{border-right-style:dashed;font-style:italic}
+/* list item with ONE top alignment: label chip, text and action share the top edge (Before you play, feeds).
+   More breathing room than .l-list. Text's first line is nudged so its cap height meets the chip/button top. */
+.l-list.top>li{align-items:start;padding:var(--s4) 0;gap:var(--s4)}
+.l-list.top>li>.chip,.l-list.top>li>.btn,.l-list.top>li>.done,.l-list.top>li>.when{margin-top:0}
+/* sortable table header: whole cell is the button; arrow slot is reserved so sorting never shifts the label */
+.l-table th>button.sort{all:unset;display:inline-flex;align-items:center;gap:var(--s1);cursor:pointer;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;max-width:100%}
+.l-table th>button.sort:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.l-table th>button.sort::after{content:"";display:inline-block;width:10px;height:10px;flex:none}
+.l-table th[aria-sort="ascending"]>button.sort::after{content:"\25B4"}
+.l-table th[aria-sort="descending"]>button.sort::after{content:"\25BE"}
+.l-table th.num>button.sort{flex-direction:row-reverse}
+/* skeleton: a block with its final dimensions, shown while async content loads */
+.l-skel{background:linear-gradient(90deg,var(--paper-2) 0%,var(--rule) 50%,var(--paper-2) 100%);background-size:200% 100%;border-radius:var(--r);animation:l-skel 1.4s ease-in-out infinite}
+@keyframes l-skel{to{background-position:-200% 0}}
+/* fixed-size frame (replay, placeholders): --frame-ratio sets the shape (16:9, the replay viewer's); content can never resize it */
+.l-frame{position:relative;aspect-ratio:var(--frame-ratio,16/9);min-height:220px;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper-2);overflow:hidden}
+.l-frame>iframe{position:absolute;inset:0;width:100%;height:100% !important;border:0;display:block}
+.l-frame>.l-empty{position:absolute;inset:var(--s4);place-content:center;justify-items:center;text-align:center}
+/* progress (play week dialog): fixed height bar + fixed-width counter */
+.l-progress{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:var(--s3);align-items:center}
+.l-progress .fitbar{height:10px;border-radius:5px}
+.l-progress .fitbar i{background:var(--team);transition:width .2s}
+.l-progress output{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+/* form field: label above control */
+.l-field{display:grid;gap:var(--s1);min-width:0}
+.l-field>span{font-size:var(--t-small);font-weight:700;color:var(--ink-2)}
+.l-field input[type=text],.l-field input[type=number]{font:inherit;height:var(--ctl-h);padding:0 var(--s3);border:1px solid var(--rule-strong);border-radius:var(--r);background:var(--paper);color:var(--ink);min-width:0}
+/* segmented control (theme, speed): equal-width buttons */
+.l-seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:minmax(72px,1fr);border:1px solid var(--rule-strong);border-radius:var(--r);overflow:hidden}
+.l-seg>button{font:inherit;font-weight:700;font-size:var(--t-small);min-height:var(--ctl-h);border:0;background:var(--paper);color:var(--ink-2);cursor:pointer;padding:0 var(--s3)}
+.l-seg>button+button{border-left:1px solid var(--rule-strong)}
+.l-seg>button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+/* ===== League / front-office primitives (2026-11-19) ===== */
+/* status chip of one width (clinch, interest, verdict, lottery move): sized for the longest word ("Clinched spot") */
+:root{--chip-w:128px}
+.chip.fix{width:var(--chip-w);justify-content:center;overflow:hidden;text-overflow:ellipsis}
+/* two equal buttons in one table cell (Scout · 1 / Full · 5) */
+.l-cellacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+.l-cellacts>.btn{min-width:0;padding:0 var(--s2)}
+/* toolbar above a table: switches/filters left, a count right; fixed height so toggling never moves the table */
+.l-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:var(--ctl-h-touch);flex-wrap:wrap}
+.l-toolbar label{display:inline-flex;align-items:center;gap:var(--s2);font-weight:650;font-size:var(--t-small);color:var(--ink-2);cursor:pointer}
+/* ===== Choice primitives (New League, 2026-11-19) ===== */
+/* selectable card: a <button aria-pressed> of one fixed height; the pressed one takes its own accent (--c) */
+:root{--pick-h:84px; --tile-h:112px}
+.l-pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s3);align-items:center;height:var(--pick-h);padding:var(--s3);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);cursor:pointer;font:inherit;color:inherit;text-align:left;min-width:0;box-shadow:inset 4px 0 0 var(--c,var(--rule))}
+.l-pick:hover{background:var(--paper-2)}
+.l-pick:focus-visible{outline:2px solid var(--c,var(--team));outline-offset:2px}
+.l-pick[aria-pressed="true"]{border-color:var(--c,var(--team));box-shadow:inset 4px 0 0 var(--c,var(--team)),inset 0 0 0 1px var(--c,var(--team));background:var(--paper-2)}
+.l-pick>span{min-width:0;display:grid;gap:2px}
+.l-pick b{font-family:var(--font-display);font-size:var(--t-h3);line-height:var(--lh-tight);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.l-pick small{font-size:var(--t-small);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.l-pick .type{height:20px;justify-self:start;margin-top:2px}
+/* equal fixed tiles in N columns (a starting six, a list of picks): every tile the same box whatever it holds */
+.l-tiles{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:var(--s2)}
+.l-tiles>*{height:var(--tile-h);min-width:0;display:grid;justify-items:center;align-content:center;gap:var(--s1);padding:var(--s1);border:1px solid var(--rule);border-radius:var(--r);background:var(--paper)}
+.l-tiles .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-small);font-weight:650}
+.l-tiles .big{font-family:var(--font-display);font-size:var(--t-h1);font-weight:800;line-height:1}
+/* a row of six row-icons, each with a one-line number under it (backups, practice squad, best on the board) */
+.l-icons{display:grid;grid-template-columns:repeat(6,40px);justify-content:space-between;gap:var(--s1)}
+.l-icons>span{display:grid;justify-items:center;gap:2px;font-size:var(--t-label);font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums;min-height:48px}
+/* side panel that stays in view beside a long list (desktop); a normal block when the columns stack */
+.l-sticky{position:sticky;top:var(--s4)}
+@media (max-width:1060px){ .l-sticky{position:static} }
