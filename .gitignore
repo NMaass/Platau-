@@ -36,3 +36,7 @@ vendor/
 tmp/
 .vercel
 .env*
+
+# Plateau generated data and screenshots
+web/franchise/data/
+web/franchise/**/.shots/
