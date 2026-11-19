@@ -75,7 +75,7 @@ export function franchiseTagCheck(catalog: Catalog, state: LeagueState, mon: Mon
   const salary = franchiseTagPrice(catalog, state, mon);
   if (!teamId || !isExpiring(mon)) return {ok: false, reason: 'Only an expiring contract can be tagged', salary};
   if (state.phase !== 'resign') return {ok: false, reason: 'Tags are used in the re-sign window', salary};
-  if (state.teams[teamId].tagSeason === state.season) return {ok: false, reason: 'One tag per offseason', salary};
+  if (state.teams[teamId].tagSeason === state.season) return {ok: false, reason: 'You used your one franchise tag this offseason', salary};
   if (!canAfford(state, teamId, salary)) return {ok: false, reason: 'Not enough cap space for the tag', salary};
   return {ok: true, reason: `One year at ${money(salary)}`, salary};
 }

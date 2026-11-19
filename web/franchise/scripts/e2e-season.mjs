@@ -117,6 +117,16 @@ async function continueOnce(label) {
     await page.click('#dlg [data-dlg="ok"]');
     await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar') && !/Auto-pick/.test(d.innerText); }, null, {timeout: 120000});
   }
+  // the season can't open with more than 18: Play lists who goes and releases them only on confirm
+  if (await page.$('#dlg ul[aria-label="Released"]')) {
+    const n = await page.$$eval('#dlg ul[aria-label="Released"] li', (x) => x.length);
+    step(`release ${n} to open the season`);
+    const before = await state();
+    const over = Object.values(before.mons).filter((m) => m.teamId === before.userTeamId && m.tier !== 'ir').length - 18;
+    if (n !== over) fail(`release list has ${n}, roster is ${over} over`);
+    await page.click('#dlg [data-dlg="ok"]');   // releases, then Play carries on into the season
+    await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar') && !d.querySelector('ul[aria-label="Released"]'); }, null, {timeout: 120000});
+  }
   await closeDlg();
 }
 async function negotiate(nth, clicks, dir) {
@@ -188,13 +198,20 @@ try {
     const go = await page.$('#dlg [data-dlg="tag"]');
     if (go) { await go.click(); await settle(); if (!/tagged/.test(await dlgText())) fail('franchise tag failed'); }
     await closeDlg();
+    // the tag is used: every remaining Tag button stays in place, disabled
+    if (go) for (const b of await page.$$('#view [data-fo="tag"]')) if (await b.getAttribute('aria-disabled') !== 'true') fail('Tag button still enabled after the tag was used');
   }
   await continueOnce('open free agency');
   step('free agency');
   await page.goto(BASE + '#freeagents'); await settle();
   const low = await negotiate(0, 30, 'dn');
   if (!/No deal/.test(low)) fail(`a lowball offer was not rejected: ${low}`);
-  const signed = await negotiate(6, 6, 'up');
+  // payrolls start near the cap (85–95%), so walk down the list to someone the club can afford
+  let signed = '';
+  for (let nth = 6; nth < 40 && !/signs/.test(signed); nth++) {
+    signed = await negotiate(nth, 6, 'up');
+    if (!/signs|Not enough cap space/.test(signed)) break;
+  }
   if (!/signs/.test(signed)) fail(`signing failed: ${signed}`);
   for (let i = 0; i < 4 && (await phaseOf()) !== 'preseason'; i++) await continueOnce(`free agency round ${i + 1}`);
   s = await invariants('next preseason');

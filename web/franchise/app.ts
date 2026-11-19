@@ -18,7 +18,10 @@ import {viewBattle, afterBattle, leaveBattle} from './ui/screens/battle.ts';
 import {viewSettings, viewNewLeague, applyTheme} from './ui/screens/settings.ts';
 import {fixtureCatalog, fixtureLeague} from './ui/dev-fixture.ts';
 import {createSimPool} from './sim/pool.ts';
-import {teamName} from './ui/components/mon.ts';
+import {teamName, speciesOf, monName, monBadge} from './ui/components/mon.ts';
+import {ico} from './ui/sprites.ts';
+import {money} from './ui/dom.ts';
+import type {Mon} from './types.ts';
 
 const STUBS: Record<string, [string, string]> = {
   trades: ['Trades', 'A two-sided trade builder with a meter that turns green when they will say yes.'],
@@ -83,6 +86,11 @@ async function play(): Promise<void> {
       if (!ok) return;
     }
   }
+  // Starting the season with more than 18 outside IR: list who would go, release only on confirm.
+  if (s.phase === 'preseason' && !isFixtureMode()) {
+    const cut = api.rosterExcess(C(), s, s.userTeamId);
+    if (cut.length && !(await confirmTrim(cut))) return;
+  }
   const wk = s.week, season = s.season, phase = s.phase;
   const bar = (done: number, total: number, label: string) => `<div class="l-stack"><p>${esc(label)}</p><div class="l-progress"><span class="fitbar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><i style="width:${total ? (done / total * 100).toFixed(1) : 0}%"></i></span><output>${done} / ${total}</output></div><p class="x-small">Every series in the league is played in the background.</p></div>`;
   openDialog({title: phase === 'regular' || phase === 'playoffs' ? `Simulating week ${wk}` : esc(phaseLabel(phase)), cap: `Season ${season}`, body: bar(0, 0, 'Preparing battles'), actions: [], locked: true});
@@ -115,6 +123,18 @@ async function play(): Promise<void> {
     title: `${esc(S().teams[me].name)} ${won ? 'win' : 'lose'} the series`, cap: `Week ${wk} · vs ${teamName(se.homeId === me ? se.awayId : se.homeId)}`,
     body: seriesResult(se), locked: false,
     actions: [{key: 'watch', label: `${ic('film')}Watch game 1`, href: `#battle-${se.id}-1`}, {key: 'close', label: 'Done', go: true}],
+  });
+}
+
+/** "Release N to start the season?": the lowest-rated non-starters, with their salary. */
+function confirmTrim(cut: Mon[]): Promise<boolean> {
+  return new Promise((res) => {
+    let ok = false;
+    const rows = cut.map((m) => `<li><span class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b></span>${monBadge(m, null, {sm: true, noPeek: true})}<span class="x-small">${m.contract ? money(m.contract.salary) : ''}</span></li>`).join('');
+    openDialog({title: `Release ${plural(cut.length, 'Pokémon', 'Pokémon')}?`, cap: 'Rosters hold 18',
+      body: `<p>The season starts with 18 outside injured reserve. Continuing releases the lowest-rated, cheapest first (never a starter); any guaranteed money stays as dead money.</p><ul class="l-list trio" aria-label="Released">${rows}</ul>`,
+      actions: [{key: 'roster', label: `Review roster ${ic('arrow')}`, href: '#roster'}, {key: 'ok', label: `Release ${cut.length} and continue`, go: true}],
+      onAction: (k) => { if (k === 'ok') { ok = true; act((st, c) => { api.trimRoster(c, st, st.userTeamId); }); } }, onClose: () => res(ok)});
   });
 }
 
@@ -162,6 +182,8 @@ async function playUntil(target: Until): Promise<void> {
       if (s.phase === 'regular' || s.phase === 'playoffs') steps++;
       const now = S();
       reasons = s.phase === 'regular' || s.phase === 'playoffs' ? api.pauseReasons(now) : [];
+      // the season can't start with more than 18: stop and send the user to the roster (Play asks to trim)
+      if (s.phase === 'preseason' && now.phase === 'preseason') reasons = api.pauseReasons(now).length ? api.pauseReasons(now) : ['The season could not start'];
       if (reasons.length) break;
     }
   } catch (e) {

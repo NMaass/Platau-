@@ -216,7 +216,10 @@ export interface TradeOffer {
 
 export interface LeagueSettings {
   cap: number; capGrowth: number; floor: number; minSalary: number; maxSalaryPct: number;
+  /** injury chance per fainted Pokémon / per Pokémon ending a battle with a status */
   injuryKo: number; injuryStatus: number;
+  /** share of injuries that are day-to-day, and that go to injured reserve (the rest: out 1–3 weeks) */
+  injuryDayToDay: number; injuryIr: number;
   budgetMs: {ai: number; human: number};
   seriesBestOf: number; finalBestOf: number;
   scoutingPointsPerWeek: number; scoutCost: number; fullScoutCost: number;

@@ -118,9 +118,9 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
   chart. No stat penalty for off-role picks. Lineup cards: role name is the card heading (no slot
   numbers), Pokémon + OVR, set dropdown from its Smogon sets, backups underneath.
 - AI GMs have a primary and secondary favourite strategy and value Pokémon by role ratings.
-- **Injuries** (all tunable): KO ~10%, ending a battle with a status ~5% (burn/toxic riskier, age
+- **Injuries** (all tunable): KO ~2.5%, ending a battle with a status ~1.2% (burn/toxic riskier, age
   raises risk). Designations: day-to-day (plays one EV grade lower), out 1–3 weeks, injured
-  reserve 4+ weeks (spot can be filled from FA). Injuries carry between games of a series. Rare
+  reserve 4+ weeks (spot can be filled from FA). Tuned to ~4 per club a season, ~2/3 day-to-day. Injuries carry between games of a series. Rare
   severe injuries permanently cost an IV grade or cap the EV grade.
 
 ## Contracts, cap, free agency

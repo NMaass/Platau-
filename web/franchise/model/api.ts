@@ -19,7 +19,7 @@ import * as dr from './draft.ts';
 import * as tr from './trades.ts';
 import * as fa from './freeagency.ts';
 import * as po from './playoffs.ts';
-import {releaseMon} from './roster.ts';
+import {releaseMon, rosterExcess as excess, trimRoster as trim} from './roster.ts';
 import {strategyById} from './strategies.ts';
 import {freeAgents as faList, teamMons} from './util.ts';
 import {inbox as pushInbox, markRead} from './inbox.ts';
@@ -147,6 +147,10 @@ export function finishWeek(catalog: Catalog, state: LeagueState): void { season.
 export function advancePhase(catalog: Catalog, state: LeagueState): void { season.advancePhase(remember(catalog), state); }
 /** Whole week without the engine (quicksim resolver), for tests, fast sims and fallbacks. */
 export function playWeekSync(catalog: Catalog, state: LeagueState): void { season.playWeekSync(remember(catalog), state); }
+/** Who would be released to bring a roster to 18 (lowest-rated first, then cheapest; never a starter). */
+export function rosterExcess(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon[] { return excess(remember(catalog), state, teamId); }
+/** Release that list (after the user confirmed it). Returns who went. */
+export function trimRoster(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon[] { return trim(remember(catalog), state, teamId); }
 /** Reasons the last finishWeek wants a multi-week sim to stop (long injury to a starter, a new offer). */
 export function pauseReasons(state: LeagueState): string[] { return state.pauseReasons ?? []; }
 

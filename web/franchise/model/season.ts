@@ -7,9 +7,9 @@ import {hash01, leagueRng, type Rng} from './rng.ts';
 import {TEAM_SEEDS, teamIdAt} from './teams.ts';
 import {initPool, drawFamily, returnToPool, type PoolCounts} from './pool.ts';
 import {createMon} from './mons.ts';
-import {STRATEGIES, strategyById} from './strategies.ts';
-import {autoLineup, canBattle, fieldedLineup, normalizeTiers, removeFromLineup} from './lineup.ts';
-import {canAfford, capPayroll, makeContract, marketSalary, marketYears} from './cap.ts';
+import {STRATEGIES} from './strategies.ts';
+import {ROSTER, STARTERS, applyPlan, autoLineup, canBattle, fieldedLineup, normalizeTiers, planLineup, removeFromLineup, type LineupPlan} from './lineup.ts';
+import {addDeadMoney, canAfford, capPayroll, makeContract, marketSalary, marketYears, maxSalary, payroll} from './cap.ts';
 import {teamExport} from './export.ts';
 import {buildSchedule, seriesOfWeek} from './schedule.ts';
 import {reverseStandings} from './standings.ts';
@@ -27,12 +27,12 @@ import {aiTrade, expireOffers, makeAiOffer} from './trades.ts';
 import {quickSim} from './quicksim.ts';
 import {checkGoal, setGoal} from './goals.ts';
 import {bestRole} from './ratings.ts';
-import {freeAgents, logTx, monsByTeam, round50k, teamMons} from './util.ts';
-import {GRADES} from './grades.ts';
+import {freeAgents, logTx, money, monsByTeam, rosterCount, round50k, teamMons} from './util.ts';
+import {GRADES, GROWTH_BAND_HI} from './grades.ts';
 
 export const DEFAULT_SETTINGS: LeagueSettings = {
   cap: 100_000_000, capGrowth: 0.04, floor: 70_000_000, minSalary: 500_000, maxSalaryPct: 0.2,
-  injuryKo: 0.10, injuryStatus: 0.05,
+  injuryKo: 0.025, injuryStatus: 0.012, injuryDayToDay: 0.68, injuryIr: 0.06,
   budgetMs: {ai: 20, human: 40},
   seriesBestOf: 3, finalBestOf: 5,
   scoutingPointsPerWeek: 10, scoutCost: 1, fullScoutCost: 5,
@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: LeagueSettings = {
 };
 
 /** Knobs for league creation (tunable). */
-export const START = {perTeam: 18, legendaries: 9, ageMin: 21, ageMax: 33, payrollTarget: 0.95, aiOfferChance: 0.3, aiTradeChance: 0.35};
+export const START = {perTeam: 18, legendaries: 9, ageMin: 21, ageMax: 33, payrollTarget: [0.85, 0.95] as [number, number], aiOfferChance: 0.3, aiTradeChance: 0.35};
 
 export interface NewLeagueOptions {
   seed?: number; name?: string; userTeamIndex?: number; start: 'random' | 'fantasy-draft';
@@ -78,6 +78,7 @@ export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState
     assignContracts(catalog, state, rng, t);
     chooseStrategy(catalog, state, t, true);
   }
+  state.teams[state.userTeamId].practiceFocus = defaultFocus(catalog, teamMons(state, state.userTeamId));
   ensurePicks(state, 1);
   generateClass(catalog, state, rng, 1);
   state.schedule = buildSchedule(state, teamIds);
@@ -136,46 +137,67 @@ function fantasyDraft(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: T
   }
 }
 
-/** Market-value contracts with 1–5 years left, scaled so the payroll fits under the cap. */
+/** Market-value contracts with 1–5 years left, scaled so the payroll lands between floor and cap
+ * (a per-club target in START.payrollTarget, as a share of the cap). */
 function assignContracts(catalog: Catalog, state: LeagueState, rng: Rng, teamId: TeamId): void {
   const mons = teamMons(state, teamId);
+  const min = state.settings.minSalary, max = maxSalary(state);
   for (const m of mons) {
     const sal = marketSalary(catalog, state, m);
     const years = Math.max(1, Math.min(5, marketYears(m) + rng.range(-2, 1)));
     m.contract = makeContract(sal, years);
   }
-  const target = state.settings.cap * START.payrollTarget;
-  const total = mons.reduce((s, m) => s + m.contract!.salary, 0);
-  if (total > target) {
-    const min = state.settings.minSalary;
-    const above = mons.reduce((s, m) => s + (m.contract!.salary - min), 0);
-    const f = Math.max(0, (target - min * mons.length) / above);
-    for (const m of mons) m.contract!.salary = Math.max(min, round50k(min + (m.contract!.salary - min) * f));
+  const [lo, hi] = START.payrollTarget;
+  const target = state.settings.cap * (lo + (hi - lo) * rng.next());
+  // scale the part above the minimum (both ways), clamping at the max salary; a few passes settle the clamps
+  for (let pass = 0; pass < 6; pass++) {
+    const total = mons.reduce((s, m) => s + m.contract!.salary, 0);
+    if (Math.abs(total - target) < 100_000) break;
+    const free = mons.filter(m => total < target ? m.contract!.salary < max : m.contract!.salary > min);
+    const above = free.reduce((s, m) => s + (m.contract!.salary - min), 0);
+    if (above <= 0) break;
+    const f = Math.max(0, 1 + (target - total) / above);
+    for (const m of free) m.contract!.salary = Math.max(min, Math.min(max, round50k(min + (m.contract!.salary - min) * f)));
   }
-  for (const m of mons) if (m.contract!.salary <= state.settings.minSalary) { m.contract!.salary = state.settings.minSalary; m.contract!.exception = 'minimum'; }
+  for (const m of mons) if (m.contract!.salary <= min) { m.contract!.salary = min; m.contract!.exception = 'minimum'; }
 }
 
-/** AI: play whichever favourite strategy gives the stronger lineup. */
+/** Salary floor, the NFL way: at the start of the regular season a club under the floor pays the
+ * shortfall as dead money for the season. */
+export function enforceFloor(catalog: Catalog, state: LeagueState): void {
+  for (const t of Object.values(state.teams)) {
+    const short = state.settings.floor - payroll(state, t.id);
+    if (short <= 0) continue;
+    const amount = Math.ceil(short / 50_000) * 50_000;
+    addDeadMoney(state, t.id, amount);
+    logTx(state, 'floor', `${t.name} paid ${money(amount)} to reach the salary floor`, [t.id], []);
+    if (t.id === state.userTeamId) inbox(state, 'deal', `Paid ${money(amount)} to reach the salary floor`,
+      `Your payroll was ${money(state.settings.floor - short)}, under the ${money(state.settings.floor)} floor. The difference counts as dead money this season.`);
+  }
+}
+
+/** Strategy-choice knobs: favourites win ties, but never over a strategy the roster can fill on-role. */
+export const STRATEGY_PICK = {offRolePenalty: 40, favourite1: 6, favourite2: 3};
+
+/**
+ * AI: try every strategy and play the strongest lineup the roster can fill on-role, leaning to
+ * the club's favourites (an off-role slot costs more than any favourite bonus).
+ */
 export function chooseStrategy(catalog: Catalog, state: LeagueState, teamId: TeamId, atStart = false): void {
   const team = state.teams[teamId];
   if (team.human && !team.lineup.auto) { normalizeTiers(catalog, state, teamId); return; }
   // the user keeps the strategy they play, except at league start: then the one their roster fits best
   if (team.human && !atStart) { autoLineup(catalog, state, teamId); return; }
-  let best = team.favoriteStrategies[0], bestScore = -Infinity;
-  for (const sid of team.human ? STRATEGIES.map(x => x.id) : team.favoriteStrategies) {
-    team.lineup.strategyId = sid;
-    const lu = autoLineup(catalog, state, teamId);
-    const strat = strategyById(sid);
-    const score = lu.slots.reduce((s, sl, i) => {
-      const m = sl.monId ? state.mons[sl.monId] : undefined;
-      if (!m) return s;
-      const fits = strat.slots[i].includes(sl.role);
-      return s + bestRole(catalog, m).ovr - (fits ? 0 : 30);
-    }, 0);
-    if (score > bestScore) { bestScore = score; best = sid; }
+  let best: {sid: string; plan: LineupPlan; score: number} | null = null;
+  for (const st of STRATEGIES) {
+    const plan = planLineup(catalog, state, teamId, st.id);
+    const fav = team.human ? 0 : st.id === team.favoriteStrategies[0] ? STRATEGY_PICK.favourite1 : st.id === team.favoriteStrategies[1] ? STRATEGY_PICK.favourite2 : 0;
+    const filled = plan.slots.filter(sl => sl.monId).length;
+    const score = plan.ratingSum / STARTERS - (STARTERS - plan.onRole) * STRATEGY_PICK.offRolePenalty - (STARTERS - filled) * 100 + fav
+      + (st.id === team.lineup.strategyId ? 1 : 0);   // a little stickiness week to week
+    if (!best || score > best.score) best = {sid: st.id, plan, score};
   }
-  team.lineup.strategyId = best;
-  autoLineup(catalog, state, teamId);
+  applyPlan(catalog, state, teamId, best!.sid, best!.plan);
 }
 
 // ---------------------------------------------------------------- weeks
@@ -282,14 +304,27 @@ function settleWeek(catalog: Catalog, state: LeagueState): void {
   }
 }
 
+/** The three practice-squad prospects with the most to gain: an evolution within reach first, then
+ * the most Growth left below their potential (youngest first on ties). */
+export function defaultFocus(catalog: Catalog, mons: Mon[]): MonId[] {
+  const gain = (m: Mon) => {
+    const room = Math.max(0, GROWTH_BAND_HI[m.potential] - m.growth);
+    const next = catalog.species[m.speciesId]?.evolvesTo.filter(e => e.level <= GROWTH_BAND_HI[m.potential]).map(e => e.level - m.growth).filter(d => d > 0) ?? [];
+    return room + (next.length && Math.min(...next) <= 30 ? 40 : 0);
+  };
+  return mons.filter(m => m.tier === 'practice' && canBattle(m))
+    .map(m => ({m, g: gain(m)}))
+    .sort((a, b) => b.g - a.g || a.m.age - b.m.age || a.m.id.localeCompare(b.m.id))
+    .slice(0, 3).map(x => x.m.id);
+}
+
 function practice(catalog: Catalog, state: LeagueState, rng: Rng, byTeam: Map<TeamId, Mon[]>): GrowthEvent[] {
   const events: GrowthEvent[] = [];
   for (const [teamId, mons] of byTeam) {
     const team = state.teams[teamId];
-    if (!team.human) {
-      const young = mons.filter(m => m.tier === 'practice' && canBattle(m)).sort((a, b) => (GRADES.indexOf(b.potential) - GRADES.indexOf(a.potential)) || a.age - b.age);
-      team.practiceFocus = young.slice(0, 3).map(m => m.id);
-    }
+    // AI clubs focus their best prospects every week; the user's club starts with the same picks
+    // (shown under Practice in "Before you play") until the user chooses
+    if (!team.human || team.practiceFocus === undefined) team.practiceFocus = defaultFocus(catalog, mons);
     const focus = new Set(team.practiceFocus ?? []);
     for (const m of mons) {
       if (m.injury && m.injury.kind !== 'day-to-day') continue;
@@ -459,11 +494,18 @@ export function advancePhase(catalog: Catalog, state: LeagueState): void {
   if (state.phase !== 'regular' && state.phase !== 'playoffs') state.pauseReasons = [];  // only a played week pauses a sim
   switch (state.phase) {
     case 'preseason': {
-      enforceRosters(catalog, state, rng);
+      // the user's roster is never trimmed silently: Play asks first (api.trimRoster)
+      const over = rosterCount(teamMons(state, state.userTeamId)) - ROSTER;
+      if (over > 0) {
+        state.pauseReasons = [`Your roster has ${ROSTER + over} outside injured reserve: release ${over} before the season starts`];
+        return;
+      }
+      enforceRosters(catalog, state, rng, Object.keys(state.teams), ROSTER, false);
       littleCup(catalog, state, rng);
       for (const t of Object.keys(state.teams)) chooseStrategy(catalog, state, t);
       state.phase = 'regular';
       state.week = 1;
+      enforceFloor(catalog, state);
       for (const t of Object.keys(state.teams)) {
         const starters = state.teams[t].lineup.slots.map(sl => sl.monId && state.mons[sl.monId]).filter((m): m is Mon => !!m);
         setGoal(catalog, state, rng, t, starters);

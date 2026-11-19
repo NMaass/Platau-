@@ -32,9 +32,14 @@ export function ratingPop(m: Mon, role: Role, ovr: number): string {
 /** Glance badge for a mon: its current slot role if given, else its best role. */
 export function monBadge(m: Mon, role?: Role | null, o: {full?: boolean; sm?: boolean; lg?: boolean; noPeek?: boolean} = {}): string {
   let r: Role | null, ovr: number | null;
+  let off: Role | null = null;
   if (role) { r = role; ovr = M.roleRating(C(), S(), m, role); if (ovr == null) { r = null; } }
   else { const b = M.bestRole(C(), S(), m); r = b.role; ovr = b.ovr; }
-  return roleBadge(r, ovr, {...o, pop: o.noPeek || !r || ovr == null ? undefined : ratingPop(m, r, ovr)});
+  // off-role in its slot: it still plays a real set, its best one; mark the badge, never "No set"
+  if (role && r == null) { const b = M.bestRole(C(), S(), m); off = role; r = b.role; ovr = b.ovr; }
+  const pop = o.noPeek || !r || ovr == null ? undefined
+    : (off ? `<strong>Off-role</strong><span>No set of ${esc(monName(m))} fills ${esc(ROLE_LABEL[off])}: it plays its best set.</span>` : '') + ratingPop(m, r!, ovr!);
+  return roleBadge(r, ovr, {...o, off: !!off, pop});
 }
 
 /** Potential as a range (peek and Pokémon page only, never in rows). */

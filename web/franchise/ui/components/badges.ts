@@ -15,13 +15,15 @@ export interface BadgeOpts {
   pop?: string;
   /** shown dimmed (e.g. scouted/unknown) */
   ghost?: boolean;
+  /** playing off-role (its best set, not the slot's role): dashed outline, same size */
+  off?: boolean;
 }
 
 /** Role badge: role | OVR. role null = "No set" placeholder of the same height. */
 export function roleBadge(role: Role | null, ovr: number | null, o: BadgeOpts = {}): string {
   if (!role || ovr == null) return `<span class="noset${o.full ? ' full' : ''}${o.sm ? ' sm' : ''}">No set</span>`;
-  const cls = 'rb' + (ovr >= 90 ? ' elite' : '') + (o.full ? ' full' : '') + (o.sm ? ' sm' : '') + (o.lg ? ' lg' : '') + (o.ghost ? ' ghost' : '');
-  const label = `${ROLE_LABEL[role]} ${ovr}`;
+  const cls = 'rb' + (ovr >= 90 ? ' elite' : '') + (o.full ? ' full' : '') + (o.sm ? ' sm' : '') + (o.lg ? ' lg' : '') + (o.ghost ? ' ghost' : '') + (o.off ? ' off' : '');
+  const label = `${o.off ? 'Off-role: ' : ''}${ROLE_LABEL[role]} ${ovr}`;
   const inner = `<span class="${cls}"${o.pop ? '' : ` role="img" aria-label="${esc(label)}"`}><span class="rb-r"${o.pop ? '' : ' aria-hidden="true"'}>${esc(o.full ? ROLE_LABEL[role] : ROLE_ABBR[role])}</span><span class="rb-n"${o.pop ? '' : ' aria-hidden="true"'}>${o.pop ? `<span>${ovr}</span>` : ovr}</span></span>`;
   return o.pop ? `<span class="peek" tabindex="0" aria-label="${esc(label)}">${inner}<span class="pop">${o.pop}</span></span>` : inner;
 }

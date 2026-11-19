@@ -50,7 +50,8 @@ export async function loadLast(): Promise<LeagueState | null> {
   try {
     const id = await idb<string | undefined>('readonly', (os) => os.get('last'));
     if (!id) return null;
-    return (await idb<LeagueState | undefined>('readonly', (os) => os.get('league:' + id))) ?? null;
+    const s = await idb<LeagueState | undefined>('readonly', (os) => os.get('league:' + id));
+    return s ? api.migrate(s) : null;
   } catch { return null; }
 }
 export async function deleteSave(id: string): Promise<void> {
@@ -69,7 +70,7 @@ export function exportSave(): void {
 export async function importSave(file: File): Promise<void> {
   const parsed = JSON.parse(await file.text()) as LeagueState;
   if (parsed?.schemaVersion !== 1 || !parsed.teams || !parsed.mons) throw new Error('This file is not a Plateau save.');
-  store.state = parsed;
+  store.state = api.migrate(parsed);
   await save();
   notify();
 }

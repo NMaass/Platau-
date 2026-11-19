@@ -32,6 +32,8 @@ node --test franchise/model/*.test.ts franchise/sim/*.test.ts franchise/catalog/
 node franchise/scripts/e2e.mjs          # real engine: a week of battles, every screen at 1280 and 390 px
 node franchise/scripts/e2e-season.mjs   # fast sim: a whole season, draft, re-sign, FA, save round trip
 npx tsc --noEmit -p .                   # battle/worker.ts has one known Rollmon error; franchise/ is clean
+node franchise/scripts/season-sanity.ts [seasons=5] [seed=11]   # quick-sim seasons: OVR, ages, legendaries,
+                                        # payrolls vs floor/cap, on-role lineups, injuries, Growth by tier
 ```
 Both e2e scripts need Playwright with Chromium and fail on any console or page error (`--no-build` skips the
 build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots). Dev saves at any phase:
@@ -51,9 +53,11 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
 ## Tuning knobs
 | Where | Knobs |
 |---|---|
-| `model/season.ts` `DEFAULT_SETTINGS` | cap, cap growth, floor, min salary, max %, injury rates, AI/human think time (ms), series lengths, scouting points/costs, deadline week, weeks |
-| `model/season.ts` `START` | roster size, starting legendaries, ages, payroll target, AI offer/trade chance per week |
-| `model/progression.ts` `XP`, `xpToNext` | XP per battle action, practice XP by tier, focus bonus; Growth curve |
+| `model/season.ts` `DEFAULT_SETTINGS` | cap, cap growth, floor, min salary, max %, injuries (`injuryKo` 2.5% per faint, `injuryStatus` 1.2% per status ending a battle, `injuryDayToDay` 68% of injuries, `injuryIr` 6%; the rest out 1–3 weeks: ~4 injuries a club a season, ~1 multi-week to a starter), AI/human think time (ms), series lengths, scouting points/costs, deadline week, weeks |
+| `model/season.ts` `START` | roster size, starting legendaries, ages, payroll target (each club 85–95% of the cap at league start), AI offer/trade chance per week |
+| `model/season.ts` `STRATEGY_PICK` | how AI clubs pick a strategy: penalty per off-role slot, bonus for their 1st/2nd favourite |
+| `model/lineup.ts` `ON_ROLE`, `PRACTICE_PENALTY` | auto lineups: on-role slots first (assignment solver), then rating sum; when a practice-squad Pokémon is promoted to fill a role |
+| `model/progression.ts` `XP`, `xpToNext` | XP per battle action, practice XP by tier (active 30, backup 60, practice squad 75 a week), focus bonus (200); Growth curve |
 | `model/grades.ts` | EV % per grade, Growth bands, IV values, IV caps on EV grade |
 | `model/ratings.ts` `EV_ADJ`, `catalog/roles.ts` `TIER_BASE` | rating = tier base + EV-grade adjustment |
 | `model/draft.ts` | lottery odds, rounds, class size, legendary arrivals |
@@ -67,10 +71,14 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
   blocked, replays don't paint. Fast-sim weeks have no replays.
 - Little Cup is simplified (no battles: half the clubs' rookies get bonus Growth). Fantasy-draft start exists in
   the model but not in the New league screen.
-- Auto lineups put the best Pokémon in a slot even off-role ("No set"); the user's club keeps its strategy.
-- Starting payrolls sit well under the $70M floor; nothing enforces the floor yet.
-- Practice-squad Growth is slow (an unevolved prospect needs several seasons to evolve without practice focus).
-- In the offseason rosters can be under or over 18 and practice squads over 6; they are trimmed/filled when the
-  regular season starts (Home warns).
-- Injuries are frequent (~1–2 per club per week), so Play until stops often; tune `injuryKo`/`injuryStatus`.
-- Imports are checked only for `schemaVersion` 1 and the basic shape; no migrations yet.
+- Auto lineups solve the slot assignment (on-role first, then rating); a slot is off-role only when no one on
+  the roster has a set for it, and then it plays its best set (dashed badge). The user's club keeps its strategy.
+- Salary floor: a club under it at the start of the regular season pays the shortfall as dead money (inbox note).
+  AI clubs don't spend toward the floor in free agency, so a few pay it every season.
+- In the offseason rosters can be over 18 and practice squads over 6. AI clubs are trimmed when the regular
+  season starts; the user's club is never trimmed silently: Home advises, and Play lists who would be released
+  (lowest-rated, then cheapest, never a starter) in a confirm dialog.
+- League OVR drifts up a few points over the first ~6 seasons (prospects develop), then levels off
+  (`season-sanity.ts 10`).
+- The user's practice focus starts on the three prospects with the most to gain until the user picks.
+- Imports are checked only for `schemaVersion` 1 and the basic shape; `migrate()` fills defaults (e.g. moves old saves to the new injury rates).

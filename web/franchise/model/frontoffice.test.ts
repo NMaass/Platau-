@@ -67,8 +67,26 @@ test('re-sign window, franchise tag, free agency signing', () => {
     assert.equal(fa.teamId, s.userTeamId);
   }
   toPhase(s, 'preseason');
+  const over = rosterCount(teamMons(s, s.userTeamId)) - 18;
   api.advancePhase(C, s);
+  if (over > 0) {
+    // never trimmed silently: the season waits, and the release list is what the confirm dialog shows
+    assert.equal(s.phase, 'preseason');
+    assert.equal(rosterCount(teamMons(s, s.userTeamId)), 18 + over);
+    assert.match(api.pauseReasons(s)[0], /release/);
+    const list = api.rosterExcess(C, s, s.userTeamId);
+    assert.equal(list.length, over);
+    const starters = new Set(s.teams[s.userTeamId].lineup.slots.map(sl => sl.monId));
+    assert.ok(list.every(m => !starters.has(m.id)), 'never a starter');
+    assert.deepEqual(api.trimRoster(C, s, s.userTeamId).map(m => m.id), list.map(m => m.id));
+    api.advancePhase(C, s);
+  }
+  assert.equal(s.phase, 'regular');
   assert.equal(rosterCount(teamMons(s, s.userTeamId)), 18);
+  for (const t of Object.keys(s.teams)) {
+    assert.equal(rosterCount(teamMons(s, t)), 18, `${t} at 18`);
+    assert.ok(api.payroll(s, t) >= s.settings.floor, `${t} at or over the floor`);
+  }
 });
 
 test('AI offers reach the user and can be accepted', () => {

@@ -105,7 +105,7 @@ export function fixtureLeague(catalog: Catalog, userTeamIndex = 0): LeagueState 
   const r = rng(1234);
   const season = 2026;
   const settings = {
-    cap: 100e6, capGrowth: .04, floor: 70e6, minSalary: .5e6, maxSalaryPct: .2, injuryKo: .1, injuryStatus: .05,
+    cap: 100e6, capGrowth: .04, floor: 70e6, minSalary: .5e6, maxSalaryPct: .2, injuryKo: .025, injuryStatus: .012, injuryDayToDay: .68, injuryIr: .06,
     budgetMs: {ai: 10, human: 40}, seriesBestOf: 3, finalBestOf: 5, scoutingPointsPerWeek: 10, scoutCost: 1, fullScoutCost: 5,
     tradeDeadlineWeek: 8, weeks: 14,
   };

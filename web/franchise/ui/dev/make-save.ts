@@ -14,7 +14,11 @@ const s: LeagueState = api.newLeague(catalog, {start: 'random', seed: +seedArg, 
 
 const step = (): void => {
   if (s.phase === 'regular' || s.phase === 'playoffs') api.playWeekSync(catalog, s);
-  else api.advancePhase(catalog, s);
+  else {
+    // the season won't open over 18; a dev save trims the way the confirm dialog would
+    if (s.phase === 'preseason' && api.rosterExcess(catalog, s, s.userTeamId).length) api.trimRoster(catalog, s, s.userTeamId);
+    api.advancePhase(catalog, s);
+  }
 };
 const at = (): boolean => {
   const m = /^week(\d+)$/.exec(phase);

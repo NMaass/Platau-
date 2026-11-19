@@ -213,6 +213,8 @@ span.peek:not(.ref){display:inline-block}
 /* list rows: --cols sets the grid, every row text-baseline aligned so chips, text and buttons line up */
 .l-list>li{display:grid;grid-template-columns:var(--cols,minmax(0,1fr) auto);gap:var(--s3);align-items:baseline;padding:var(--s3) 0;border-top:1px solid var(--rule);min-height:var(--row-h)}
 .l-list>li>*{min-width:0}
+/* three columns: name, badge, a fixed-width figure (money) on the right (e.g. the release list) */
+.l-list.trio>li{--cols:minmax(0,1fr) auto 6em;align-items:center}.l-list.trio>li>:last-child{text-align:right;font-variant-numeric:tabular-nums}
 /* label/value pairs; label column is --label-w */
 .l-kv{display:grid;grid-template-columns:var(--label-w) minmax(0,1fr);gap:var(--s3) var(--s4);align-items:center}
 .l-kv>dt,.l-kv>.k{color:var(--ink-2)}
@@ -321,6 +323,7 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 .rb.range .rb-n{width:var(--rb-range-w);font-size:var(--t-lead)}
 .rb.sm{height:24px}.rb.sm .rb-r{font-size:var(--t-label)}.rb.sm .rb-n{font-size:var(--t-lead);width:32px}
 .rb.ghost{opacity:.55}
+.rb.off{border-style:dashed}.rb.off .rb-r{border-right-style:dashed;font-style:italic}
 /* list item with ONE top alignment: label chip, text and action share the top edge (Before you play, feeds).
    More breathing room than .l-list. Text's first line is nudged so its cap height meets the chip/button top. */
 .l-list.top>li{align-items:start;padding:var(--s4) 0;gap:var(--s4)}

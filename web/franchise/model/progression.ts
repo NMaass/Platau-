@@ -10,7 +10,7 @@ import {setForRole} from './ratings.ts';
 /** XP knobs (tunable). */
 export const XP = {
   played: 15, win: 20, ko: 25, damageDealt: 0.2, damageTaken: 0.05, status: 8, hazard: 10, seriesMvp: 60,
-  practiceActive: 30, practiceBackup: 30, practiceSquad: 20, focus: 150, seriesWinTeam: 10,
+  practiceActive: 30, practiceBackup: 60, practiceSquad: 75, focus: 200, seriesWinTeam: 10,
   pastPotential: 0.25,
 };
 

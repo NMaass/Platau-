@@ -5,6 +5,7 @@ import type {Rng} from './rng.ts';
 import {ROSTER, normalizeTiers, removeFromLineup, autoLineup} from './lineup.ts';
 import {addDeadMoney, canAfford, deadMoneyOnCut, makeContract, marketSalary} from './cap.ts';
 import {monValue} from './value.ts';
+import {bestRole} from './ratings.ts';
 import {freeAgents, logTx, money, rosterCount, teamMons} from './util.ts';
 import {inbox} from './inbox.ts';
 import {drawFamily} from './pool.ts';
@@ -69,11 +70,34 @@ export function releaseCandidate(catalog: Catalog, state: LeagueState, teamId: T
 }
 
 /**
+ * Who a club would release to get down to 18 outside injured reserve: never a lineup starter;
+ * lowest-rated first, then cheapest (the user sees this list in a confirm dialog before any cut).
+ */
+export function rosterExcess(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon[] {
+  const mons = teamMons(state, teamId).filter(m => m.tier !== 'ir');
+  const over = mons.length - ROSTER;
+  if (over <= 0) return [];
+  const starters = new Set(state.teams[teamId].lineup.slots.map(s => s.monId));
+  return mons.filter(m => !starters.has(m.id))
+    .sort((a, b) => bestRole(catalog, a).ovr - bestRole(catalog, b).ovr || (a.contract?.salary ?? 0) - (b.contract?.salary ?? 0) || a.id.localeCompare(b.id))
+    .slice(0, over);
+}
+
+/** Release `rosterExcess` (the user confirmed the list). */
+export function trimRoster(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon[] {
+  const cut = rosterExcess(catalog, state, teamId);
+  for (const m of cut) releaseMon(catalog, state, m);
+  const team = state.teams[teamId];
+  if (cut.length) { if (!team.human || team.lineup.auto) autoLineup(catalog, state, teamId); else normalizeTiers(catalog, state, teamId); }
+  return cut;
+}
+
+/**
  * Bring every team to exactly 18 (IR excluded): sign minimum-deal free agents
  * (waiver priority = reverse standings order of `order`), release the lowest value.
  * The user's team is filled and trimmed too, flagged in the inbox.
  */
-export function enforceRosters(catalog: Catalog, state: LeagueState, rng: Rng, order: TeamId[] = Object.keys(state.teams), max = ROSTER): void {
+export function enforceRosters(catalog: Catalog, state: LeagueState, rng: Rng, order: TeamId[] = Object.keys(state.teams), max = ROSTER, trimUser = true): void {
   for (const teamId of order) {
     const team = state.teams[teamId];
     let mons = teamMons(state, teamId);
@@ -91,7 +115,7 @@ export function enforceRosters(catalog: Catalog, state: LeagueState, rng: Rng, o
       mons = teamMons(state, teamId);
       changed = true;
     }
-    while (rosterCount(mons) > max) {
+    while (rosterCount(mons) > max && (trimUser || !team.human)) {
       const cut = releaseCandidate(catalog, state, teamId);
       if (!cut) break;
       releaseMon(catalog, state, cut);

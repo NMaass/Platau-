@@ -15,58 +15,114 @@ export function canBattle(mon: Mon): boolean {
   return !mon.injury || mon.injury.kind === 'day-to-day';
 }
 
-function slotFit(catalog: Catalog, mon: Mon, roles: Role[], all = allRoles(catalog, mon)): {role: Role; score: number} {
-  let best: {role: Role; score: number} | null = null;
+/** Score bonus for an on-role pick: the solver maximises on-role slots first, then the rating sum. */
+const ON_ROLE = 1000;
+/** Practice-squad candidates are promoted only when they beat the active/backup options by this much. */
+const PRACTICE_PENALTY = 6;
+
+function slotFit(mon: Mon, roles: Role[], all: {role: Role; ovr: number; setId: string}[]): {role: Role; score: number; setId: string; onRole: boolean} {
+  let best: {role: Role; score: number; setId: string; onRole: boolean} | null = null;
   roles.forEach((r, i) => {
     const hit = all.find(x => x.role === r);
     if (hit) {
-      const score = hit.ovr - i * 2;
-      if (!best || score > best.score) best = {role: r, score};
+      const score = ON_ROLE + hit.ovr - i * 2;
+      if (!best || score > best.score) best = {role: r, score, setId: hit.setId, onRole: true};
     }
   });
   if (best) return best;
-  // off-role pick: no stat penalty in battle, but auto-assign prefers real fits
-  return {role: roles[0], score: (all[0]?.ovr ?? 40) - 25};
+  // off-role pick: no stat penalty in battle; plays its best set
+  const top = all[0];
+  return {role: roles[0], score: (top?.ovr ?? 40) - 25, setId: top?.setId ?? mon.setId, onRole: false};
+}
+
+/**
+ * Max-weight assignment of rows (slots) to distinct columns (candidates), rows <= cols.
+ * Hungarian algorithm (O(n^2 m)) on cost = -score. Returns the column per row.
+ */
+export function assignMax(score: number[][]): number[] {
+  const n = score.length, m = n ? score[0].length : 0;
+  if (!n || !m) return score.map(() => -1);
+  if (m < n) {   // pad with dummy columns that score very low (rows left unfilled)
+    const padded = score.map(r => [...r, ...Array(n - m).fill(-1e9)]);
+    return assignMax(padded).map(c => (c >= m ? -1 : c));
+  }
+  const INF = 1e18;
+  const u = new Array(n + 1).fill(0), v = new Array(m + 1).fill(0), p = new Array(m + 1).fill(0), way = new Array(m + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i;
+    let j0 = 0;
+    const minv = new Array(m + 1).fill(INF), used = new Array(m + 1).fill(false);
+    do {
+      used[j0] = true;
+      const i0 = p[j0];
+      let delta = INF, j1 = 0;
+      for (let j = 1; j <= m; j++) {
+        if (used[j]) continue;
+        const cur = -score[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= m; j++) {
+        if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const out = new Array(n).fill(-1);
+  for (let j = 1; j <= m; j++) if (p[j]) out[p[j] - 1] = j - 1;
+  return out;
+}
+
+export interface LineupPlan { slots: LineupSlot[]; onRole: number; ratingSum: number }
+
+/**
+ * Best lineup for a strategy without touching state: every slot gets a Pokémon whose set fills
+ * the slot's role whenever the roster has one (practice squad included, promoted if needed), then
+ * the highest rating sum. Off-role picks play their best set.
+ */
+export function planLineup(catalog: Catalog, state: LeagueState, teamId: TeamId, strategyId: string): LineupPlan {
+  const strat = strategyById(strategyId);
+  const mons = teamMons(state, teamId).filter(canBattle);
+  const allR = mons.map(m => allRoles(catalog, m));
+  const fits = strat.slots.map(roles => mons.map((m, i) => slotFit(m, roles, allR[i])));
+  const nonPractice = mons.filter(m => m.tier !== 'practice').length;
+  const score = fits.map(row => row.map((f, i) => {
+    if (mons[i].tier !== 'practice') return f.score;
+    // practice only when it fills a role nobody else can, or the roster is short
+    return f.onRole || nonPractice < STARTERS ? f.score - PRACTICE_PENALTY : -1e6;
+  }));
+  const pick = assignMax(score);
+  const used = new Set(pick.filter(c => c >= 0));
+  let onRole = 0, ratingSum = 0;
+  const slots: LineupSlot[] = strat.slots.map((roles, s) => {
+    const c = pick[s];
+    if (c < 0 || score[s][c] <= -1e5) return {role: roles[0], monId: null, backups: backupsOf(s), setId: undefined};
+    const f = fits[s][c];
+    if (f.onRole) onRole++;
+    ratingSum += f.onRole ? f.score - ON_ROLE : f.score;
+    return {role: f.role, monId: mons[c].id, backups: backupsOf(s), setId: f.setId};
+  });
+  function backupsOf(s: number): MonId[] {
+    return mons.map((m, i) => ({m, i, sc: fits[s][i].score}))
+      .filter(x => !used.has(x.i) && x.m.tier !== 'practice')
+      .sort((a, b) => b.sc - a.sc || a.m.id.localeCompare(b.m.id))
+      .slice(0, 2).map(x => x.m.id);
+  }
+  return {slots, onRole, ratingSum};
 }
 
 /** Auto-assign the team's lineup for its current strategy. Returns (and stores) the lineup. */
 export function autoLineup(catalog: Catalog, state: LeagueState, teamId: TeamId): Lineup {
   const team = state.teams[teamId];
   const strat = strategyById(team.lineup.strategyId);
-  const mons = teamMons(state, teamId);
-  let pool = mons.filter(m => canBattle(m) && m.tier !== 'practice');
-  if (pool.length < STARTERS) pool = mons.filter(canBattle);
-  const allR = pool.map(m => allRoles(catalog, m));
-  const fits = strat.slots.map(roles => pool.map((m, i) => slotFit(catalog, m, roles, allR[i])));
-  const chosen: (number | null)[] = strat.slots.map(() => null);
-  const used = new Set<number>();
-  for (let n = 0; n < strat.slots.length; n++) {
-    let bs = -1, bm = -1, best = -Infinity;
-    for (let s = 0; s < strat.slots.length; s++) {
-      if (chosen[s] !== null) continue;
-      for (let m = 0; m < pool.length; m++) {
-        if (used.has(m)) continue;
-        const sc = fits[s][m].score;
-        if (sc > best) { best = sc; bs = s; bm = m; }
-      }
-    }
-    if (bs < 0) break;
-    chosen[bs] = bm; used.add(bm);
-  }
-  const slots: LineupSlot[] = strat.slots.map((roles, s) => {
-    const mi = chosen[s];
-    const mon = mi === null ? null : pool[mi];
-    const role = mi === null ? roles[0] : fits[s][mi].role;
-    const backups = pool
-      .map((m, i) => ({i, sc: fits[s][i].score}))
-      .filter(x => !used.has(x.i))
-      .sort((a, b) => b.sc - a.sc)
-      .slice(0, 2)
-      .map(x => pool[x.i].id);
-    return {role, monId: mon?.id ?? null, backups, setId: mon ? setForRole(catalog, mon, role) : undefined};
-  });
-  team.lineup = {strategyId: strat.id, slots, auto: team.lineup.auto};
-  for (const sl of slots) if (sl.monId && sl.setId) state.mons[sl.monId].setId = sl.setId;
+  return applyPlan(catalog, state, teamId, strat.id, planLineup(catalog, state, teamId, strat.id));
+}
+
+export function applyPlan(catalog: Catalog, state: LeagueState, teamId: TeamId, strategyId: string, plan: LineupPlan): Lineup {
+  const team = state.teams[teamId];
+  team.lineup = {strategyId, slots: plan.slots, auto: team.lineup.auto};
+  for (const sl of plan.slots) if (sl.monId && sl.setId) state.mons[sl.monId].setId = sl.setId;
   normalizeTiers(catalog, state, teamId);
   return team.lineup;
 }
@@ -77,7 +133,9 @@ export function slotSetId(catalog: Catalog, mon: Mon, slot: {role: Role; setId?:
   if (slot.setId && sp.sets.some(s => s.id === slot.setId)) return slot.setId;
   const chosen = sp.sets.find(s => s.id === mon.setId);
   if (chosen && chosen.roles.includes(slot.role)) return chosen.id;
-  return setForRole(catalog, mon, slot.role);
+  if (roleRating(catalog, mon, slot.role) !== null) return setForRole(catalog, mon, slot.role);
+  // off-role: its best set (never a set-less Pokémon)
+  return allRoles(catalog, mon)[0]?.setId ?? (sp.sets.some(s => s.id === mon.setId) ? mon.setId : sp.sets[0].id);
 }
 
 export interface FieldedSlot { slot: number; role: Role; monId: MonId; setId: string; flagged?: 'backup' | 'auto' | 'practice' | 'injured' }

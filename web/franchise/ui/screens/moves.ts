@@ -238,7 +238,7 @@ export function viewFreeAgents(): string {
     {key: 'ask', label: 'Asking', width: '136px', num: true, cell: (m) => { const a = ask(m); return `${money(a.salary)} × ${a.years}y`; }, sort: (m) => ask(m).salary, desc: true},
     {key: 'int', label: `Interest ${info('About interest', '<strong>Interest</strong><span>How keen this Pokémon is on your club. Keen ones take a little under their ask; cool ones want a little over.</span>')}`, width: '152px', cell: (m) => { const i = api.interest(s, m, me); return fixChip(INTEREST[i][0], INTEREST[i][1], i); }, sort: (m) => ['Keen', 'Neutral', 'Cool'].indexOf(api.interest(s, m, me))},
     {key: 'act', label: '', width: '232px', cell: (m) => resign
-      ? `<span class="l-cellacts"><button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Re-sign ${esc(monName(m))}">Re-sign</button><button type="button" class="btn sm" data-fo="tag" data-mon="${esc(m.id)}" aria-label="Franchise tag ${esc(monName(m))}">Tag</button></span>`
+      ? `<span class="l-cellacts"><button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Re-sign ${esc(monName(m))}">Re-sign</button>${tagButton(m)}</span>`
       : `<button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Negotiate with ${esc(monName(m))}">Negotiate</button>`},
   ];
   const phaseNote = resignPhase ? 'Re-sign window: keep your expiring contracts or tag one before free agency opens.'
@@ -295,6 +295,13 @@ function negotiateDialog(monId: string): void {
   };
   d.addEventListener('change', onChange);
   d.addEventListener('close', () => d.removeEventListener('change', onChange), {once: true});
+}
+
+/** Tag button of fixed width; when the tag can't be used it stays in place, disabled, with the reason in a peek. */
+function tagButton(m: Mon): string {
+  const chk = api.franchiseTagCheck(C(), S(), m.id);
+  if (chk.ok) return `<button type="button" class="btn sm" data-fo="tag" data-mon="${esc(m.id)}" aria-label="Franchise tag ${esc(monName(m))}">Tag</button>`;
+  return `<button type="button" class="btn sm peek" data-fo="tag" data-mon="${esc(m.id)}" aria-disabled="true" aria-label="Franchise tag ${esc(monName(m))}: ${esc(chk.reason)}">Tag<span class="pop"><strong>Franchise tag</strong><span>${esc(chk.reason)}.</span></span></button>`;
 }
 
 function tagDialog(monId: string): void {

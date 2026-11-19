@@ -42,9 +42,10 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
       out.push({id: `off-${i}`, kind: 'lineup', label: 'Lineup', text: `${name(m.id)} has no ${ROLE_LABEL[sl.role]} set and plays off-role.`, action: {label: 'Fix lineup', route: '#lineup'}});
     }
   });
-  if (state.phase === 'preseason' || state.phase === 'regular') {
+  if (state.phase === 'preseason' || state.phase === 'regular' || state.phase === 'free-agency') {
     const n = rosterCount(teamMons(state, me.id));
-    if (n !== 18) out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: n > 18 ? `You carry ${n}; the lowest-rated will be released down to 18.` : `You carry ${n}; free agents will be signed up to 18.`, action: n > 18 ? {label: 'Roster', route: '#roster'} : {label: 'Sign', route: '#freeagents'}});
+    if (n > 18) out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: `You carry ${n} outside injured reserve; release ${n - 18} before the season starts (Play lists who would go).`, action: {label: 'Roster', route: '#roster'}});
+    else if (n < 18 && state.phase !== 'free-agency') out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: `You carry ${n}; free agents will be signed up to 18.`, action: {label: 'Sign', route: '#freeagents'}});
   }
   for (const o of state.offers) {
     if (o.status !== 'open' || o.toTeamId !== me.id) continue;

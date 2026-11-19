@@ -1,5 +1,5 @@
-// Injuries (all tunable): KO ~10%, ending a battle with a status ~5% (burn and
-// toxic riskier), age raises risk. Day-to-day plays one EV grade lower; out 1–3
+// Injuries (all tunable in LeagueSettings): KO ~2.5%, ending a battle with a status ~1.2% (burn and
+// toxic riskier), age raises risk; ~68% day-to-day, ~6% IR. A club sees ~3–5 a season. Day-to-day plays one EV grade lower; out 1–3
 // weeks; IR 4+ weeks. Rare severe injuries cost an IV grade or cap the EV grade.
 import type {Injury, LeagueState, Mon, MonBox, StatId} from '../types.ts';
 import type {Rng} from './rng.ts';
@@ -26,9 +26,10 @@ export function rollInjury(state: LeagueState, rng: Rng, mon: Mon, box: MonBox):
   if (!rng.chance(injuryRisk(state, mon, box))) return null;
   const x = rng.next();
   const late = mon.age >= 31 ? 0.08 : 0;
+  const dtd = state.settings.injuryDayToDay ?? 0.68, ir = state.settings.injuryIr ?? 0.06;
   let kind: Injury['kind'], weeksLeft: number;
-  if (x < 0.55 - late) { kind = 'day-to-day'; weeksLeft = 0; }
-  else if (x < 0.86 - late) { kind = 'out'; weeksLeft = rng.range(1, 3); }
+  if (x < dtd - late) { kind = 'day-to-day'; weeksLeft = 0; }
+  else if (x < 1 - ir - late) { kind = 'out'; weeksLeft = rng.range(1, 3); }
   else { kind = 'ir'; weeksLeft = rng.range(4, 8); }
   const pool = box.fainted || !box.endStatus ? KO_TEXT : (STATUS_TEXT[box.endStatus] ?? KO_TEXT);
   const inj: Injury = {kind, weeksLeft, description: rng.pick(pool), sinceWeek: state.week, season: state.season};
