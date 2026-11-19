@@ -97,7 +97,8 @@ function rarity(s: Sp, fam: string): Rarity {
   const tags = s.tags as string[];
   if (tags.includes('Mythical')) return 'mythical';
   if (tags.includes('Restricted Legendary') || tags.includes('Sub-Legendary')) return 'legendary';
-  if (PSEUDO_ROOTS.has(fam)) return 'pseudo';
+  // Ultra Beasts and Paradox Pokémon are rare like pseudo-legendaries (~3 each), not common (lead's call, 2026-11-19).
+  if (PSEUDO_ROOTS.has(fam) || tags.includes('Ultra Beast') || tags.includes('Paradox')) return 'pseudo';
   return 'common';
 }
 const growthJson: {byNum: Record<string, GrowthRate>} = JSON.parse(readFileSync(new URL('../catalog/growth-rates.json', import.meta.url), 'utf8'));
