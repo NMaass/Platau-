@@ -1,0 +1,398 @@
+<style>
+.ph-row{display:flex;flex-wrap:wrap;gap:32px 28px;justify-content:center;align-items:flex-start;padding:8px 0;max-width:100%}
+.ph-fig{margin:0;width:300px;max-width:100%;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.ph-cap{font-family:var(--font-ui);font-size:14px;line-height:1.4;color:var(--ink-2);text-align:center;margin:0 6px}
+.ph-phone{width:100%;height:620px;border-radius:32px;padding:7px;background:var(--paper-2);border:1px solid var(--rule-strong);box-shadow:var(--shadow);box-sizing:border-box}
+.ph-screen{position:relative;height:100%;border-radius:25px;overflow:hidden;background:var(--ground);color:var(--ink);font-family:var(--font-ui);font-size:13.5px;line-height:1.4;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;border:1px solid var(--rule)}
+.ph-screen *{box-sizing:border-box}
+.ph-screen h3,.ph-screen h4{margin:0;font-family:var(--font-display);color:var(--ink);line-height:1.1}
+.ph-screen h3{font-size:22px;font-weight:800}
+.ph-screen h4{font-size:17px;font-weight:700}
+.ph-screen p{margin:0}
+.ph-screen :focus-visible{outline:2px solid var(--team-ink);outline-offset:2px;border-radius:3px}
+.ph-screen button{font-family:var(--font-ui);color:inherit}
+.ph-status{display:flex;justify-content:space-between;align-items:center;height:26px;padding:0 20px;font-size:12px;font-weight:700;color:var(--ink-2);flex:none}
+.ph-status span:last-child{display:inline-flex;gap:4px;align-items:center}
+.ph-status svg.i{width:15px;height:15px}
+.ph-body{flex:1;min-height:0;overflow:hidden;padding:2px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.ph-head{display:flex;align-items:center;gap:10px;padding:2px 2px 0}
+.ph-crest{width:12px;height:12px;border-radius:50%;background:var(--team);flex:none;box-shadow:0 0 0 2px var(--paper),0 0 0 3px var(--team-2)}
+.ph-sub{font-size:13px;color:var(--ink-2)}
+.ph-panel{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+/* hub steps */
+.ph-steps{display:grid;grid-template-columns:repeat(4,1fr);padding:0;list-style:none;margin:0}
+.ph-steps li+li{border-left:1px solid var(--rule)}
+.ph-step{display:grid;justify-items:center;gap:2px;padding:8px 2px 7px;text-align:center}
+.ph-step b{font-size:13px;font-weight:700}
+.ph-step span{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:650}
+.ph-step svg.i{width:13px;height:13px;stroke-width:2.25}
+.ph-ok{color:var(--ev-growth)} .ph-warn{color:var(--ev-decline)} .ph-next{color:var(--team-ink)}
+.ph-step.ph-now{background:var(--team-tint)}
+/* advisory */
+.ph-adv{padding:10px 12px 12px;display:grid;gap:8px}
+.ph-adv-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ph-adv-top .chip{display:inline-flex}
+.ph-more{font-size:12px;color:var(--ink-3);font-weight:650}
+.ph-adv p{font-size:14px}
+.ph-adv p strong{font-weight:700}
+.ph-adv-foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ph-adv-foot .btn{min-height:36px}
+.ph-chips{display:grid;grid-template-columns:1fr;gap:6px}
+/* series card */
+.ph-series{padding:10px 12px;display:grid;gap:6px}
+.ph-vs{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ph-vs h4{font-size:18px}
+.ph-dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0}
+.ph-dl div{display:grid;gap:0}
+.ph-dl dt{font-stretch:78%;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.ph-dl dd{margin:0;font-weight:700;font-size:14px}
+.ph-play{position:absolute;left:12px;right:12px;bottom:68px}
+.ph-play .btn{width:100%;justify-content:center;min-height:48px;font-size:16px}
+.ph-play .btn svg.i{width:18px;height:18px}
+/* tab bar */
+.ph-tabs{flex:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--paper);border-top:1px solid var(--rule);padding:0 2px 6px}
+.ph-tab{all:unset;box-sizing:border-box;white-space:nowrap;font-stretch:92%;display:grid;justify-items:center;align-content:center;gap:2px;min-height:52px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;border-top:2px solid transparent;text-align:center}
+.ph-tab svg.i{width:20px;height:20px}
+.ph-tab[aria-current="page"]{color:var(--team-ink);border-top-color:var(--team);font-weight:750}
+/* lens switcher */
+.ph-seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper-2);border:1px solid var(--rule);border-radius:var(--r);padding:3px;gap:3px}
+.ph-seg button{all:unset;box-sizing:border-box;text-align:center;min-height:32px;display:grid;place-items:center;border-radius:3px;font-family:var(--font-ui);font-size:13px;font-weight:650;color:var(--ink-2);cursor:pointer}
+.ph-seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);font-weight:750;box-shadow:0 0 0 1px var(--rule-strong)}
+/* roster list */
+.ph-list{display:grid}
+.ph-grp{display:flex;justify-content:space-between;align-items:center;padding:5px 4px 4px}
+.ph-grp .cap{color:var(--ink-2)}
+.ph-grp-btn{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;width:100%;min-height:30px;padding:2px 4px;cursor:pointer;border-top:1px solid var(--rule)}
+.ph-grp-btn .ph-sub{font-size:12px}
+.ph-grp-btn svg.i{color:var(--ink-3)}
+.ph-rows{list-style:none;margin:0;padding:0;background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.ph-r{display:grid;grid-template-columns:32px minmax(0,1fr) 30px 40px;gap:9px;align-items:center;min-height:42px;padding:3px 9px}
+.ph-r+.ph-r{border-top:1px solid var(--rule)}
+.ph-r .name{font-size:14px;line-height:1.2}
+.ph-meta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;font-size:12px;color:var(--ink-2);line-height:1.3}
+.ph-fit{font-family:var(--font-display);font-weight:700;font-size:16px;text-align:right;color:var(--ink)}
+.ph-fit.ph-na{color:var(--ink-3)}
+.ph-hdr{display:grid;grid-template-columns:1fr 30px 40px;gap:9px;padding:2px 9px 4px 4px}
+.ph-hdr span{font-stretch:78%;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.ph-hdr span:nth-child(2){text-align:right}
+.ph-hdr span:nth-child(3){text-align:center}
+.ph-hdr span:first-child{color:var(--ink-2)}
+.ph-hurt{background:repeating-linear-gradient(135deg,var(--ev-health-bg) 0 2px,transparent 2px 9px),var(--paper)}
+.ph-hurt .ph-fit{color:var(--ink-3)}
+.ph-up{display:inline-flex;align-items:center;gap:3px;color:var(--ev-growth);background:var(--ev-growth-bg);font-weight:700;padding:0 5px;border-radius:3px}
+.ph-up svg.i{width:12px;height:12px;stroke-width:2.5}
+.ph-pk{display:inline-grid;justify-items:center;gap:0}
+.ph-pk::after{content:"";width:28px;border-bottom:2px dotted var(--ink-3);margin-top:3px}
+.ph-r .grade{justify-self:center}
+/* sheet */
+.ph-dim{position:absolute;inset:0;background:color-mix(in srgb,var(--ground) 70%,transparent);backdrop-filter:blur(1px)}
+.ph-sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--rule-strong);border-radius:16px 16px 0 0;box-shadow:var(--shadow);padding:6px 16px 18px;display:grid;gap:12px}
+.ph-grab{width:40px;height:5px;border-radius:3px;background:var(--rule-strong);justify-self:center;margin-top:2px}
+.ph-sh-head{display:flex;align-items:center;gap:10px}
+.ph-sh-head h4{flex:1;font-size:19px}
+.ph-x{all:unset;box-sizing:border-box;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--rule);color:var(--ink-2);cursor:pointer}
+.ph-facts{margin:0;display:grid;border-top:1px solid var(--rule)}
+.ph-facts>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.ph-facts dt{color:var(--ink-2)}
+.ph-facts dd{margin:0;font-weight:700;text-align:right}
+.ph-facts .grade{min-width:30px;height:22px;font-size:14px}
+.ph-track{position:relative;height:8px;border-radius:4px;background:var(--paper-2);border:1px solid var(--rule)}
+.ph-track i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ink-2)}
+.ph-track b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--team)}
+.ph-track-lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);margin-top:4px}
+.ph-link{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--rule-strong);border-radius:var(--r);font-weight:750;font-size:14px;color:var(--team-ink);text-decoration:none}
+/* lineup */
+.ph-arch{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ph-arch .btn{min-height:36px;font-size:13px;padding:6px 10px}
+.ph-arch .ph-sub{white-space:nowrap}
+.ph-slots{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.ph-slot{display:grid;grid-template-columns:82px minmax(0,1fr) 26px 38px;gap:8px;align-items:center;min-height:38px;padding:3px 10px;background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.ph-slot .cap{font-size:12px;color:var(--ink-2)}
+.ph-slot .name{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph-slot .grade{min-width:32px;height:22px;font-size:14px}
+.ph-broken{background:var(--paper);border:1px solid var(--ev-decline);border-radius:var(--r);padding:8px 10px 10px;display:grid;gap:6px}
+.ph-broken-top{display:flex;justify-content:space-between;align-items:center}
+.ph-broken-top .chip{display:inline-flex;white-space:nowrap}
+.ph-broken-top{gap:8px}
+.ph-broken p{font-size:13px;color:var(--ink-2)}
+.ph-cands{list-style:none;margin:0;padding:0;display:grid;border:1px solid var(--rule);border-radius:var(--r)}
+.ph-cand{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:18px 1fr 44px 34px;gap:8px;align-items:center;min-height:40px;padding:3px 8px;cursor:pointer;font-family:var(--font-ui)}
+.ph-cands li+li .ph-cand{border-top:1px solid var(--rule)}
+.ph-cand[aria-checked="true"]{background:var(--team-tint)}
+.ph-radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--rule-strong);display:grid;place-items:center}
+.ph-cand[aria-checked="true"] .ph-radio{border-color:var(--team-ink)}
+.ph-cand[aria-checked="true"] .ph-radio::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--team-ink)}
+.ph-cand strong{font-size:14px;display:block;line-height:1.2}
+.ph-cand small{font-size:12px;color:var(--ink-2)}
+.ph-cand .ph-sug{color:var(--team-ink);font-weight:700}
+.ph-fitn{text-align:right;font-size:12px;color:var(--ink-2);line-height:1.1}
+.ph-fitn b{display:block;font-family:var(--font-display);font-size:17px;color:var(--ink)}
+.ph-cand .grade{min-width:32px;height:22px;font-size:14px}
+.ph-broken .btn.go{width:100%;justify-content:center;min-height:44px}
+/* page */
+.ph-back{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:4px;min-height:32px;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--team-ink);cursor:pointer}
+.ph-id{padding:10px 12px;display:grid;gap:8px}
+.ph-id-top{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.ph-id-top .mon.ph-big{width:46px;height:46px;font-size:17px}
+.ph-id-top .grade{min-width:40px;height:30px;font-size:20px}
+.ph-types{display:flex;gap:4px;margin-top:4px}
+.ph-id .ph-dl{border-top:1px solid var(--rule);padding-top:7px;grid-template-columns:.7fr .9fr 1.4fr}
+.ph-id .ph-dl dd{font-size:13.5px}
+.ph-sec{display:grid;gap:6px}
+.ph-sec-h{display:flex;justify-content:space-between;align-items:baseline}
+.ph-sec-h h4{font-size:16px}
+.ph-ladder{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;list-style:none;margin:0;padding:0}
+.ph-ladder li{display:grid;place-items:center;height:28px;border-radius:3px;font-family:var(--font-display);font-weight:800;font-size:14px;border:1px solid var(--rule);color:var(--ink-2);background:var(--paper)}
+.ph-ladder li.ph-past{background:var(--paper-2);color:var(--ink-2)}
+.ph-ladder li.ph-cur{border:2px solid var(--team);color:var(--team-ink);background:var(--team-tint)}
+.ph-ladder li.ph-fut{border-style:dashed;color:var(--ink-3)}
+.ph-fits{list-style:none;margin:0;padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.ph-fits li{display:grid;grid-template-columns:1fr auto;gap:2px 6px;align-items:center;font-size:13px}
+.ph-fits .fitbar{grid-column:1/-1}
+.ph-fits b{font-family:var(--font-display);font-size:15px;text-align:right}
+.ph-scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--paper)}
+.ph-tbl{border-collapse:collapse;min-width:360px;width:100%;font-size:13px}
+.ph-tbl th,.ph-tbl td{padding:4px 8px;text-align:right;white-space:nowrap}
+.ph-tbl th:first-child,.ph-tbl td:first-child{text-align:left}
+.ph-tbl thead th{font-stretch:78%;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--rule-strong)}
+.ph-tbl tbody tr+tr td{border-top:1px solid var(--rule)}
+.ph-tbl tr.ph-curr td{color:var(--team-ink);font-weight:700}
+.ph-tbl tfoot td{border-top:3px double var(--rule-strong);font-weight:750}
+.ph-hint{font-size:12px;color:var(--ink-3);display:flex;align-items:center;gap:4px}
+.ph-hint svg.i{width:13px;height:13px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ph-i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></symbol>
+  <symbol id="ph-i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="ph-i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="ph-i-signal" viewBox="0 0 24 24"><path d="M4 18v-2M9 18v-5M14 18v-8M19 18V6"/></symbol>
+  <symbol id="ph-i-batt" viewBox="0 0 24 24"><rect x="3" y="8" width="16" height="9" rx="2"/><path d="M21 11v3M6 11v3M9 11v3M12 11v3"/></symbol>
+  <symbol id="ph-i-scroll" viewBox="0 0 24 24"><path d="M4 12h16M16 8l4 4-4 4M8 8l-4 4 4 4"/></symbol>
+</svg>
+
+<div class="ph-row">
+
+  <!-- 1. This week (hub) -->
+  <figure class="ph-fig">
+    <div class="ph-phone"><div class="ph-screen">
+      <div class="ph-status"><span>9:41</span><span><svg class="i"><use href="#ph-i-signal"/></svg><svg class="i"><use href="#ph-i-batt"/></svg></span></div>
+      <div class="ph-body">
+        <div class="ph-head">
+          <span class="ph-crest" aria-hidden="true"></span>
+          <div><h3>Vermilion Volts</h3><p class="ph-sub">4–1 · Kanto East · Week 6 of 14</p></div>
+        </div>
+        <ol class="ph-steps ph-panel" aria-label="This week's steps">
+          <li class="ph-step"><b>Read</b><span class="ph-ok"><svg class="i"><use href="#i-check"/></svg>Done</span></li>
+          <li class="ph-step"><b>Injuries</b><span class="ph-warn"><svg class="i"><use href="#i-flag"/></svg>1 flag</span></li>
+          <li class="ph-step"><b>Prepare</b><span class="ph-ok"><svg class="i"><use href="#i-check"/></svg>Ready</span></li>
+          <li class="ph-step ph-now" aria-current="step"><b>Play</b><span class="ph-next"><svg class="i"><use href="#i-bolt"/></svg>Next</span></li>
+        </ol>
+        <section class="ph-panel ph-adv" aria-label="Top advisory">
+          <div class="ph-adv-top"><span class="chip c-health"><svg class="i"><use href="#i-cross"/></svg>Injury</span><span class="ph-more">1 of 3 advisories</span></div>
+          <p><strong>Kingambit</strong> is out 2–3 weeks. The Attacker slot was auto-filled by <strong>Gholdengo</strong> (fit 79).</p>
+          <div class="ph-adv-foot"><span class="ph-sub">Play still works as is.</span><button class="btn" type="button">Review<svg class="i"><use href="#i-chev"/></svg></button></div>
+        </section>
+        <div class="ph-chips" aria-label="Other advisories">
+          <span class="chip c-growth"><svg class="i"><use href="#i-up"/></svg>Dragapult graded up to AA</span>
+          <span class="chip c-decline"><svg class="i"><use href="#i-flag"/></svg>Clefable contract expiring</span>
+        </div>
+        <section class="ph-panel ph-series" aria-label="Next series">
+          <div class="ph-vs"><h4>vs Saffron Sages</h4><span class="ph-sub">Best of 3</span></div>
+          <dl class="ph-dl">
+            <div><dt>Style</dt><dd>Stall</dd></div>
+            <div><dt>Record</dt><dd>3–2</dd></div>
+            <div><dt>Cap room</dt><dd>$6.8M</dd></div>
+          </dl>
+        </section>
+      </div>
+      <div class="ph-play"><button class="btn go" type="button"><svg class="i"><use href="#ph-i-play"/></svg>Play week 6</button></div>
+      <nav class="ph-tabs" aria-label="Main">
+        <button class="ph-tab" type="button" aria-current="page"><svg class="i"><use href="#i-home"/></svg>This week</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-list"/></svg>Roster</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-grid"/></svg>Lineup</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-trophy"/></svg>League</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#ph-i-more"/></svg>More</button>
+      </nav>
+    </div></div>
+    <figcaption class="ph-cap">This week: the four steps, one advisory up top, and Play is always one tap away.</figcaption>
+  </figure>
+
+  <!-- 2. Roster -->
+  <figure class="ph-fig">
+    <div class="ph-phone"><div class="ph-screen">
+      <div class="ph-status"><span>9:41</span><span><svg class="i"><use href="#ph-i-signal"/></svg><svg class="i"><use href="#ph-i-batt"/></svg></span></div>
+      <div class="ph-body">
+        <div class="ph-head"><h3>Roster</h3><span class="ph-sub" style="margin-left:auto">18 + 1 IR</span></div>
+        <div class="ph-seg" role="group" aria-label="Lens">
+          <button type="button" aria-pressed="true">Lineup</button>
+          <button type="button" aria-pressed="false">Growth</button>
+          <button type="button" aria-pressed="false">Contract</button>
+        </div>
+        <div class="ph-list">
+          <div class="ph-hdr"><span>Active · 6</span><span aria-hidden="true">Fit</span><span aria-hidden="true">Grade</span></div>
+          <ul class="ph-rows">
+            <li class="ph-r"><span class="mon">Ga</span><div><a class="name" href="#">Garchomp</a><div class="ph-meta">Attacker · 26</div></div><span class="ph-fit">88</span><span class="ph-pk"><span class="grade gA">A</span></span></li>
+            <li class="ph-r"><span class="mon">Dr</span><div><a class="name" href="#">Dragapult</a><div class="ph-meta">Sweeper · 24 <span class="ph-up"><svg class="i"><use href="#i-up"/></svg>Graded up</span></div></div><span class="ph-fit">90</span><span class="grade gAA">AA</span></li>
+            <li class="ph-r"><span class="mon">Co</span><div><a class="name" href="#">Corviknight</a><div class="ph-meta">Pivot · 27</div></div><span class="ph-fit">86</span><span class="grade gB">B</span></li>
+            <li class="ph-r"><span class="mon">Cl</span><div><a class="name" href="#">Clefable</a><div class="ph-meta">Setter · 29</div></div><span class="ph-fit">84</span><span class="grade gB">B</span></li>
+            <li class="ph-r"><span class="mon">Iv</span><div><a class="name" href="#">Iron Valiant</a><div class="ph-meta">Wallbreaker · 25</div></div><span class="ph-fit">81</span><span class="grade gA">A</span></li>
+            <li class="ph-r ph-hurt"><span class="mon">Ki</span><div><a class="name" href="#">Kingambit</a><div class="ph-meta"><span class="tag t-out"><svg class="i"><use href="#i-cross"/></svg>Out 2–3 wk</span></div></div><span class="ph-fit ph-na">—</span><span class="grade gA">A</span></li>
+          </ul>
+          <button class="ph-grp-btn" type="button" aria-expanded="false" style="margin-top:4px"><span class="cap">Backup · 6</span><span class="ph-sub">Gholdengo, Great Tusk +4 <svg class="i"><use href="#i-chev"/></svg></span></button>
+          <button class="ph-grp-btn" type="button" aria-expanded="false"><span class="cap">Practice · 6</span><span class="ph-sub">Volcarona +5 <svg class="i"><use href="#i-chev"/></svg></span></button>
+          <div class="ph-grp" style="border-top:1px solid var(--rule)"><span class="cap">Injured reserve · 1</span></div>
+          <ul class="ph-rows">
+            <li class="ph-r ph-hurt"><span class="mon">To</span><div><a class="name" href="#">Toxapex</a><div class="ph-meta"><span class="tag t-ir"><svg class="i"><use href="#i-cross"/></svg>IR · 5 wk</span></div></div><span class="ph-fit ph-na">—</span><span class="grade gC">C</span></li>
+          </ul>
+        </div>
+      </div>
+      <nav class="ph-tabs" aria-label="Main">
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-home"/></svg>This week</button>
+        <button class="ph-tab" type="button" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Roster</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-grid"/></svg>Lineup</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-trophy"/></svg>League</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#ph-i-more"/></svg>More</button>
+      </nav>
+    </div></div>
+    <figcaption class="ph-cap">Roster: a lens picks the columns, and each row keeps its three most useful marks.</figcaption>
+  </figure>
+
+  <!-- 3. Peek as bottom sheet -->
+  <figure class="ph-fig">
+    <div class="ph-phone"><div class="ph-screen">
+      <div class="ph-status"><span>9:41</span><span><svg class="i"><use href="#ph-i-signal"/></svg><svg class="i"><use href="#ph-i-batt"/></svg></span></div>
+      <div class="ph-body" aria-hidden="true" inert>
+        <div class="ph-head"><h3>Roster</h3><span class="ph-sub" style="margin-left:auto">18 + 1 IR</span></div>
+        <div class="ph-seg"><button type="button" aria-pressed="true">Lineup</button><button type="button" aria-pressed="false">Growth</button><button type="button" aria-pressed="false">Contract</button></div>
+        <div class="ph-list">
+          <div class="ph-grp"><span class="cap">Active · 6</span></div>
+          <ul class="ph-rows">
+            <li class="ph-r"><span class="mon">Ga</span><div><span class="name">Garchomp</span><div class="ph-meta">Attacker · 26</div></div><span class="ph-fit">88</span><span class="ph-pk"><span class="grade gA">A</span></span></li>
+            <li class="ph-r"><span class="mon">Dr</span><div><span class="name">Dragapult</span><div class="ph-meta">Sweeper · 24</div></div><span class="ph-fit">90</span><span class="grade gAA">AA</span></li>
+            <li class="ph-r"><span class="mon">Co</span><div><span class="name">Corviknight</span><div class="ph-meta">Pivot · 27</div></div><span class="ph-fit">86</span><span class="grade gB">B</span></li>
+            <li class="ph-r"><span class="mon">Cl</span><div><span class="name">Clefable</span><div class="ph-meta">Setter · 29</div></div><span class="ph-fit">84</span><span class="grade gB">B</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="ph-dim" aria-hidden="true"></div>
+      <section class="ph-sheet" role="dialog" aria-modal="true" aria-label="Garchomp's grade">
+        <span class="ph-grab" aria-hidden="true"></span>
+        <div class="ph-sh-head">
+          <span class="grade gA">A</span>
+          <h4>Garchomp's grade</h4>
+          <button class="ph-x" type="button" aria-label="Close"><svg class="i"><use href="#i-cross"/></svg></button>
+        </div>
+        <p>Garchomp carries <strong>80%</strong> of the EVs his moveset invests in. Grade rises as his growth track climbs.</p>
+        <div>
+          <div class="ph-track" role="img" aria-label="Growth 71 of 100; AA at 75"><i style="width:71%"></i><b style="left:75%"></b></div>
+          <div class="ph-track-lbl"><span>Growth 71 of 100</span><span>AA at 75</span></div>
+        </div>
+        <dl class="ph-facts">
+          <div><dt>Moveset EVs</dt><dd>80%</dd></div>
+          <div><dt>Next grade</dt><dd><span class="grade gAA">AA</span> in ~3 weeks</dd></div>
+          <div><dt>IV ceiling</dt><dd><span class="grade gAA">AA</span></dd></div>
+        </dl>
+        <a class="ph-link" href="#">Open Garchomp<svg class="i"><use href="#i-chev"/></svg></a>
+      </section>
+    </div></div>
+    <figcaption class="ph-cap">Peek: tapping a dotted mark opens a bottom sheet with the reason and a link to the page.</figcaption>
+  </figure>
+
+  <!-- 4. Lineup slot picker -->
+  <figure class="ph-fig">
+    <div class="ph-phone"><div class="ph-screen">
+      <div class="ph-status"><span>9:41</span><span><svg class="i"><use href="#ph-i-signal"/></svg><svg class="i"><use href="#ph-i-batt"/></svg></span></div>
+      <div class="ph-body">
+        <div class="ph-arch">
+          <div><h3>Lineup</h3><p class="ph-sub">Wk 6 vs Saffron Sages</p></div>
+          <button class="btn" type="button"><svg class="i"><use href="#i-swap"/></svg>Bulky Offense</button>
+        </div>
+        <ol class="ph-slots" aria-label="Bulky Offense slots">
+          <li class="ph-slot"><span class="cap">Setter</span><a class="name" href="#">Clefable</a><span class="ph-fit">84</span><span class="grade gB">B</span></li>
+          <li class="ph-slot"><span class="cap">Pivot</span><a class="name" href="#">Corviknight</a><span class="ph-fit">86</span><span class="grade gB">B</span></li>
+          <li class="ph-slot"><span class="cap">Attacker</span><a class="name" href="#">Garchomp</a><span class="ph-fit">88</span><span class="grade gA">A</span></li>
+          <li class="ph-broken">
+            <div class="ph-broken-top"><span class="cap" style="color:var(--ink-2)">Attacker</span><span class="chip c-decline"><svg class="i"><use href="#i-flag"/></svg>Auto-filled</span></div>
+            <ul class="ph-cands" role="radiogroup" aria-label="Attacker candidates">
+              <li><button class="ph-cand" type="button" role="radio" aria-checked="true"><span class="ph-radio"></span><span><strong>Gholdengo</strong><small class="ph-sug">Suggested</small></span><span class="ph-fitn">fit<b>79</b></span><span class="grade gB">B</span></button></li>
+              <li><button class="ph-cand" type="button" role="radio" aria-checked="false"><span class="ph-radio"></span><span><strong>Great Tusk</strong><small>Backup</small></span><span class="ph-fitn">fit<b>74</b></span><span class="grade gB">B</span></button></li>
+              <li><button class="ph-cand" type="button" role="radio" aria-checked="false"><span class="ph-radio"></span><span><strong>Volcarona</strong><small>Practice</small></span><span class="ph-fitn">fit<b>58</b></span><span class="grade gA">A</span></button></li>
+            </ul>
+            <button class="btn go" type="button"><svg class="i"><use href="#i-check"/></svg>Keep Gholdengo</button>
+          </li>
+          <li class="ph-slot"><span class="cap">Wallbreaker</span><a class="name" href="#">Iron Valiant</a><span class="ph-fit">81</span><span class="grade gA">A</span></li>
+          <li class="ph-slot"><span class="cap">Sweeper</span><a class="name" href="#">Dragapult</a><span class="ph-fit">90</span><span class="grade gAA">AA</span></li>
+        </ol>
+      </div>
+      <nav class="ph-tabs" aria-label="Main">
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-home"/></svg>This week</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-list"/></svg>Roster</button>
+        <button class="ph-tab" type="button" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Lineup</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-trophy"/></svg>League</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#ph-i-more"/></svg>More</button>
+      </nav>
+    </div></div>
+    <figcaption class="ph-cap">Lineup: the broken slot opens in place with three ranked candidates.</figcaption>
+  </figure>
+
+  <!-- 5. Pokemon page -->
+  <figure class="ph-fig">
+    <div class="ph-phone"><div class="ph-screen">
+      <div class="ph-status"><span>9:41</span><span><svg class="i"><use href="#ph-i-signal"/></svg><svg class="i"><use href="#ph-i-batt"/></svg></span></div>
+      <div class="ph-body" style="gap:7px">
+        <button class="ph-back" type="button"><svg class="i"><use href="#ph-i-back"/></svg>Roster</button>
+        <section class="ph-panel ph-id" aria-label="Garchomp">
+          <div class="ph-id-top">
+            <span class="mon ph-big">Ga</span>
+            <div><h3>Garchomp</h3><div class="ph-types"><span class="type ty-dragon">Dragon</span><span class="type ty-ground">Ground</span></div></div>
+            <span class="grade gA">A</span>
+          </div>
+          <dl class="ph-dl">
+            <div><dt>Age</dt><dd>26</dd></div>
+            <div><dt>Role</dt><dd>Attacker</dd></div>
+            <div><dt>Contract</dt><dd>$14.2M to 2029</dd></div>
+          </dl>
+        </section>
+        <section class="ph-sec" aria-label="Growth">
+          <div class="ph-sec-h"><h4>Growth</h4><span class="ph-sub">71 of 100 · AA at 75</span></div>
+          <ol class="ph-ladder">
+            <li class="ph-past">F</li><li class="ph-past">D</li><li class="ph-past">C</li><li class="ph-past">B</li><li class="ph-cur" aria-current="step">A</li><li class="ph-fut">AA</li><li class="ph-fut">AAA</li>
+          </ol>
+        </section>
+        <section class="ph-sec" aria-label="Role fit">
+          <h4 style="font-size:16px">Role fit</h4>
+          <ul class="ph-fits ph-panel">
+            <li><span>Attacker</span><b>88</b><span class="fitbar"><i style="width:88%"></i></span></li>
+            <li><span>Wallbreaker</span><b>81</b><span class="fitbar"><i style="width:81%"></i></span></li>
+            <li><span>Sweeper</span><b>79</b><span class="fitbar"><i style="width:79%"></i></span></li>
+            <li><span>Setter</span><b>74</b><span class="fitbar"><i style="width:74%"></i></span></li>
+          </ul>
+        </section>
+        <section class="ph-sec" aria-label="Career">
+          <div class="ph-sec-h"><h4>Career</h4><span class="ph-hint"><svg class="i"><use href="#ph-i-scroll"/></svg>Swipe</span></div>
+          <div class="ph-scroll" tabindex="0" role="region" aria-label="Career stats, scrolls sideways">
+            <table class="ph-tbl">
+              <thead><tr><th scope="col">Year</th><th scope="col">Ser</th><th scope="col">W–L</th><th scope="col">KO</th><th scope="col">Fnt</th><th scope="col">KO/S</th><th scope="col">Gr</th></tr></thead>
+              <tbody>
+                <tr><td>2025</td><td>14</td><td>9–5</td><td>31</td><td>12</td><td>2.2</td><td>B</td></tr>
+                <tr><td>2026</td><td>14</td><td>10–4</td><td>38</td><td>10</td><td>2.7</td><td>A</td></tr>
+                <tr class="ph-curr"><td>2027</td><td>5</td><td>4–1</td><td>15</td><td>3</td><td>3.0</td><td>A</td></tr>
+              </tbody>
+              <tfoot><tr><td>Career</td><td>33</td><td>23–10</td><td>84</td><td>25</td><td>2.5</td><td>—</td></tr></tfoot>
+            </table>
+          </div>
+        </section>
+      </div>
+      <nav class="ph-tabs" aria-label="Main">
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-home"/></svg>This week</button>
+        <button class="ph-tab" type="button" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Roster</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-grid"/></svg>Lineup</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#i-trophy"/></svg>League</button>
+        <button class="ph-tab" type="button"><svg class="i"><use href="#ph-i-more"/></svg>More</button>
+      </nav>
+    </div></div>
+    <figcaption class="ph-cap">Pokémon page: the card back, with growth ladder, role fits and a career line that swipes sideways.</figcaption>
+  </figure>
+
+</div>

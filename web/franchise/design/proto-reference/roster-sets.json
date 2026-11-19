@@ -1,0 +1,1006 @@
+{
+"Hippowdon": {
+"sets": [
+{
+"tier": "OU",
+"name": "Special Wall",
+"moves": [
+"Earthquake",
+"Slack Off",
+"Stealth Rock",
+"Toxic"
+],
+"ability": "Sand Stream",
+"item": "Leftovers",
+"nature": "Careful",
+"evs": {
+"hp": 252,
+"atk": 8,
+"spd": 248
+},
+"roles": [
+"Rocks setter",
+"Sand setter",
+"Wall"
+]
+}
+],
+"roleTiers": {
+"Rocks setter": {
+"base": 92,
+"tier": "OU",
+"set": "Special Wall"
+},
+"Sand setter": {
+"base": 92,
+"tier": "OU",
+"set": "Special Wall"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "Special Wall"
+}
+}
+},
+"Rotom-Wash": {
+"sets": [
+{
+"tier": "OU",
+"name": "Defensive Pivot",
+"moves": [
+"Volt Switch",
+"Hydro Pump",
+"Thunder Wave",
+"Pain Split"
+],
+"ability": "Levitate",
+"item": "Leftovers",
+"nature": "Calm",
+"evs": {
+"hp": 252,
+"spd": 168,
+"spe": 88
+},
+"roles": [
+"Pivot"
+]
+},
+{
+"tier": "UU",
+"name": "Pivot",
+"moves": [
+"Volt Switch",
+"Hydro Pump",
+"Pain Split",
+"Will-O-Wisp"
+],
+"ability": "Levitate",
+"item": "Leftovers",
+"nature": "Timid",
+"evs": {
+"hp": 252,
+"def": 40,
+"spe": 216
+},
+"roles": [
+"Pivot"
+]
+}
+],
+"roleTiers": {
+"Pivot": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive Pivot"
+}
+}
+},
+"Garchomp": {
+"sets": [
+{
+"tier": "OU",
+"name": "Swords Dance",
+"moves": [
+"Swords Dance",
+"Earthquake",
+"Fire Fang",
+"Scale Shot"
+],
+"ability": "Rough Skin",
+"item": "Leftovers",
+"nature": "Jolly",
+"evs": {
+"atk": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": [
+"Setup sweeper"
+]
+},
+{
+"tier": "OU",
+"name": "Tank",
+"moves": [
+"Stealth Rock",
+"Earthquake",
+"Toxic",
+"Rest"
+],
+"ability": "Rough Skin",
+"item": "Rocky Helmet",
+"nature": "Jolly",
+"evs": {
+"hp": 252,
+"def": 136,
+"spe": 120
+},
+"roles": [
+"Rocks setter"
+]
+}
+],
+"roleTiers": {
+"Setup sweeper": {
+"base": 92,
+"tier": "OU",
+"set": "Swords Dance"
+},
+"Rocks setter": {
+"base": 92,
+"tier": "OU",
+"set": "Tank"
+}
+}
+},
+"Excadrill": {
+"sets": [
+{
+"tier": "OU",
+"name": "Sand Rush",
+"moves": [
+"Swords Dance",
+"Earthquake",
+"Iron Head",
+"Rapid Spin"
+],
+"ability": "Sand Rush",
+"item": "Leftovers",
+"nature": "Jolly",
+"evs": {
+"atk": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": [
+"Hazard remover",
+"Sand abuser",
+"Setup sweeper"
+]
+},
+{
+"tier": "OU",
+"name": "Utility",
+"moves": [
+"Earthquake",
+"Iron Head",
+"Stealth Rock",
+"Toxic"
+],
+"ability": "Mold Breaker",
+"item": "Leftovers",
+"nature": "Jolly",
+"evs": {
+"atk": 4,
+"spd": 252,
+"spe": 252
+},
+"roles": [
+"Rocks setter"
+]
+}
+],
+"roleTiers": {
+"Hazard remover": {
+"base": 92,
+"tier": "OU",
+"set": "Sand Rush"
+},
+"Sand abuser": {
+"base": 92,
+"tier": "OU",
+"set": "Sand Rush"
+},
+"Setup sweeper": {
+"base": 92,
+"tier": "OU",
+"set": "Sand Rush"
+},
+"Rocks setter": {
+"base": 92,
+"tier": "OU",
+"set": "Utility"
+}
+}
+},
+"Hydreigon": {
+"sets": [
+{
+"tier": "OU",
+"name": "Three Attacks",
+"moves": [
+"Dark Pulse",
+"Earth Power",
+"Flash Cannon",
+"Roost"
+],
+"ability": "Levitate",
+"item": "Leftovers",
+"nature": "Timid",
+"evs": {
+"spa": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": []
+},
+{
+"tier": "OU",
+"name": "Nasty Plot",
+"moves": [
+"Nasty Plot",
+"Dark Pulse",
+"Earth Power",
+"Roost"
+],
+"ability": "Levitate",
+"item": "Leftovers",
+"nature": "Timid",
+"evs": {
+"spa": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": [
+"Setup sweeper"
+]
+}
+],
+"roleTiers": {
+"Setup sweeper": {
+"base": 92,
+"tier": "OU",
+"set": "Nasty Plot"
+}
+}
+},
+"Dragonite": {
+"sets": [
+{
+"tier": "OU",
+"name": "Offensive Dragon Dance",
+"moves": [
+"Dragon Dance",
+"Dual Wingbeat",
+"Earthquake",
+"Roost"
+],
+"ability": "Multiscale",
+"item": "Heavy-Duty Boots",
+"nature": "Jolly",
+"evs": {
+"atk": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": [
+"Setup sweeper"
+]
+},
+{
+"tier": "OU",
+"name": "Defensive Dragon Dance",
+"moves": [
+"Dragon Dance",
+"Dual Wingbeat",
+"Heal Bell",
+"Roost"
+],
+"ability": "Multiscale",
+"item": "Heavy-Duty Boots",
+"nature": "Adamant",
+"evs": {
+"hp": 248,
+"atk": 52,
+"def": 56,
+"spe": 152
+},
+"roles": [
+"Setup sweeper"
+]
+},
+{
+"tier": "OU",
+"name": "Utility",
+"moves": [
+"Ice Beam",
+"Earthquake",
+"Roost",
+"Heal Bell"
+],
+"ability": "Multiscale",
+"item": "Heavy-Duty Boots",
+"nature": "Relaxed",
+"evs": {
+"hp": 252,
+"def": 252,
+"spd": 4
+},
+"roles": [
+"Wall"
+]
+}
+],
+"roleTiers": {
+"Setup sweeper": {
+"base": 92,
+"tier": "OU",
+"set": "Offensive Dragon Dance"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "Utility"
+}
+}
+},
+"Tyranitar": {
+"sets": [
+{
+"tier": "OU",
+"name": "Specially Defensive",
+"moves": [
+"Stealth Rock",
+"Rock Blast",
+"Earthquake",
+"Thunder Wave"
+],
+"ability": "Sand Stream",
+"item": "Leftovers",
+"nature": "Careful",
+"evs": {
+"hp": 252,
+"def": 4,
+"spd": 252
+},
+"roles": [
+"Rocks setter",
+"Sand setter"
+]
+},
+{
+"tier": "OU",
+"name": "Choice Band",
+"moves": [
+"Stone Edge",
+"Crunch",
+"Fire Punch",
+"Ice Punch"
+],
+"ability": "Sand Stream",
+"item": "Choice Band",
+"nature": "Adamant",
+"evs": {
+"atk": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": [
+"Sand setter",
+"Wallbreaker"
+]
+}
+],
+"roleTiers": {
+"Rocks setter": {
+"base": 92,
+"tier": "OU",
+"set": "Specially Defensive"
+},
+"Sand setter": {
+"base": 92,
+"tier": "OU",
+"set": "Specially Defensive"
+},
+"Wallbreaker": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Band"
+}
+}
+},
+"Corviknight": {
+"sets": [
+{
+"tier": "OU",
+"name": "Defog",
+"moves": [
+"Body Press",
+"U-turn",
+"Defog",
+"Roost"
+],
+"ability": "Pressure",
+"item": "Leftovers",
+"nature": "Impish",
+"evs": {
+"hp": 248,
+"def": 168,
+"spd": 92
+},
+"roles": [
+"Hazard remover",
+"Pivot",
+"Wall"
+]
+}
+],
+"roleTiers": {
+"Hazard remover": {
+"base": 92,
+"tier": "OU",
+"set": "Defog"
+},
+"Pivot": {
+"base": 92,
+"tier": "OU",
+"set": "Defog"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "Defog"
+}
+}
+},
+"Volcarona": {
+"sets": [
+{
+"tier": "OU",
+"name": "Bulky Quiver Dance",
+"moves": [
+"Quiver Dance",
+"Roost",
+"Flamethrower",
+"Psychic"
+],
+"ability": "Flame Body",
+"item": "Heavy-Duty Boots",
+"nature": "Timid",
+"evs": {
+"hp": 248,
+"def": 156,
+"spa": 16,
+"spe": 88
+},
+"roles": [
+"Setup sweeper"
+]
+},
+{
+"tier": "OU",
+"name": "Offensive Quiver Dance",
+"moves": [
+"Quiver Dance",
+"Flamethrower",
+"Bug Buzz",
+"Psychic"
+],
+"ability": "Flame Body",
+"item": "Heavy-Duty Boots",
+"nature": "Timid",
+"evs": {
+"def": 4,
+"spa": 252,
+"spe": 252
+},
+"roles": [
+"Setup sweeper"
+]
+}
+],
+"roleTiers": {
+"Setup sweeper": {
+"base": 92,
+"tier": "OU",
+"set": "Bulky Quiver Dance"
+}
+}
+},
+"Pelipper": {
+"sets": [
+{
+"tier": "OU",
+"name": "Defensive",
+"moves": [
+"Scald",
+"Roost",
+"U-turn",
+"Defog"
+],
+"ability": "Drizzle",
+"item": "Damp Rock",
+"nature": "Bold",
+"evs": {
+"hp": 248,
+"def": 252,
+"spd": 8
+},
+"roles": [
+"Hazard remover",
+"Pivot",
+"Rain setter",
+"Wall"
+]
+},
+{
+"tier": "OU",
+"name": "Choice Specs",
+"moves": [
+"Weather Ball",
+"Hurricane",
+"Scald",
+"U-turn"
+],
+"ability": "Drizzle",
+"item": "Choice Specs",
+"nature": "Modest",
+"evs": {
+"def": 4,
+"spa": 252,
+"spe": 252
+},
+"roles": [
+"Pivot",
+"Rain setter",
+"Wallbreaker"
+]
+}
+],
+"roleTiers": {
+"Hazard remover": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+},
+"Pivot": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+},
+"Rain setter": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+},
+"Wallbreaker": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Specs"
+}
+}
+},
+"Mandibuzz": {
+"sets": [
+{
+"tier": "OU",
+"name": "Defensive",
+"moves": [
+"Foul Play",
+"Roost",
+"Defog",
+"U-turn"
+],
+"ability": "Overcoat",
+"item": "Heavy-Duty Boots",
+"nature": "Impish",
+"evs": {
+"hp": 248,
+"def": 92,
+"spd": 152,
+"spe": 16
+},
+"roles": [
+"Hazard remover",
+"Pivot",
+"Wall"
+]
+}
+],
+"roleTiers": {
+"Hazard remover": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+},
+"Pivot": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "Defensive"
+}
+}
+},
+"Dragapult": {
+"sets": [
+{
+"tier": "OU",
+"name": "Choice Specs",
+"moves": [
+"Shadow Ball",
+"Draco Meteor",
+"U-turn",
+"Hydro Pump"
+],
+"ability": "Infiltrator",
+"item": "Choice Specs",
+"nature": "Timid",
+"evs": {
+"def": 4,
+"spa": 252,
+"spe": 252
+},
+"roles": [
+"Pivot",
+"Wallbreaker"
+]
+},
+{
+"tier": "OU",
+"name": "Offensive Pivot",
+"moves": [
+"Hex",
+"Draco Meteor",
+"U-turn",
+"Thunder Wave"
+],
+"ability": "Infiltrator",
+"item": "Heavy-Duty Boots",
+"nature": "Timid",
+"evs": {
+"def": 4,
+"spa": 252,
+"spe": 252
+},
+"roles": [
+"Pivot"
+]
+}
+],
+"roleTiers": {
+"Pivot": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Specs"
+},
+"Wallbreaker": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Specs"
+}
+}
+},
+"Gible": {
+"sets": [],
+"roleTiers": {}
+},
+"Larvesta": {
+"sets": [
+{
+"tier": "LC",
+"name": "Pivot",
+"moves": [
+"Flare Blitz",
+"U-turn",
+"Will-O-Wisp",
+"Morning Sun"
+],
+"ability": "Flame Body",
+"item": "Heavy-Duty Boots",
+"nature": "Jolly",
+"evs": {
+"hp": 76,
+"def": 236,
+"spe": 196
+},
+"roles": [
+"Pivot"
+]
+}
+],
+"roleTiers": {
+"Pivot": {
+"base": 55,
+"tier": "LC",
+"set": "Pivot"
+}
+}
+},
+"Barraskewda": {
+"sets": [
+{
+"tier": "OU",
+"name": "Choice Band",
+"moves": [
+"Liquidation",
+"Close Combat",
+"Flip Turn",
+"Aqua Jet"
+],
+"ability": "Swift Swim",
+"item": "Choice Band",
+"nature": "Adamant",
+"evs": {
+"atk": 252,
+"def": 4,
+"spe": 252
+},
+"roles": [
+"Pivot",
+"Rain abuser",
+"Wallbreaker"
+]
+}
+],
+"roleTiers": {
+"Pivot": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Band"
+},
+"Rain abuser": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Band"
+},
+"Wallbreaker": {
+"base": 92,
+"tier": "OU",
+"set": "Choice Band"
+}
+}
+},
+"Torkoal": {
+"sets": [
+{
+"tier": "OU",
+"name": "Support",
+"moves": [
+"Lava Plume",
+"Rest",
+"Rapid Spin",
+"Sleep Talk"
+],
+"ability": "Drought",
+"item": "Heat Rock",
+"nature": "Bold",
+"evs": {
+"hp": 248,
+"def": 252,
+"spd": 8
+},
+"roles": [
+"Hazard remover",
+"Sun setter",
+"Wall"
+]
+},
+{
+"tier": "UU",
+"name": "Sun Setter",
+"moves": [
+"Stealth Rock",
+"Lava Plume",
+"Rapid Spin",
+"Toxic"
+],
+"ability": "Drought",
+"item": "Heat Rock",
+"nature": "Bold",
+"evs": {
+"hp": 248,
+"def": 252,
+"spd": 8
+},
+"roles": [
+"Hazard remover",
+"Rocks setter",
+"Sun setter"
+]
+},
+{
+"tier": "RU",
+"name": "Sun Support",
+"moves": [
+"Stealth Rock",
+"Lava Plume",
+"Yawn",
+"Body Press"
+],
+"ability": "Drought",
+"item": "Heat Rock",
+"nature": "Bold",
+"evs": {
+"hp": 248,
+"def": 252,
+"spd": 8
+},
+"roles": [
+"Rocks setter",
+"Sun setter"
+]
+}
+],
+"roleTiers": {
+"Hazard remover": {
+"base": 92,
+"tier": "OU",
+"set": "Support"
+},
+"Sun setter": {
+"base": 92,
+"tier": "OU",
+"set": "Support"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "Support"
+},
+"Rocks setter": {
+"base": 84,
+"tier": "UU",
+"set": "Sun Setter"
+}
+}
+},
+"Ninetales-Alola": {
+"sets": [
+{
+"tier": "OU",
+"name": "Aurora Veil",
+"moves": [
+"Aurora Veil",
+"Freeze-Dry",
+"Hail",
+"Hypnosis"
+],
+"ability": "Snow Warning",
+"item": "Light Clay",
+"nature": "Timid",
+"evs": {
+"hp": 252,
+"spa": 4,
+"spe": 252
+},
+"roles": [
+"Snow setter"
+]
+},
+{
+"tier": "UU",
+"name": "Aurora Veil",
+"moves": [
+"Aurora Veil",
+"Freeze-Dry",
+"Moonblast",
+"Hypnosis"
+],
+"ability": "Snow Warning",
+"item": "Heavy-Duty Boots",
+"nature": "Timid",
+"evs": {
+"spa": 252,
+"spd": 4,
+"spe": 252
+},
+"roles": [
+"Snow setter"
+]
+}
+],
+"roleTiers": {
+"Snow setter": {
+"base": 92,
+"tier": "OU",
+"set": "Aurora Veil"
+}
+}
+},
+"Ferrothorn": {
+"sets": [
+{
+"tier": "OU",
+"name": "Utility",
+"moves": [
+"Spikes",
+"Knock Off",
+"Leech Seed",
+"Body Press"
+],
+"ability": "Iron Barbs",
+"item": "Leftovers",
+"nature": "Careful",
+"evs": {
+"hp": 252,
+"def": 4,
+"spd": 252
+},
+"roles": [
+"Spikes setter"
+]
+}
+],
+"roleTiers": {
+"Spikes setter": {
+"base": 92,
+"tier": "OU",
+"set": "Utility"
+}
+}
+},
+"Toxapex": {
+"sets": [
+{
+"tier": "OU",
+"name": "The Pex",
+"moves": [
+"Knock Off",
+"Recover",
+"Haze",
+"Toxic Spikes"
+],
+"ability": "Regenerator",
+"item": "Rocky Helmet",
+"nature": "Bold",
+"evs": {
+"hp": 252,
+"def": 252,
+"spd": 4
+},
+"roles": [
+"Phazer",
+"Spikes setter",
+"Wall"
+]
+}
+],
+"roleTiers": {
+"Phazer": {
+"base": 92,
+"tier": "OU",
+"set": "The Pex"
+},
+"Spikes setter": {
+"base": 92,
+"tier": "OU",
+"set": "The Pex"
+},
+"Wall": {
+"base": 92,
+"tier": "OU",
+"set": "The Pex"
+}
+}
+}
+}

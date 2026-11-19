@@ -1,0 +1,404 @@
+<style>
+.hub-frame{border:1px solid var(--rule);border-radius:6px;background:var(--ground);box-shadow:var(--shadow);overflow:hidden;color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+.hub-scroll{overflow-x:auto;max-width:100%}
+.hub-app{min-width:1060px;display:grid;grid-template-columns:212px 1fr;min-height:880px}
+.hub-frame :focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.hub-frame h3,.hub-frame h4{margin:0;font-family:var(--font-display);color:var(--ink);line-height:1.15}
+.hub-frame p{margin:0}
+.hub-frame ul,.hub-frame ol{list-style:none;margin:0;padding:0}
+.hub-num{font-variant-numeric:tabular-nums}
+.hub-mn{font-family:var(--font-display);font-size:16px;font-weight:700}
+
+/* sidebar */
+.hub-side{background:var(--paper);border-right:1px solid var(--rule);padding:18px 12px 18px;display:flex;flex-direction:column;gap:18px}
+.hub-club{display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:0 6px 16px;border-bottom:1px solid var(--rule)}
+.hub-crest{width:40px;height:40px;border-radius:50%;background:var(--team);color:var(--on-team);display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:.02em;box-shadow:inset 0 0 0 3px var(--paper),inset 0 0 0 4px var(--team)}
+.hub-crest.hub-away{background:var(--paper-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule-strong)}
+.hub-club-name{font-family:var(--font-display);font-weight:800;font-size:18px;line-height:1.05}
+.hub-club-meta{font-size:13px;color:var(--ink-2)}
+.hub-nav{display:flex;flex-direction:column;gap:14px}
+.hub-navgrp .cap{display:block;padding:0 8px 4px}
+.hub-navgrp a{display:flex;align-items:center;gap:9px;min-height:32px;padding:5px 8px;border-radius:var(--r);color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:550}
+.hub-navgrp a:hover{background:var(--paper-2);color:var(--ink)}
+.hub-navgrp a[aria-current="page"]{background:var(--team-tint);color:var(--team-ink);font-weight:700}
+.hub-navgrp a svg.i{color:currentColor;opacity:.85}
+.hub-count{margin-left:auto;min-width:22px;height:20px;padding:0 6px;border-radius:10px;display:inline-grid;place-items:center;font-size:12px;font-weight:700;background:var(--paper-2);color:var(--ink);border:1px solid var(--rule)}
+.hub-count.hub-hot{background:var(--ev-health-bg);color:var(--ev-health);border-color:transparent}
+.hub-capbox{margin-top:auto;border-top:1px solid var(--rule);padding:14px 8px 0;display:grid;gap:6px}
+.hub-capbox .hub-capfig{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink-2)}
+.hub-capbox strong{font-family:var(--font-display);font-size:20px;color:var(--ink)}
+.hub-capbox .fitbar{height:6px}
+
+/* top bar */
+.hub-main{display:flex;flex-direction:column;min-width:0}
+.hub-top{display:flex;align-items:center;gap:16px;padding:16px 28px;background:var(--paper);border-bottom:1px solid var(--rule)}
+.hub-top h3{font-size:28px;font-weight:800;white-space:nowrap}
+.hub-top-meta{display:flex;align-items:center;gap:14px;font-size:13.5px;color:var(--ink-2)}
+.hub-top-meta>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.hub-sep{width:1px;height:18px;background:var(--rule)}
+.hub-dl{color:var(--ev-decline);font-weight:700}
+.hub-top-act{margin-left:auto;display:flex;gap:10px;align-items:center}
+.hub-top-act .btn.go{font-size:15px;padding:8px 18px}
+
+.hub-body{padding:22px 28px 32px;display:grid;gap:22px}
+
+/* steps */
+.hub-steps{display:grid;grid-template-columns:repeat(4,1fr);background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.hub-step{display:grid;grid-template-columns:30px 1fr;gap:4px 12px;padding:14px 16px;text-decoration:none;color:var(--ink);border-right:1px solid var(--rule);align-items:start}
+.hub-step:last-child{border-right:0}
+.hub-step:hover{background:var(--paper-2)}
+.hub-step-n{grid-row:span 2;width:30px;height:30px;border-radius:50%;border:1px solid var(--rule-strong);display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:16px;color:var(--ink-2)}
+.hub-step.hub-done .hub-step-n{background:var(--paper-2)}
+.hub-step.hub-now .hub-step-n{background:var(--team);border-color:var(--team);color:var(--on-team)}
+.hub-step-t{font-family:var(--font-display);font-weight:700;font-size:18px;line-height:1.2}
+.hub-step-s{display:block;font-size:13px;color:var(--ink-2)}
+.hub-step-s svg.i{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
+.hub-st-ok{color:var(--ev-growth)} .hub-st-warn{color:var(--ev-decline)} .hub-st-bad{color:var(--ev-health)}
+.hub-step-s b{font-weight:700}
+
+/* columns */
+.hub-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+.hub-stack{display:grid;gap:22px}
+.hub-panel{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.hub-ph{display:flex;align-items:baseline;gap:12px;padding:14px 18px 12px;border-bottom:1px solid var(--rule)}
+.hub-ph h4{font-size:21px;font-weight:800}
+.hub-ph .hub-ph-meta{font-size:13px;color:var(--ink-2)}
+.hub-ph .hub-ph-end{margin-left:auto}
+.hub-link{font:inherit;font-size:13px;font-weight:700;color:var(--team-ink);background:none;border:0;padding:4px 2px;min-height:24px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+
+/* advisories */
+.hub-adv-note{display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--paper-2);border-bottom:1px solid var(--rule);font-size:13px;color:var(--ink-2)}
+.hub-adv-note svg.i{color:var(--ink-2)}
+.hub-adv-note b{color:var(--ink)}
+.hub-adv li{display:grid;grid-template-columns:22px 128px minmax(0,1fr);gap:10px 14px;align-items:start;padding:14px 18px;border-bottom:1px solid var(--rule)}
+.hub-adv li:last-child{border-bottom:0}
+.hub-rank{font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ink-3);line-height:26px;text-align:right}
+.hub-sev{display:grid;gap:3px}
+.hub-sev .chip{width:100%;box-sizing:border-box}
+.hub-lvl{font-size:12px;font-weight:700;font-stretch:78%;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding-left:2px}
+.hub-adv-txt{font-size:14px;line-height:1.5;padding-top:2px}
+.hub-adv-txt .hub-sub{display:block;margin-top:3px;font-size:13px;color:var(--ink-2)}
+.hub-adv .btn{min-height:32px;padding:5px 12px;font-size:13.5px;grid-column:3;justify-self:start}
+.hub-rank,.hub-sev{grid-row:span 2}
+
+/* feed */
+.hub-feed li{display:grid;grid-template-columns:140px minmax(0,1fr) 62px;gap:14px;align-items:start;padding:11px 18px;border-bottom:1px solid var(--rule)}
+.hub-feed li:last-child{border-bottom:0}
+.hub-feed .chip{width:100%;box-sizing:border-box}
+.hub-feed-txt{padding-top:3px;line-height:1.5}
+.hub-feed-txt .grade{height:20px;min-width:28px;font-size:14px;vertical-align:-3px}
+.hub-feed-txt .tag{vertical-align:1px;margin-left:4px}
+.hub-when{padding-top:4px;font-size:12.5px;color:var(--ink-3);text-align:right;white-space:nowrap}
+.hub-arrow{display:inline-block;vertical-align:-3px;color:var(--ink-3)}
+
+/* series card */
+.hub-series{padding:16px 18px 18px;display:grid;gap:14px}
+.hub-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;text-align:center}
+.hub-vs-team{display:grid;justify-items:center;gap:6px}
+.hub-vs-team .hub-crest{width:48px;height:48px;font-size:18px}
+.hub-vs-nm{font-family:var(--font-display);font-weight:700;font-size:17px;line-height:1.1}
+.hub-vs-rec{font-size:13px;color:var(--ink-2)}
+.hub-vs-mid{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--ink-3)}
+.hub-kv{display:grid;gap:0;border-top:1px solid var(--rule)}
+.hub-kv>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13.5px}
+.hub-kv dt{color:var(--ink-2)} .hub-kv dd{margin:0;font-weight:700;text-align:right}
+.hub-peekbtn{font:inherit;font-weight:700;color:var(--ink);background:none;border:0;padding:2px 0;min-height:24px;cursor:help}
+.hub-frame .hub-kv .peek>.pop{left:auto;right:0}
+.hub-key{display:grid;gap:8px}
+.hub-key .cap{display:block}
+.hub-fitrow{display:grid;grid-template-columns:96px 1fr 26px;gap:10px;align-items:center;font-size:13.5px}
+.hub-fitrow b{font-family:var(--font-display);font-size:16px;text-align:right}
+.hub-fitrow .fitbar.hub-best i{background:var(--team)}
+.hub-series-act{display:flex;gap:8px}
+.hub-series-act .btn{flex:1;justify-content:center;font-size:13.5px}
+
+/* standings */
+.hub-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.hub-tbl th{text-align:right;padding:8px 10px;border-bottom:1px solid var(--rule);font-weight:700;font-stretch:78%;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.hub-tbl th:first-child,.hub-tbl td:first-child{text-align:left;padding-left:18px}
+.hub-tbl th:last-child,.hub-tbl td:last-child{padding-right:18px}
+.hub-tbl td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--rule)}
+.hub-tbl tr:last-child td{border-bottom:0}
+.hub-tbl .hub-pos{display:inline-block;width:16px;color:var(--ink-3);font-family:var(--font-display);font-weight:700}
+.hub-tbl .hub-you td{background:var(--team-tint);color:var(--team-ink);font-weight:700}
+.hub-tbl .hub-you .hub-pos{color:var(--team-ink)}
+.hub-youtag{font-size:12px;font-weight:700;margin-left:6px}
+.hub-tbl-foot{padding:10px 18px;font-size:13px;color:var(--ink-2);border-top:1px solid var(--rule)}
+
+/* play-until menu (open state) */
+.hub-menu-wrap{display:grid;gap:8px}
+.hub-menu-cap{font-size:13px;color:var(--ink-3)}
+.hub-menu{background:var(--paper);border:1px solid var(--rule-strong);border-radius:var(--r);box-shadow:var(--shadow);padding:6px}
+.hub-menu button{display:grid;grid-template-columns:18px 1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;font:inherit;color:var(--ink);background:none;border:0;border-radius:3px;padding:8px 10px;cursor:pointer;min-height:40px}
+.hub-menu button:hover{background:var(--paper-2)}
+.hub-menu button svg.i{grid-row:span 2;color:var(--ink-2)}
+.hub-menu .hub-mt{font-weight:700;font-size:14px}
+.hub-menu .hub-ms{grid-column:2;font-size:12.5px;color:var(--ink-2)}
+.hub-menu .hub-mw{grid-row:1;grid-column:3;font-size:12.5px;color:var(--ink-3)}
+.hub-menu hr{border:0;border-top:1px solid var(--rule);margin:6px 4px}
+.hub-menu .hub-mfoot{padding:6px 10px 4px;font-size:12.5px;color:var(--ink-2);line-height:1.4}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="hub-i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.6.8-2.6 2s1.1 1.6 2.6 2 2.6.8 2.6 2-1.1 2-2.6 2c-1.2 0-2.1-.5-2.6-1.3M12 6.5V8m0 8v1.5"/></symbol>
+  <symbol id="hub-i-down" viewBox="0 0 24 24"><path d="M4 7l6 6 4-4 6 6"/><path d="M20 10v5h-5"/></symbol>
+  <symbol id="hub-i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="hub-i-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="hub-i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.1"/></symbol>
+  <symbol id="hub-i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+  <symbol id="hub-i-ff" viewBox="0 0 24 24"><path d="M4 6l8 6-8 6zM12 6l8 6-8 6z"/></symbol>
+  <symbol id="hub-i-book" viewBox="0 0 24 24"><path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"/><path d="M12 6v13.5"/></symbol>
+  <symbol id="hub-i-users" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><path d="M15.5 5.6a3.5 3.5 0 010 6.8M17.5 14.4c1.8.7 3 2.300 3.500 4.600"/></symbol>
+</svg>
+
+<div class="hub-frame">
+<div class="hub-scroll">
+<div class="hub-app">
+
+  <!-- ===== Sidebar: calm paper, team colour only on crest + active item ===== -->
+  <aside class="hub-side" aria-label="Franchise navigation">
+    <div class="hub-club">
+      <span class="hub-crest" aria-hidden="true">VV</span>
+      <div>
+        <div class="hub-club-name">Vermilion Volts</div>
+        <div class="hub-club-meta">Kanto East · <span class="hub-num">4–1</span></div>
+      </div>
+    </div>
+
+    <nav class="hub-nav" aria-label="Rooms">
+      <div class="hub-navgrp">
+        <span class="cap">League</span>
+        <a href="#" aria-current="page"><svg class="i"><use href="#i-home"/></svg>This week</a>
+        <a href="#"><svg class="i"><use href="#i-list"/></svg>Standings</a>
+        <a href="#"><svg class="i"><use href="#i-grid"/></svg>Schedule</a>
+      </div>
+      <div class="hub-navgrp">
+        <span class="cap">Roster</span>
+        <a href="#"><svg class="i"><use href="#hub-i-users"/></svg>Roster<span class="hub-count hub-hot" aria-label="1 injury">1</span></a>
+        <a href="#"><svg class="i"><use href="#i-pen"/></svg>Lineup<span class="hub-count hub-hot" aria-label="1 auto-filled slot">1</span></a>
+        <a href="#"><svg class="i"><use href="#i-target"/></svg>Practice<span class="hub-count" aria-label="Practice focus not set">0/3</span></a>
+      </div>
+      <div class="hub-navgrp">
+        <span class="cap">Development</span>
+        <a href="#"><svg class="i"><use href="#i-up"/></svg>Growth &amp; grades</a>
+      </div>
+      <div class="hub-navgrp">
+        <span class="cap">Front office</span>
+        <a href="#"><svg class="i"><use href="#i-swap"/></svg>Trade desk<span class="hub-count" aria-label="1 offer">1</span></a>
+        <a href="#"><svg class="i"><use href="#i-pen"/></svg>Free agency</a>
+        <a href="#"><svg class="i"><use href="#hub-i-coin"/></svg>Cap</a>
+      </div>
+      <div class="hub-navgrp">
+        <span class="cap">Scouting</span>
+        <a href="#"><svg class="i"><use href="#i-eye"/></svg>Reports<span class="hub-count" aria-label="1 new report">1</span></a>
+      </div>
+      <div class="hub-navgrp">
+        <span class="cap">History</span>
+        <a href="#"><svg class="i"><use href="#i-trophy"/></svg>Seasons &amp; honours</a>
+      </div>
+    </nav>
+
+    <div class="hub-capbox">
+      <span class="cap">Cap room</span>
+      <div class="hub-capfig"><strong class="hub-num">$6.8M</strong><span class="hub-num">of $100M</span></div>
+      <div class="fitbar" role="img" aria-label="93.2 percent of cap used"><i style="width:93.2%"></i></div>
+      <div class="hub-club-meta hub-num">$93.2M committed</div>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="hub-main">
+    <header class="hub-top">
+      <h3>This week</h3>
+      <div class="hub-top-meta">
+        <span class="hub-num"><b>Week 6</b>&nbsp;of 14</span>
+        <span class="hub-sep" aria-hidden="true"></span>
+        <span>Season 2027</span>
+        <span class="hub-sep" aria-hidden="true"></span>
+        <span class="hub-dl"><svg class="i"><use href="#hub-i-clock"/></svg>2 weeks to trade deadline</span>
+      </div>
+      <div class="hub-top-act">
+        <button class="btn" type="button" aria-haspopup="menu" aria-expanded="false">Play until… <svg class="i" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
+        <button class="btn go" type="button"><svg class="i"><use href="#hub-i-play"/></svg>Play week 6</button>
+      </div>
+    </header>
+
+    <div class="hub-body">
+
+      <!-- four steps -->
+      <ol class="hub-steps" aria-label="Weekly steps">
+        <li style="display:contents"><a class="hub-step hub-done" href="#">
+          <span class="hub-step-n" aria-hidden="true">1</span>
+          <span class="hub-step-t">Read</span>
+          <span class="hub-step-s hub-st-ok"><svg class="i"><use href="#i-check"/></svg><b>Done</b>&nbsp;· 9 events</span>
+        </a></li>
+        <li style="display:contents"><a class="hub-step" href="#">
+          <span class="hub-step-n" aria-hidden="true">2</span>
+          <span class="hub-step-t">Injuries</span>
+          <span class="hub-step-s hub-st-bad"><svg class="i"><use href="#i-cross"/></svg><b>1 slot auto-filled</b></span>
+        </a></li>
+        <li style="display:contents"><a class="hub-step" href="#">
+          <span class="hub-step-n" aria-hidden="true">3</span>
+          <span class="hub-step-t">Prepare</span>
+          <span class="hub-step-s hub-st-warn"><svg class="i"><use href="#hub-i-info"/></svg><b>Lineup set</b>&nbsp;· no practice focus</span>
+        </a></li>
+        <li style="display:contents"><a class="hub-step hub-now" href="#" aria-current="step">
+          <span class="hub-step-n" aria-hidden="true">4</span>
+          <span class="hub-step-t">Play</span>
+          <span class="hub-step-s"><svg class="i"><use href="#hub-i-play"/></svg><b>Ready</b>&nbsp;· vs Saffron Sages</span>
+        </a></li>
+      </ol>
+
+      <div class="hub-cols">
+        <div class="hub-stack">
+
+          <!-- ADVISORIES -->
+          <section class="hub-panel" aria-labelledby="hub-adv-h">
+            <div class="hub-ph">
+              <h4 id="hub-adv-h">Advisories</h4>
+              <span class="hub-ph-meta">5 open · ranked by impact on week 6</span>
+              <button class="hub-link hub-ph-end" type="button">Dismiss all</button>
+            </div>
+            <p class="hub-adv-note"><svg class="i"><use href="#hub-i-info"/></svg><span><b>Play is never blocked.</b> Ignore any of these and the staff plays the best lineup they can.</span></p>
+            <ol class="hub-adv">
+              <li>
+                <span class="hub-rank" aria-label="Rank 1">1</span>
+                <span class="hub-sev"><span class="chip c-health"><svg class="i"><use href="#i-cross"/></svg>Injury</span><span class="hub-lvl">Act now</span></span>
+                <p class="hub-adv-txt"><a class="name" href="#">Kingambit</a> is out 2–3 weeks. The Attacker slot was auto-filled by <a class="name" href="#">Gholdengo</a>, fit 79 (Kingambit 88).<span class="hub-sub">Flagged on your lineup until you confirm or change it.</span></p>
+                <button class="btn" type="button">Review slot</button>
+              </li>
+              <li>
+                <span class="hub-rank" aria-label="Rank 2">2</span>
+                <span class="hub-sev"><span class="chip c-league"><svg class="i"><use href="#i-flag"/></svg>Matchup</span><span class="hub-lvl">Act now</span></span>
+                <p class="hub-adv-txt">Saffron Sages play Stall, so your Wallbreaker decides this series. <a class="name" href="#">Great Tusk</a> fits 84 here against Ursaluna's 71.<span class="hub-sub">Great Tusk is on your Backup six.</span></p>
+                <button class="btn" type="button"><svg class="i"><use href="#i-swap"/></svg>Swap in Great Tusk</button>
+              </li>
+              <li>
+                <span class="hub-rank" aria-label="Rank 3">3</span>
+                <span class="hub-sev"><span class="chip c-decline"><svg class="i"><use href="#hub-i-shield"/></svg>Weak backup</span><span class="hub-lvl">Consider</span></span>
+                <p class="hub-adv-txt">If the Wallbreaker gets hurt, the best fill is <a class="name" href="#">Iron Hands</a> at fit 63.<span class="hub-sub">Free agency has two Wallbreakers above 70 within your cap room.</span></p>
+                <button class="btn" type="button">Review slot</button>
+              </li>
+              <li>
+                <span class="hub-rank" aria-label="Rank 4">4</span>
+                <span class="hub-sev"><span class="chip c-deal"><svg class="i"><use href="#hub-i-coin"/></svg>Contract</span><span class="hub-lvl">Consider</span></span>
+                <p class="hub-adv-txt"><a class="name" href="#">Hydreigon</a>'s contract expires after this season, and you have $6.8M of cap room.<span class="hub-sub">The trade deadline is in 2 weeks; an offer for Hydreigon is open.</span></p>
+                <button class="btn" type="button">Open trade desk</button>
+              </li>
+              <li>
+                <span class="hub-rank" aria-label="Rank 5">5</span>
+                <span class="hub-sev"><span class="chip c-growth"><svg class="i"><use href="#i-up"/></svg>Growth</span><span class="hub-lvl">FYI</span></span>
+                <p class="hub-adv-txt"><a class="name" href="#">Dragonite</a> is 2 growth from grade <span class="grade gAA" style="height:20px;min-width:30px;font-size:14px;vertical-align:-3px">AA</span>. A practice focus this week would likely get it there.</p>
+                <button class="btn" type="button"><svg class="i"><use href="#i-target"/></svg>Focus Dragonite</button>
+              </li>
+            </ol>
+          </section>
+
+          <!-- EVENT FEED -->
+          <section class="hub-panel" aria-labelledby="hub-feed-h">
+            <div class="hub-ph">
+              <h4 id="hub-feed-h">Since last week</h4>
+              <span class="hub-ph-meta">9 events from week 5</span>
+              <button class="hub-link hub-ph-end" type="button">All events</button>
+            </div>
+            <ul class="hub-feed">
+              <li><span class="chip c-health"><svg class="i"><use href="#i-cross"/></svg>Injured</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Kingambit</a> strained a hamstring in game 3 vs Cerulean. <span class="tag t-out"><svg class="i"><use href="#i-cross"/></svg>Out 2–3 wk</span></p>
+                <span class="hub-when">Wk 5 · G3</span></li>
+              <li><span class="chip c-league"><svg class="i"><use href="#i-flag"/></svg>Series won 2–1</span>
+                <p class="hub-feed-txt">Beat <a class="name" href="#">Cerulean Tides</a>. The Volts move to 4–1, first in Kanto East.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-growth"><svg class="i"><use href="#i-up"/></svg>Graded up</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Garchomp</a> <span class="grade gB">B</span> <svg class="i hub-arrow" aria-label="to"><use href="#i-chev"/></svg> <span class="grade gA">A</span> after a 9-point growth week.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-deal"><svg class="i"><use href="#i-swap"/></svg>Offer received</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Lavender Wraiths</a> offer Baxcalibur and a 2nd-round pick for Hydreigon. Open until the deadline.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-growth"><svg class="i"><use href="#i-target"/></svg>Goal met</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Corviknight</a> hit its practice goal: Defense IV C to B.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-decline"><svg class="i"><use href="#hub-i-down"/></svg>Declining</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Tyranitar</a>, age 29, slipped on the growth track, 61 to 58.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-honour"><svg class="i"><use href="#i-trophy"/></svg>Award</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Gholdengo</a> named Kanto East player of the week.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-scout"><svg class="i"><use href="#i-eye"/></svg>Report ready</span>
+                <p class="hub-feed-txt">Scouting report on <a class="name" href="#">Saffron Sages</a> is ready for week 6.</p>
+                <span class="hub-when">Wk 5</span></li>
+              <li><span class="chip c-health"><svg class="i"><use href="#i-check"/></svg>Returned</span>
+                <p class="hub-feed-txt"><a class="name" href="#">Rotom-Wash</a> is cleared after a day-to-day knock.</p>
+                <span class="hub-when">Wk 5</span></li>
+            </ul>
+          </section>
+        </div>
+
+        <!-- right column -->
+        <div class="hub-stack">
+          <section class="hub-panel" aria-labelledby="hub-ser-h">
+            <div class="hub-ph"><h4 id="hub-ser-h">Week 6 series</h4><span class="hub-ph-meta">Best of 3</span></div>
+            <div class="hub-series">
+              <div class="hub-vs">
+                <div class="hub-vs-team"><span class="hub-crest" aria-hidden="true">VV</span><span class="hub-vs-nm">Vermilion Volts</span><span class="hub-vs-rec hub-num">4–1 · home</span></div>
+                <span class="hub-vs-mid">vs</span>
+                <div class="hub-vs-team"><span class="hub-crest hub-away" aria-hidden="true">SS</span><span class="hub-vs-nm">Saffron Sages</span><span class="hub-vs-rec hub-num">3–2 · away</span></div>
+              </div>
+              <dl class="hub-kv">
+                <div><dt>Their archetype</dt><dd>
+                  <span class="peek"><button class="lbl hub-peekbtn" type="button" aria-describedby="hub-pop-sages">Stall</button>
+                    <span class="pop" role="tooltip" id="hub-pop-sages">
+                      <span class="row"><span>Stall usage</span><span class="hub-num">4 of 5 series</span></span>
+                      <span class="row"><span>Core</span><span>Blissey, Toxapex, Corviknight</span></span>
+                      <span class="row"><span>Weak to</span><span>Wallbreaker, Setter</span></span>
+                      <span class="row"><span>Games won by timer</span><span class="hub-num">3 of 8</span></span>
+                      <span class="more">Open opponent report</span>
+                    </span>
+                  </span></dd></div>
+                <div><dt>Your archetype</dt><dd>Bulky Offense</dd></div>
+                <div><dt>Staff projection</dt><dd class="hub-num">Volts 57%</dd></div>
+              </dl>
+              <div class="hub-key">
+                <span class="cap">Key slot · Wallbreaker</span>
+                <div class="hub-fitrow"><span>Ursaluna <span class="hub-sub" style="color:var(--ink-3)">(set)</span></span><div class="fitbar"><i style="width:71%"></i></div><b>71</b></div>
+                <div class="hub-fitrow"><span>Great Tusk</span><div class="fitbar hub-best"><i style="width:84%"></i></div><b>84</b></div>
+              </div>
+              <div class="hub-series-act">
+                <button class="btn" type="button"><svg class="i"><use href="#i-eye"/></svg>Report</button>
+                <button class="btn" type="button"><svg class="i"><use href="#i-pen"/></svg>Lineup</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="hub-panel" aria-labelledby="hub-div-h">
+            <div class="hub-ph"><h4 id="hub-div-h">Kanto East</h4><span class="hub-ph-meta">Top 6 make the Plateau</span></div>
+            <table class="hub-tbl">
+              <thead><tr><th scope="col">Team</th><th scope="col">W–L</th><th scope="col"><abbr title="Game differential">GD</abbr></th><th scope="col">Strk</th></tr></thead>
+              <tbody class="hub-num">
+                <tr class="hub-you"><td><span class="hub-pos">1</span>Vermilion<span class="hub-youtag">(you)</span></td><td>4–1</td><td>+5</td><td>W3</td></tr>
+                <tr><td><span class="hub-pos">2</span>Saffron</td><td>3–2</td><td>+2</td><td>L1</td></tr>
+                <tr><td><span class="hub-pos">3</span>Lavender</td><td>3–2</td><td>+1</td><td>W1</td></tr>
+                <tr><td><span class="hub-pos">4</span>Cerulean</td><td>1–4</td><td>−6</td><td>L2</td></tr>
+              </tbody>
+            </table>
+            <p class="hub-tbl-foot">League rank 2nd of 16 · 2 games clear of 7th</p>
+          </section>
+
+          <div class="hub-menu-wrap">
+            <span class="hub-menu-cap">“Play until…” menu, open state</span>
+            <div class="hub-menu" role="menu" aria-label="Play until">
+              <button role="menuitem" type="button"><svg class="i"><use href="#hub-i-play"/></svg><span class="hub-mt">Next week</span><span class="hub-mw">Wk 7</span><span class="hub-ms">Plays week 6 only</span></button>
+              <button role="menuitem" type="button"><svg class="i"><use href="#i-swap"/></svg><span class="hub-mt">Trade deadline</span><span class="hub-mw">After wk 8</span><span class="hub-ms">3 weeks · offers stay open</span></button>
+              <button role="menuitem" type="button"><svg class="i"><use href="#hub-i-ff"/></svg><span class="hub-mt">End of regular season</span><span class="hub-mw">Wk 14</span><span class="hub-ms">9 weeks</span></button>
+              <button role="menuitem" type="button"><svg class="i"><use href="#i-trophy"/></svg><span class="hub-mt">Indigo Plateau</span><span class="hub-mw">Playoffs</span><span class="hub-ms">Stops at the bracket</span></button>
+              <button role="menuitem" type="button"><svg class="i"><use href="#i-eye"/></svg><span class="hub-mt">Draft</span><span class="hub-mw">Offseason</span><span class="hub-ms">Skips the Plateau if eliminated</span></button>
+              <hr>
+              <p class="hub-mfoot">Stops early for a new injury in your Active six or an expiring offer.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>

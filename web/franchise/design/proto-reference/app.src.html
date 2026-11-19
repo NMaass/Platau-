@@ -1,0 +1,1068 @@
+<title>Plateau Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rokkitt:wght@500;700;800&family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<style>
+/* @tokens:begin - inlined from ui/parts/plateau-tokens.css (source of truth; edit there, re-inline here) */
+/* Plateau v3 design system: tokens, shared components, layout layer.
+   Source of truth. The prototype inlines this whole file between "@tokens:begin" and "@tokens:end".
+   Card-back world, softened for readability (WCAG 2.2 AA checked).
+   Body text >= 13px, labels >= 12px, ink is soft charcoal, borders mostly 1px rules.
+   Team colour is an ACCENT only (crest, active nav, primary button, own rows) - never a large field.
+   Grade chips: each grade has its own fg/bg pair (all >= 6:1 in light, >= 7.5:1 in dark; AAA ink on foil >= 5.7:1). */
+:root{
+  --ground:#E6E4DE; --paper:#F7F6F2; --paper-2:#EFEDE7; --rule:#D3D0C7; --rule-strong:#8A867E;
+  --ink:#2B2A30; --ink-2:#57555E; --ink-3:#65626B;
+  --team:#B5381B; --on-team:#FFFFFF; --team-ink:#9E2F16; --team-tint:#F6E3DB; --team-2:#E2AE14; --on-team-2:#2B2006;
+  /* event / state categories: fg is text+icon colour, bg is chip fill. Always paired with an icon + word. */
+  --ev-health:#A3241B;  --ev-health-bg:#F8E1DD;   /* injured, returned, IR */
+  --ev-growth:#2B6A2B;  --ev-growth-bg:#E1EFDC;   /* graded up, evolved, goal met, done */
+  --ev-decline:#7E5000; --ev-decline-bg:#F7EAC8;  /* declining, expiring, slot broken */
+  --ev-deal:#1F5A99;    --ev-deal-bg:#DEE9F6;     /* offer, signed, claimed, promoted */
+  --ev-league:#5A3B98;  --ev-league-bg:#E9E2F5;   /* series won/lost, clinched, eliminated */
+  --ev-honour:#6A5200;  --ev-honour-bg:#F2EBCB;   /* award, record, inducted, retired */
+  --ev-scout:#0F655C;   --ev-scout-bg:#DAEEEB;    /* report ready, lottery, pick made */
+  --gr-F:#8E1F16; --gr-F-bg:#F7DCD8; --gr-D:#8A3D05; --gr-D-bg:#F9E2CF; --gr-C:#6B4C00; --gr-C-bg:#F4E6BC;
+  --gr-B:#22602A; --gr-B-bg:#DCEDD6; --gr-A:#0B5A52; --gr-A-bg:#D3ECE7; --gr-AA:#1B4E8C; --gr-AA-bg:#DAE6F6; --gr-AAA:#2B2A30;
+  --spr-bg:#EDEBE4;
+  --foil:linear-gradient(115deg,#d9dde3 0%,#f3e9c9 22%,#d7e9e4 44%,#e6d6ee 66%,#f1f0e6 86%,#d9dde3 100%);
+  --font-display:"Rokkitt",Rockwell,"Roboto Slab",Georgia,serif;
+  --font-ui:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --r:4px; --r-lg:6px; --shadow:0 1px 2px rgba(30,28,34,.06),0 6px 18px -8px rgba(30,28,34,.18);
+  --scrim:rgba(20,18,24,.45);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#18171B; --paper:#1E1D22; --paper-2:#26252B; --rule:#36343C; --rule-strong:#6B6872;
+  --ink:#E4E1DA; --ink-2:#ADAAB2; --ink-3:#8F8C96;
+  --team:#E8704F; --on-team:#1A0E09; --team-ink:#F08B6D; --team-tint:#3A231B; --team-2:#F0C23C; --on-team-2:#1A1305;
+  --ev-health:#F2958C;  --ev-health-bg:#3A1F1C; --ev-growth:#8FD08A; --ev-growth-bg:#1F3220; --ev-decline:#E9BC63; --ev-decline-bg:#3A2F14;
+  --ev-deal:#8DB8EE; --ev-deal-bg:#1B2A3D; --ev-league:#BDA6F0; --ev-league-bg:#2B2440; --ev-honour:#E3CC6E; --ev-honour-bg:#35301A;
+  --ev-scout:#7FD3C7; --ev-scout-bg:#163330;
+  --gr-F:#F7B0A8; --gr-F-bg:#4A1E1A; --gr-D:#F6BE8E; --gr-D-bg:#4A2A14; --gr-C:#EDD08A; --gr-C-bg:#42361A;
+  --gr-B:#9ED89A; --gr-B-bg:#1F3A22; --gr-A:#86D9CD; --gr-A-bg:#143A36; --gr-AA:#A5C8F2; --gr-AA-bg:#1B2E4A; --gr-AAA:#141318;
+  --spr-bg:#2A2930;
+  --foil:linear-gradient(115deg,#8a909a 0%,#c4b37e 22%,#8ab0a8 44%,#ad97ba 66%,#c0bdb0 86%,#8a909a 100%);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); --scrim:rgba(0,0,0,.6); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --ground:#18171B; --paper:#1E1D22; --paper-2:#26252B; --rule:#36343C; --rule-strong:#6B6872;
+  --ink:#E4E1DA; --ink-2:#ADAAB2; --ink-3:#8F8C96;
+  --team:#E8704F; --on-team:#1A0E09; --team-ink:#F08B6D; --team-tint:#3A231B; --team-2:#F0C23C; --on-team-2:#1A1305;
+  --ev-health:#F2958C;  --ev-health-bg:#3A1F1C; --ev-growth:#8FD08A; --ev-growth-bg:#1F3220; --ev-decline:#E9BC63; --ev-decline-bg:#3A2F14;
+  --ev-deal:#8DB8EE; --ev-deal-bg:#1B2A3D; --ev-league:#BDA6F0; --ev-league-bg:#2B2440; --ev-honour:#E3CC6E; --ev-honour-bg:#35301A;
+  --ev-scout:#7FD3C7; --ev-scout-bg:#163330;
+  --gr-F:#F7B0A8; --gr-F-bg:#4A1E1A; --gr-D:#F6BE8E; --gr-D-bg:#4A2A14; --gr-C:#EDD08A; --gr-C-bg:#42361A;
+  --gr-B:#9ED89A; --gr-B-bg:#1F3A22; --gr-A:#86D9CD; --gr-A-bg:#143A36; --gr-AA:#A5C8F2; --gr-AA-bg:#1B2E4A; --gr-AAA:#141318;
+  --spr-bg:#2A2930;
+  --foil:linear-gradient(115deg,#8a909a 0%,#c4b37e 22%,#8ab0a8 44%,#ad97ba 66%,#c0bdb0 86%,#8a909a 100%);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); --scrim:rgba(0,0,0,.6); color-scheme:dark }
+
+/* ===== Layout layer: scales. Screens are compositions of the primitives below; screens must not invent spacing, widths or dialog rules. ===== */
+:root{
+  /* spacing scale: the only gaps/paddings/margins allowed */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  /* type scale */
+  --t-label:12px; --t-small:13px; --t-body:14px; --t-lead:16px; --t-h3:18px; --t-h2:22px; --t-h1:28px; --t-num:18px;
+  --lh-tight:1.2; --lh-body:1.45;
+  /* control sizes: every button/input in a group shares one height and one min width */
+  --ctl-h:36px; --ctl-h-sm:32px; --ctl-w:132px; --ctl-h-touch:44px; --tab-h:44px; --row-h:52px;
+  /* layout */
+  --page-max:1240px; --side-w:200px; --gutter:16px; --card-min:260px; --dialog-w:560px; --label-w:112px;
+}
+@media (max-width:640px){ :root{ --ctl-h:var(--ctl-h-touch); --ctl-h-sm:var(--ctl-h-touch); --t-h1:24px; --t-h2:20px } }
+
+/* ---- base ---- */
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground)}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font-ui);font-size:var(--t-body);line-height:var(--lh-body);font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%;overflow-x:hidden}
+h1,h2,h3{margin:0;font-family:var(--font-display);color:var(--ink);line-height:var(--lh-tight)}
+p{margin:0} ul,ol{list-style:none;margin:0;padding:0} dl,dd{margin:0} a{color:inherit} button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--ink-2)} .dash{color:var(--ink-3)}
+
+/* ---- shared components (class names are reserved; do not redefine in screens) ---- */
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.cap{font-stretch:78%;font-weight:700;font-size:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}  /* small caps label */
+.grade{display:inline-grid;place-items:center;min-width:34px;height:24px;padding:0 6px;border-radius:3px;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1;border:1px solid currentColor}
+.gF{background:var(--gr-F-bg);color:var(--gr-F)} .gD{background:var(--gr-D-bg);color:var(--gr-D)} .gC{background:var(--gr-C-bg);color:var(--gr-C)}
+.gB{background:var(--gr-B-bg);color:var(--gr-B)} .gA{background:var(--gr-A-bg);color:var(--gr-A)} .gAA{background:var(--gr-AA-bg);color:var(--gr-AA)}
+.gAAA{background:var(--foil);color:var(--gr-AAA);border-color:var(--rule-strong)}
+/* event chip: icon + word, category colour (.c-health .c-growth .c-decline .c-deal .c-league .c-honour .c-scout). */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:3px 8px;border-radius:3px;font-size:12.5px;font-weight:650;line-height:1.2;white-space:nowrap}
+.chip svg.i{width:14px;height:14px;stroke-width:2}
+.c-health{color:var(--ev-health);background:var(--ev-health-bg)} .c-growth{color:var(--ev-growth);background:var(--ev-growth-bg)}
+.c-decline{color:var(--ev-decline);background:var(--ev-decline-bg)} .c-deal{color:var(--ev-deal);background:var(--ev-deal-bg)}
+.c-league{color:var(--ev-league);background:var(--ev-league-bg)} .c-honour{color:var(--ev-honour);background:var(--ev-honour-bg)}
+.c-scout{color:var(--ev-scout);background:var(--ev-scout-bg)}
+/* status tag (injury / contract designation): icon + word */
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-label);font-weight:700;height:22px;padding:0 7px 0 5px;border-radius:3px;white-space:nowrap;flex:none}
+.tag svg.i{width:13px;height:13px;stroke-width:2.25}
+.t-dtd,.t-exp{color:var(--ev-decline);background:var(--ev-decline-bg)} .t-out,.t-ir{color:var(--ev-health);background:var(--ev-health-bg)} .t-focus{color:var(--ev-growth);background:var(--ev-growth-bg)}
+/* type chip */
+.type{display:inline-flex;align-items:center;height:24px;font-size:var(--t-label);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 7px;border-radius:3px;color:#fff;line-height:1;white-space:nowrap}
+.ty-dragon{background:#5B32C9}.ty-ground{background:#7A5A1C}.ty-steel{background:#5A5A70}.ty-dark{background:#4B3B2E}.ty-water{background:#2F5FB8}.ty-fire{background:#B04A16}.ty-bug{background:#56620E}.ty-ghost{background:#5B4380}.ty-fairy{background:#A54A78}.ty-flying{background:#5E50B0}
+.ty-electric{background:#7A5E00}.ty-fighting{background:#A1352B}.ty-poison{background:#7A3F8C}.ty-ice{background:#2A6F7A}.ty-rock{background:#6B5B16}.ty-grass{background:#2F6B22}.ty-normal{background:#6A6458}.ty-psychic{background:#A3365F}
+/* buttons: .btn, .btn.go (primary), .btn.sm (row actions); aria-pressed / aria-disabled states */
+.btn{font:inherit;font-weight:700;font-size:var(--t-body);line-height:1.2;border-radius:var(--r);min-height:var(--ctl-h);padding:0 14px;border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink);cursor:pointer;display:inline-flex;gap:var(--s2);align-items:center;justify-content:center;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--paper-2)}
+.btn.go{background:var(--team);color:var(--on-team);border-color:var(--team)}
+.btn.go:hover{filter:brightness(1.06);background:var(--team)}
+.btn[aria-pressed="true"]{background:var(--team-tint);color:var(--team-ink);border-color:var(--team-ink)}
+.btn[aria-disabled="true"]{color:var(--ink-3);border-color:var(--rule);cursor:not-allowed;background:var(--paper)}
+.btn.sm{min-height:var(--ctl-h-sm);padding:0 12px;font-size:var(--t-small)}
+.x{width:36px;height:36px;display:grid;place-items:center;border:1px solid transparent;border-radius:var(--r);background:transparent;cursor:pointer;color:var(--ink-2);flex:none}  /* icon close button */
+.x:hover{background:var(--paper-2)}
+select{font:inherit;font-weight:650;font-size:var(--t-body);height:var(--ctl-h);padding:0 32px 0 12px;border:1px solid var(--rule-strong);border-radius:var(--r);background-color:var(--paper);color:var(--ink);appearance:none;max-width:100%;min-width:0;text-overflow:ellipsis;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+/* name link (inline) */
+.name{font-weight:700;color:var(--ink);text-decoration:none;border-bottom:1.5px solid transparent}
+.name:hover{border-bottom-color:var(--team)}
+/* ref: icon + name of any Pokémon (own or other club). Always a .peek. Name truncates, icon never shrinks. */
+.ref{display:inline-flex;align-items:center;gap:var(--s2);min-width:0;max-width:100%;min-height:32px;color:var(--ink);text-decoration:none;font-weight:700}
+.ref>.nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1.5px solid transparent}
+.ref:hover>.nm,a.ref:focus-visible>.nm{border-bottom-color:var(--team)}
+span.ref>.nm{border-bottom:1.5px dotted var(--rule-strong)}
+.ref.inline{display:inline;min-height:0}  /* name inside running text */
+.ref.inline>.nm{white-space:inherit}
+/* peek: hover/focus/tap explanation. The .pop child is never shown in place; one floating layer (.l-peek-layer, #float) shows it. */
+.peek{position:relative;cursor:help}
+a.peek,button.peek{cursor:pointer}
+span.peek:not(.ref){display:inline-block}
+.peek>.pop{display:none !important}
+.info{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink-2);font-family:var(--font-display);font-weight:800;font-size:14px;font-style:normal;line-height:1;cursor:help;vertical-align:middle;padding:0;text-transform:none;letter-spacing:0;flex:none}  /* (i) peek trigger */
+.info:hover{background:var(--paper-2);color:var(--ink)}
+.fitbar{height:6px;border-radius:3px;background:var(--paper-2);overflow:hidden}  /* thin meter */
+.fitbar i{display:block;height:100%;background:var(--ink-2)}
+.cnt{min-width:22px;height:20px;padding:0 6px;border-radius:10px;display:inline-grid;place-items:center;font-size:var(--t-label);font-weight:700;background:var(--ev-health-bg);color:var(--ev-health)}  /* count badge; .off keeps its space */
+.cnt.off{visibility:hidden}
+/* role badge: full role name | OVR */
+.rb{display:inline-flex;align-items:stretch;height:28px;border:1px solid var(--rule-strong);border-radius:3px;overflow:hidden;vertical-align:middle;line-height:1;white-space:nowrap;max-width:100%}
+.rb-r{display:flex;align-items:center;padding:0 var(--s2);background:var(--paper-2);color:var(--ink-2);font-stretch:85%;font-weight:700;font-size:var(--t-small);border-right:1px solid var(--rule-strong);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rb-n{display:grid;place-items:center;min-width:36px;padding:0 6px;background:var(--paper);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:var(--t-num);flex:none}
+.rb.elite .rb-n{color:var(--team-ink)}
+.rb.lg{height:32px}.rb.lg .rb-n{font-size:22px;min-width:44px}
+.peek .rb-n span{text-decoration:underline dotted 1.5px;text-decoration-color:var(--ink-3);text-underline-offset:3px}
+.noset{display:inline-flex;align-items:center;height:28px;padding:0 8px;border:1px dashed var(--rule-strong);border-radius:3px;font-size:var(--t-small);font-weight:650;color:var(--ink-2);white-space:nowrap}
+/* switch: role="switch" aria-checked; label sits beside it, text never changes */
+.switch{position:relative;width:44px;height:26px;border-radius:13px;border:1px solid var(--rule-strong);background:var(--paper-2);cursor:pointer;padding:0;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--ink-2);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--team);border-color:var(--team)}
+.switch[aria-checked="true"]::after{transform:translateX(18px);background:var(--on-team)}
+/* sprites */
+.ico{display:inline-block;width:40px;height:30px;flex:none;overflow:hidden;position:relative}
+.ico img{display:block;width:40px;height:30px;image-rendering:pixelated}
+.ico img.fb{width:40px;height:40px;margin-top:-6px}
+.spr{display:grid;place-items:center;flex:none;width:72px;height:72px;border-radius:var(--r-lg);background:var(--spr-bg);border:1px solid var(--rule);overflow:hidden}
+.spr img{width:72px;height:72px;image-rendering:pixelated;display:block}
+.spr.xl{width:112px;height:112px}.spr.xl img{width:96px;height:96px}
+.spr.md{width:56px;height:56px}.spr.md img{width:56px;height:56px}
+
+/* ===== Layout layer: primitives ===== */
+/* app shell: sidebar of rooms + main column; on phone the sidebar becomes .l-tabbar */
+.l-shell{max-width:var(--page-max);margin-inline:auto;padding:var(--s4) var(--gutter);display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:var(--s6);align-items:start}
+.l-shell>*{min-width:0}
+/* sidebar: club + room links */
+.l-side{position:sticky;top:var(--s4);background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s4) var(--s3);display:grid;gap:var(--s4);align-content:start;min-height:calc(100vh - 2*var(--s4))}
+.l-side nav{display:grid;gap:var(--s1)}
+.l-side nav a{display:flex;align-items:center;gap:var(--s3);min-height:var(--ctl-h);padding:0 var(--s3);border-radius:var(--r);color:var(--ink-2);text-decoration:none;font-weight:650}
+.l-side nav a:hover{background:var(--paper-2);color:var(--ink)}
+.l-side nav a[aria-current="page"]{background:var(--team-tint);color:var(--team-ink)}
+.l-side nav a .cnt{margin-left:auto}
+/* phone tab bar: max 5 items, fixed to the bottom */
+.l-tabbar{display:none}
+/* page: vertical stack of sub-tabs, head, sections. Same rhythm on every page */
+.l-page{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr);min-width:0;padding-bottom:var(--s7)}
+.l-page>*{min-width:0}
+/* page head: title (+ one sub line) left, .l-actions right; fixed min height so pages line up */
+.l-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--s2) var(--s5);min-height:64px}
+.l-head>div{display:grid;gap:var(--s2);min-width:0}
+.l-head h1{font-size:var(--t-h1);font-weight:800;line-height:var(--lh-tight)}
+.l-head h1:focus{outline:none}
+.l-head .sub{color:var(--ink-2)}
+/* section: title -> content is always --s3 */
+.l-section{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)}
+.l-section>*{min-width:0}
+.l-section>h2,.l-section>.l-split>h2{font-size:var(--t-h2);font-weight:700;line-height:var(--lh-tight)}
+/* panel: boxed section (use with .l-section). .flush = no padding, children handle their own (tables, tabs) */
+.l-panel{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s5);min-width:0}
+.l-panel.flush{padding:0;overflow:hidden}
+.l-panel.flush>h2,.l-panel.flush>.l-pad{padding:var(--s5) var(--s5) 0}
+/* two-column body: 7/5 split, collapses to one column. .side-first: 2nd child spans the right column, so on phone it comes 2nd */
+.l-cols{display:grid;gap:var(--s5);grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:start}
+.l-cols>*{min-width:0}
+.l-cols.side-first{grid-auto-flow:row dense}
+.l-cols.side-first>:nth-child(2){grid-column:2;grid-row:1/span 2}
+.l-cols.side-first>:not(:nth-child(2)){grid-column:1}
+/* stacks and rows */
+.l-stack{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)} .l-stack>*{min-width:0} .l-stack.tight{gap:var(--s2)} .l-stack.loose{gap:var(--s5)}
+.l-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0}          /* inline things share one centre line */
+.l-split{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);min-width:0}
+/* equal-size cards; set --card-min on the grid to change the column minimum */
+.l-grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--card-min)),1fr));grid-auto-rows:1fr}
+.l-grid>*{min-width:0}
+/* wrap list of small refs (icon + name); never overflows */
+.l-wrap{display:grid;gap:var(--s1) var(--s3);grid-template-columns:repeat(auto-fill,minmax(min(100%,136px),1fr))}
+.l-wrap>*{min-width:0}
+/* equal-width buttons; on phone they share the row equally */
+.l-actions{display:grid;gap:var(--s2);grid-auto-flow:column;grid-auto-columns:minmax(var(--ctl-w),1fr);justify-content:start}
+.l-actions>.btn{min-height:var(--ctl-h)}
+/* list rows: --cols sets the grid, every row text-baseline aligned so chips, text and buttons line up */
+.l-list>li{display:grid;grid-template-columns:var(--cols,minmax(0,1fr) auto);gap:var(--s3);align-items:baseline;padding:var(--s3) 0;border-top:1px solid var(--rule);min-height:var(--row-h)}
+.l-list>li>*{min-width:0}
+/* label/value pairs; label column is --label-w */
+.l-kv{display:grid;grid-template-columns:var(--label-w) minmax(0,1fr);gap:var(--s3) var(--s4);align-items:center}
+.l-kv>dt,.l-kv>.k{color:var(--ink-2)}
+.l-kv>dd,.l-kv>.v{min-width:0}
+/* labelled facts stacked: .cap label above value */
+.l-facts{display:grid;gap:var(--s4)}
+.l-facts>div{display:grid;gap:var(--s2);min-width:0}
+/* sub-tabs: links, same position on every page of a room; weight never changes so nothing jumps */
+.l-tabs{display:flex;gap:var(--s5);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;min-width:0}
+.l-tabs::-webkit-scrollbar{display:none}
+.l-tabs>a,.l-tabs>button,.l-tabs>span>a{position:relative;display:inline-flex;align-items:center;gap:var(--s2);min-height:var(--tab-h);padding:0;border:0;background:none;font-weight:700;font-size:var(--t-body);color:var(--ink-2);text-decoration:none;white-space:nowrap;cursor:pointer;flex:none}
+.l-tabs>span{display:contents}
+.l-tabs a:hover,.l-tabs button:hover{color:var(--ink)}
+.l-tabs [aria-current="page"],.l-tabs [aria-selected="true"]{color:var(--ink)}
+.l-tabs [aria-current="page"]::after,.l-tabs [aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:2px 2px 0 0;background:var(--team)}
+.l-tabs :focus-visible{outline-offset:-3px}
+.l-panel>.l-tabs{padding:0 var(--s5)}
+/* tables: fixed columns from one <colgroup>, scroll inside own box, headers never move between lenses */
+.l-table-wrap{overflow-x:auto;min-width:0;position:relative} /* positioned so .sr text in cells can't escape the scroll box */
+.l-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:var(--t-body)}
+.l-table th,.l-table td{height:var(--row-h);padding:0 var(--s3);text-align:left;vertical-align:middle;border-bottom:1px solid var(--rule);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.l-table th:first-child,.l-table td:first-child{padding-left:var(--s5)}
+.l-table th:last-child,.l-table td:last-child{padding-right:var(--s5)}
+.l-table thead th{height:44px;font-stretch:78%;font-size:var(--t-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border-bottom-color:var(--rule-strong)}
+.l-table .num{text-align:right}
+.l-table tbody th.grp{height:40px;font-family:var(--font-display);font-size:var(--t-h3);font-weight:700;color:var(--ink);background:var(--paper-2)}
+.l-table tbody th.grp span{font-family:var(--font-ui);font-size:var(--t-small);font-weight:500;color:var(--ink-2);margin-left:var(--s2)}
+.l-table tr.cur td{background:var(--team-tint)}
+.l-table tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--team)}
+.l-table tr.off td{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--rule) 60%,transparent) 7px 8px)}  /* unavailable row */
+.l-table tr.tot td{border-top:3px double var(--rule-strong);border-bottom:0;font-weight:800}
+/* card */
+.l-card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s4);display:grid;gap:var(--s3);align-content:start;min-width:0}
+/* empty / placeholder block */
+.l-empty{display:grid;gap:var(--s2);justify-items:start;padding:var(--s4);border:1px dashed var(--rule-strong);border-radius:var(--r-lg);background:var(--paper-2);color:var(--ink-2)}
+.l-empty b{color:var(--ink)}
+/* reserved space for dynamic text so nothing shifts; set --lines */
+.l-reserve{min-height:calc(var(--t-body) * var(--lh-body) * var(--lines,1))}
+/* clamp text to --lines lines, height reserved */
+.l-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,2);overflow:hidden;min-height:calc(1em * var(--lh-body) * var(--lines,2))}
+/* dialog: always centred and inside the viewport; head / scrolling body / foot */
+dialog.l-dialog{position:fixed;inset:0;margin:auto;width:min(var(--dialog-w),calc(100% - 2*var(--gutter)));max-width:none;max-height:min(760px,calc(100% - 2*var(--gutter)));height:fit-content;padding:0;border:1px solid var(--rule-strong);border-radius:var(--r-lg);background:var(--paper);color:var(--ink);box-shadow:var(--shadow);overflow:hidden}
+dialog.l-dialog[open]{display:flex;flex-direction:column}
+dialog.l-dialog::backdrop{background:var(--scrim)}
+.l-dialog-head{display:flex;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);border-bottom:1px solid var(--rule);flex:none}
+.l-dialog-head h2{font-size:var(--t-h2);font-weight:800}
+.l-dialog-head .x{margin-left:auto}
+.l-dialog-body{padding:var(--s5);display:grid;gap:var(--s4);overflow:auto;min-height:0;flex:1 1 auto}
+.l-dialog-foot{display:flex;justify-content:flex-end;padding:var(--s3) var(--s5) var(--s4);border-top:1px solid var(--rule);flex:none}
+/* floating peek layer (#float): one per page, positioned by script inside the viewport */
+.l-peek-layer{position:fixed;z-index:60;width:min(300px,calc(100vw - 2*var(--gutter)));background:var(--paper);color:var(--ink);border:1px solid var(--rule-strong);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s3);font-size:13.5px;line-height:var(--lh-body);display:grid;gap:var(--s2);pointer-events:none}
+.l-peek-layer[hidden]{display:none}
+.l-peek-layer .row{display:flex;justify-content:space-between;gap:var(--s3)}
+.l-peek-layer .row>span:first-child{color:var(--ink-2)}
+.l-peek-layer .row b{font-family:var(--font-display);font-size:17px}
+.l-peek-layer .tot{border-top:1px solid var(--rule);padding-top:var(--s2)}
+.l-peek-layer .types{display:flex;gap:var(--s1)}
+
+/* ---- responsive behaviour of the primitives ---- */
+@media (max-width:1060px){ .l-cols{grid-template-columns:minmax(0,1fr)} .l-cols.side-first>*{grid-column:auto !important;grid-row:auto !important} }
+@media (max-width:759px){
+  .l-shell{grid-template-columns:minmax(0,1fr);gap:0;padding-top:0}
+  .l-side{display:none}
+  .l-page{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .l-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--paper);border-top:1px solid var(--rule);padding:var(--s1) max(var(--s2),env(safe-area-inset-right)) calc(var(--s1) + env(safe-area-inset-bottom)) max(var(--s2),env(safe-area-inset-left))}
+  .l-tabbar a{flex:1 1 0;min-width:0;display:grid;justify-items:center;align-content:center;gap:2px;min-height:52px;text-decoration:none;color:var(--ink-2);font-size:var(--t-label);font-weight:650;border-radius:var(--r);position:relative;white-space:nowrap}
+  .l-tabbar a svg.i{width:20px;height:20px}
+  .l-tabbar a[aria-current="page"]{color:var(--team-ink)}
+  .l-tabbar a[aria-current="page"]::before{content:"";position:absolute;top:-5px;left:28%;right:28%;height:3px;border-radius:0 0 2px 2px;background:var(--team)}
+  .l-panel{padding:var(--s4)}
+  .l-panel.flush>h2,.l-panel.flush>.l-pad{padding:var(--s4) var(--s4) 0}
+  .l-panel>.l-tabs{padding:0 var(--s4)}
+  .l-table th:first-child,.l-table td:first-child{padding-left:var(--s4)}
+  .l-table th:last-child,.l-table td:last-child{padding-right:var(--s4)}
+}
+@media (max-width:640px){
+  .l-head{grid-template-columns:minmax(0,1fr);min-height:0}
+  .l-actions{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);justify-content:stretch}
+  .l-kv{grid-template-columns:minmax(0,1fr);row-gap:var(--s1)}
+  .l-kv>dd,.l-kv>.v{margin-bottom:var(--s2)}
+  .l-list.wrap>li{grid-template-columns:minmax(0,1fr) auto}
+  .l-list.wrap>li>:first-child{grid-column:1;grid-row:1;justify-self:start}
+  .l-list.wrap>li>:last-child{grid-column:2;grid-row:1}
+  .l-list.wrap>li>:nth-child(2):not(:last-child){grid-column:1/-1;grid-row:2}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* ---- additions ---- */
+.l-row.even>*{height:28px}  /* inline chips/badges/tags in one row share one height and centre line */
+.l-row.even>.type,.l-row.even>.tag{padding-inline:var(--s2)}
+
+/* card title: the first-read heading inside .l-card */
+.l-card-title{font-family:var(--font-display);font-size:var(--t-h3);font-weight:700;line-height:var(--lh-tight);margin:0}
+/* peek label: dotted underline that says "hover or tap for more" */
+.peek>.lbl,.l-peek-lbl{text-decoration:underline dotted 1.5px;text-decoration-color:var(--ink-3);text-underline-offset:4px}
+
+/* @tokens:end */
+
+/* ================= screen compositions (only scale values; layout comes from .l- primitives) ================= */
+/* shell bits */
+.club{display:grid;grid-template-columns:40px minmax(0,1fr);gap:var(--s3);align-items:center;padding:0 var(--s2) var(--s4);border-bottom:1px solid var(--rule)}
+.crest{width:40px;height:40px;border-radius:50%;background:var(--team);color:var(--on-team);display:grid;place-items:center;box-shadow:inset 0 0 0 3px var(--paper),inset 0 0 0 4px var(--team);flex:none}
+.crest svg{width:22px;height:22px;fill:var(--team-2);stroke:none}
+.club b{display:block;font-family:var(--font-display);font-weight:800;font-size:var(--t-h3);line-height:var(--lh-tight)}
+.club span{font-size:var(--t-small);color:var(--ink-2)}
+.nextup{border-top:1px solid var(--rule);padding:var(--s4) var(--s2) 0;display:grid;gap:var(--s1);font-size:var(--t-small);color:var(--ink-2)}
+.nextup b{color:var(--ink)}
+.mhead{display:none}
+@media (max-width:759px){
+  .mhead{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) 0}
+  .mhead .crest{width:32px;height:32px}.mhead .crest svg{width:18px;height:18px}
+  .mhead b{font-family:var(--font-display);font-weight:800;font-size:var(--t-lead)}
+  .mhead .rec{margin-left:auto;font-size:var(--t-small);color:var(--ink-2)}
+}
+/* sub-nav: the other room's tabs show only on phone (League + Draft share one phone tab) */
+.subnav .alt{display:none}
+.subnav .sep{width:1px;align-self:center;height:20px;background:var(--rule-strong);flex:none}
+@media (max-width:759px){ .subnav .alt{display:contents} }
+
+/* ===== This week ===== */
+.ev{--cols:112px minmax(0,1fr) var(--ctl-w)}
+.ev .btn,.ev .done{width:var(--ctl-w)}
+.done{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--ctl-h-sm);border-radius:var(--r);font-size:var(--t-small);font-weight:700;color:var(--ev-growth);background:var(--ev-growth-bg)}
+.ev li.resolved p{color:var(--ink-2)}
+.feed{--cols:112px minmax(0,1fr) 48px}
+.feed p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed .when{font-size:var(--t-small);color:var(--ink-3);text-align:right}
+@media (max-width:640px){ .ev .btn,.ev .done{width:auto;min-width:var(--ctl-w)} .feed p{white-space:normal} }
+.opp-h{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3);align-items:center}
+.opp-h h2{font-size:var(--t-h2);font-weight:800}
+.pips{display:flex;gap:var(--s2)}
+.pips i{width:28px;height:28px;border-radius:50%;border:1px solid var(--rule-strong);display:grid;place-items:center;font-style:normal;font-family:var(--font-display);font-weight:700;font-size:var(--t-small);color:var(--ink-3)}
+.pips i.w{background:var(--ev-growth-bg);color:var(--ev-growth);border-color:currentColor}
+.pips i.l{background:var(--ev-health-bg);color:var(--ev-health);border-color:currentColor}
+/* result dialog content */
+.score{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--s3);text-align:center;font-weight:700}
+.score b{font-family:var(--font-display);font-size:40px;font-weight:800;line-height:1}
+.games{--cols:64px 96px minmax(0,1fr)}
+@media (max-width:480px){ .games{--cols:minmax(0,1fr) auto} .games li>:first-child{display:none} .games li>:last-child{grid-column:1/-1} }
+.mvp{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3);align-items:center;padding:var(--s3);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper-2)}
+.mvp b{font-family:var(--font-display);font-size:var(--t-h2);display:block}
+
+/* ===== Roster ===== */
+.roster{min-width:760px}
+.who{display:flex;align-items:center;gap:var(--s2);min-width:0}
+.lensbar{display:flex;align-items:center;gap:var(--s3);height:56px;padding:0 var(--s5);border-bottom:1px solid var(--rule);color:var(--ink-2);overflow:hidden;white-space:nowrap}
+.lensbar>span{overflow:hidden;text-overflow:ellipsis}
+.gbar{display:grid;grid-template-columns:minmax(48px,1fr) 80px;gap:var(--s2);align-items:center}
+.gbar .fitbar{position:relative;overflow:visible}
+.gbar .fitbar b{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink);border-radius:1px}
+.gbar small{font-size:var(--t-small);color:var(--ink-2)}
+/* cap meter (Roster contract lens, Moves pages) */
+.capm{display:flex;align-items:center;gap:var(--s3);min-width:0;white-space:nowrap}
+.capm b{font-family:var(--font-display);font-size:var(--t-h3);color:var(--ink)}
+.capm .fitbar{width:120px;flex:none}
+@media (max-width:759px){ .lensbar{padding:0 var(--s4)} .capm .fitbar{width:64px} }
+
+/* ===== Lineup ===== */
+.lbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);border-bottom:1px solid var(--rule)}
+.lbar label{font-weight:650;color:var(--ink-2)}
+.lbar .avg{color:var(--ink-2);white-space:nowrap}
+.lbar .avg b{font-family:var(--font-display);font-size:var(--t-h3);color:var(--ink);display:inline-block;min-width:3ch}
+.lbar .btn{margin-left:auto;min-width:var(--ctl-w)}
+#strat{width:220px}
+.slots{--card-min:280px;padding:var(--s5)}
+.slot{grid-template-rows:auto auto auto 1fr auto}
+.slot.flagged{border-color:var(--ev-decline);box-shadow:inset 0 0 0 1px var(--ev-decline)}
+.slot.hl{animation:hl 2.4s ease-out 1}
+@keyframes hl{0%,35%{outline:2px solid var(--team);outline-offset:3px}100%{outline:2px solid transparent;outline-offset:3px}}
+.slot-h{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3);align-items:start}
+.slot-h h3{font-size:var(--t-h2);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-h p{font-size:var(--t-small);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-mon{display:grid;grid-template-columns:64px minmax(0,1fr);gap:var(--s3);align-items:center}
+.slot-mon .spr{width:64px;height:64px}.slot-mon .spr img{width:64px;height:64px}
+.slot-mon .ref{font-size:var(--t-lead)}
+.slot-set{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s2) var(--s3);align-items:center}
+.slot-set label{font-weight:700;font-size:var(--t-small);color:var(--ink-2)}
+.slot-set select{width:100%;font-size:var(--t-small)}
+.slot-set .fills{grid-column:2;font-size:var(--t-small);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-set .fills b{color:var(--ink)}
+.bk{width:100%;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:var(--s2);align-items:center;min-height:var(--ctl-h);padding:0 var(--s1);border:1px solid var(--rule);border-radius:var(--r);background:var(--paper);cursor:pointer;text-align:left}
+.bk:hover{background:var(--paper-2);border-color:var(--rule-strong)}
+.bk .bn{font-weight:700;font-size:var(--t-small);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk .rb{height:24px}.bk .rb-r{font-size:var(--t-label)}.bk .rb-n{font-size:var(--t-lead);min-width:30px}
+.bk-none{display:flex;align-items:center;min-height:var(--ctl-h);padding:0 var(--s3);border:1px dashed var(--rule);border-radius:var(--r);font-size:var(--t-small);color:var(--ink-3)}
+.slot-foot{display:flex;align-items:center;gap:var(--s2);min-height:var(--ctl-h-sm);font-size:var(--t-small);color:var(--ink-2);border-top:1px solid var(--rule);padding-top:var(--s2);min-width:0}
+.slot-foot .si{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-foot .btn{margin-left:auto}
+.slot-empty{grid-row:2/5;align-content:center;justify-items:center;text-align:center}
+@media (max-width:759px){ .slots{padding:var(--s4)} .lbar{padding:var(--s4)} #strat{flex:1;width:auto} .lbar .btn{margin-left:0} }
+/* chooser (anchored popover; bottom sheet on phone) */
+#chooser{position:fixed;z-index:70;width:360px;max-width:calc(100vw - 2*var(--gutter));max-height:min(460px,70vh);display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--rule-strong);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+#chooser[hidden]{display:none}
+#chooser .ch-h{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s3) var(--s3) var(--s4);border-bottom:1px solid var(--rule)}
+#chooser .ch-h b{font-family:var(--font-display);font-size:var(--t-h3);display:block;line-height:var(--lh-tight)}
+#chooser .ch-h small{font-size:var(--t-small);color:var(--ink-2)}
+#chooser .ch-h .x{margin-left:auto}
+#chooser ul{overflow:auto;padding:var(--s1)}
+#chooser li button{width:100%;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:var(--s3);align-items:center;min-height:48px;padding:var(--s1) var(--s3) var(--s1) var(--s1);border:0;border-radius:var(--r);background:transparent;text-align:left;cursor:pointer}
+#chooser li button:hover:not([aria-disabled="true"]),#chooser li button:focus-visible{background:var(--paper-2)}
+#chooser li button[aria-current="true"]{background:var(--team-tint)}
+#chooser li button[aria-disabled="true"]{cursor:not-allowed;color:var(--ink-3)}
+#chooser .nm{font-weight:700;display:block;line-height:var(--lh-tight)}
+#chooser .where{display:block;font-size:var(--t-small);color:var(--ink-2)}
+#scrim{position:fixed;inset:0;z-index:65;background:var(--scrim)}
+#scrim[hidden]{display:none}
+@media (max-width:759px){ #chooser{left:0 !important;right:0;top:auto !important;bottom:0;width:auto;max-width:none;max-height:72vh;border-radius:var(--r-lg) var(--r-lg) 0 0;padding-bottom:env(safe-area-inset-bottom)} }
+
+/* ===== Pokémon page ===== */
+.back{display:inline-flex;align-items:center;gap:var(--s1);min-height:var(--ctl-h-sm);color:var(--ink-2);text-decoration:none;font-weight:650;font-size:var(--t-small);justify-self:start}
+.back:hover{color:var(--ink)}
+.mh{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s5);align-items:center}
+.mh h1{font-size:36px;font-weight:800}
+.mh h1:focus{outline:none}
+@media (max-width:640px){ .mh{gap:var(--s4)} .mh .spr.xl{width:80px;height:80px}.mh .spr.xl img{width:72px;height:72px} .mh h1{font-size:var(--t-h1)} }
+.ladder{display:flex;gap:var(--s2);flex-wrap:wrap}
+.ladder .step{display:grid;justify-items:center;gap:var(--s1)}
+.ladder .grade{min-width:40px;height:30px}
+.ladder .step.cur .grade{outline:2px solid var(--team);outline-offset:2px}
+.ladder small{font-size:var(--t-label);font-weight:700;color:var(--team-ink);height:16px}
+@media (max-width:540px){ .ladder{gap:var(--s1)} .ladder .grade{min-width:0;padding:0 5px;font-size:14px} }
+.track{position:relative;height:10px;border-radius:5px;background:var(--paper-2);border:1px solid var(--rule)}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--ink-2)}
+.track b{position:absolute;top:-5px;width:2px;height:18px;background:var(--ink);border-radius:1px}
+.grow-top{display:flex;justify-content:space-between;align-items:baseline}
+.grow-top b{font-family:var(--font-display);font-size:26px;font-weight:800}
+.grow-top b small{font-size:var(--t-lead);color:var(--ink-2)}
+.grow-foot{display:flex;justify-content:space-between;gap:var(--s3);font-size:var(--t-small);color:var(--ink-2)}
+.moves{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.moves li{height:40px;display:flex;align-items:center;padding:0 var(--s3);border:1px solid var(--rule);border-radius:var(--r);font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:480px){ .moves{grid-template-columns:1fr} }
+.awards{--card-min:220px;grid-auto-rows:auto}
+.award{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3);align-items:center}
+.award .chip{padding:0;width:32px;height:32px;justify-content:center;border-radius:50%}
+.award b{display:block}
+.award span{font-size:var(--t-small);color:var(--ink-2)}
+
+.roles{min-width:0}
+.history{min-width:820px}
+.tierb{display:inline-grid;place-items:center;min-width:36px;height:24px;padding:0 6px;border:1px solid var(--rule-strong);border-radius:3px;font-weight:800;font-size:var(--t-label);letter-spacing:.04em;background:var(--paper-2)}
+/*@@EXTRA_CSS@@*/
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-week" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-roster" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.8.7 3 2.5 3.5 5.2"/></symbol>
+  <symbol id="i-lineup" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.7h18M9 4v16"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h12V9.5"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15l-4-4M20 16H5l4 4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.5 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.3v.2"/></symbol>
+  <symbol id="i-health" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+  <symbol id="i-deal" viewBox="0 0 24 24"><path d="M5 3.5h9l5 5V20.5H5z"/><path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4M12 13v4M8.5 20h7M10 17h4"/></symbol>
+  <symbol id="i-scout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="M4.5 19.5 14 10M16.5 3l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></symbol>
+  <symbol id="i-empty" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke-dasharray="3 3"/><path d="M12 8.5v7M8.5 12h7"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+</svg>
+
+<div class="l-shell">
+  <aside class="l-side" aria-label="Club">
+    <div class="club"><span class="crest" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg></span><div><b>Vermilion Volts</b><span>Kanto East · 4–1</span></div></div>
+    <nav aria-label="Rooms" id="sidenav"></nav>
+    <div class="nextup"><span class="cap">Next</span><span><b>Week 6</b> at Saffron Sages</span><span>Best of 3 · Saturday</span></div>
+  </aside>
+  <main id="main" class="l-page">
+    <div class="mhead"><span class="crest" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg></span><b>Vermilion Volts</b><span class="rec">Kanto East · 4–1</span></div>
+    <div id="subnav"></div>
+    <div id="view" class="l-stack loose"></div>
+  </main>
+</div>
+<nav class="l-tabbar" aria-label="Main" id="tabbar"></nav>
+<div id="float" class="l-peek-layer" role="tooltip" hidden></div>
+<div id="scrim" hidden></div>
+<div id="chooser" role="dialog" aria-modal="true" aria-labelledby="ch-title" hidden></div>
+<dialog id="dlg" class="l-dialog" aria-labelledby="dlg-title"></dialog>
+<script>
+(function(){
+"use strict";
+/* ---------- data (inlined: sprites from the game, Smogon gen8 sets by tier) ---------- */
+const SPR={"Hippowdon":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAYGBg5OUFaWmJiUjlqIEp7e4ucgzmkQXO0pIO9vc3NtDnmQSDmc5Tu1ZT///+NZL9JAAAAAXRSTlMAQObYZgAAA8hJREFUWMPtlz9oE1EcxxtxcZHeXaWNJdR7J6gEkbvnIkJRCRQJFlQKRczg5hoJvCFThcIhFAoKcktAoSBvSxUyvE1w61JR6PLQiMstDwQnQc7f790lvZhc7gbBJT9I79p8P/f7ft+/pHNzs5rVrP5HkXPx9QQpqKdeyTCM+TmHFiJOUGpYlFLXcGghwqEGjcuE17kCDQZ66kEjNx9wvSHhWkUA4iYAZHCtAiEs10wAdDSfqy9ZA0O2Hqt8wBxGoNArHzBsYyiHNN58gQg2zLOJM+cVAUxqL/m+v2WYeniv38wFCOo1AkuDVru5gP2Ab/j+9iZ/jEQ+ULI552egAeePTeqJd4aRN0wR5+BqCy5PSVUIK2/JllaiV5gBLpvLAgGaM1LGmST0kp8AebNXWtrmbwDhexrwiE3AFe7BTOIs577/jHMEbpGD+5DDtqcSfM/3n/LXCLx9jwC1YPrtKbNxESyRi1sAdA80QHG9TGmxjbm3NfDw4K5eiwCY2YDcROBQYOoPsFWpQz3DsUjmWVX5jIDEEF1aNUGOXRxqZZ0jKUAQsbwPRxRFyM2alIr2tKM9CdETSBBcvlbGvMchGkNAoBgY6np2BoCeGrGnAeChMXMakIQQbYGewM5q33HtjAwTgVBZGbs8Dp0APfzhIKBUf0JoWGQlCYCUR424A9a+Bjr98dCl6JF2JKEa9TTg0o5S46FXoh8lk+xIoyLlTj32E3ty6SoAi/PjQOVKdPkwevSR3BOi3kt5AuDbJEBG0W+4XInOi+5aPdWiDKnZOPCr8iWSAETRT9FttQcDte/Qqwg0/wLORryyIxH4EtVFc41pdQteTxwAwjHgJuebEoFfFRikBcaYNgUD3HtyXil1YRzYgwYSGm18Er1Fxlo6QU2026w1ATj5bqOBwCHn0KDLBkCX9XqMdUL1shyMAuKOPNLAXk2IJgDLCdCG+3WlvpeDYBRoSelDjw3QoyNmEkKAwFsAQlUOdtPA6WVRw1XxCfSCgaqpt04VgRpbD6HFiB4BUYPSo99krbX4Y9WrLrJa8AIsKXVjBOj0h+utxxZAA4cr7mZv4XYQBB01Rig1WNLgBiSBiWo4M8r4C6jBVDgCdPr1+PGsCRoVPteWyKVYH7dIO4K/9HF6GTPK+F74XFu6FoQqqU5an5g0sOJbFUAL71IwUHfU17Qeuw4f9XfhE8JwxNDcqcFATKwQO+yOHQKnMtUjbo5nLiVI+8HhmKZPMdpkGIZZnyanj0OGx+Ak8xl9EijvS8cIslv0a/iQmP1HMqtZ/dv6A5eEJuxbzFdlAAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAG1BMVEUxMTExMTFSUlJzc3OtnErFQjHWxVrmSjH///9OxIjzAAAAAXRSTlMAQObYZgAAAL5JREFUKM/VkbFuwzAMRKU/MOPFq46C0FW8IV3rIR/QP6hR3N78/9DJkY0E3cvx4Ugejyn9q8rTCzj3ZCmZnYSfNE5G2Bk6u1vEYUyOjXEHEX3ASxN/7gF4GUJJfq0ejtF/wU0b5NGj7jCTuElao0f72IVOoulbcOhrd+4kQ5LQjjDAtklaVUZ7Ma9Nqiv6WFTMK4TqfBidGYiVYAEePrORBmeZlvfD8WZpDvSU7Rzp4uzP4b8t5Tl9e/mTv+sXNe4lXqR4sSQAAAAASUVORK5CYII="},"Rotom-Wash":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAKlBMVEUAAAAIQawISsUQEBAxe+5KSlJKe/97OSCLvfa9vb3FShjucyn/rIP////ZRByvAAAAAXRSTlMAQObYZgAAAy5JREFUWMPtljFr20AUx819g9K5IFRyHyAidknoB+gsjkKzneHJCDwZckTaOpgsGTp0CXQKrugpWzEGXTKWQOIOhSY4AX2XvtNJStRaUlQy+mE82O937/3vvXt3vd7GNraxZzdidQQo70YQgI6A/5V3BBbdAOpfdsuJxtcH3YCz/wB4RyDincqAQBfVxD9X8sC2nwzY/hIBgCchxLZt0IAQGnmCXgDwgqVKIhkhYrXrlZEXhuivlJJR++ZS/1qFKlbxMkQiad8rGl+cLJQyHyRaQ1D5+w4dw2/3KrO2+hE4/PUqRscv73KgOSdC/YsXLxFIDIa6G5uQUIi/v9Cu5rsNQH84u/qkXU0cjNQEaH///OrwPpEInJgAsm81+HPqo8xw/jlO7gIToB4g9HhqEU+73dycKBGbAFEdQOjolveIhwufS/nTKMbeCPq8zn+MO068RIjcOeuMQJ6uB+goHeE/WUoLIYQBFoGsBcapLqnRoAssRJj51wO3tARmjrOnA4VJE8BLYMYYc/fyXZWn608dHVkFkDDXQeIBWEtQ3iuAGesDZ2yvADhdR1BuFwBzjwBes/clQNbEwN8AuK4DZvQmnWIIt0zJouOp/c9JxvOOBAIL9jZdAeywsATIKP2LIBAvl5cCm89Tc3esgS0tQgMoqEePV9WsiJ+wMxUKzCucu7geDHdKgHPdB6vKUSXeD7aPs0VkAKBoLMWHHLBRBBynK14B5mxfYqOKiQagAmCBaLYnFSBhgQxinEUPwK4+DhnAcSrD0dR6LDpUcuLIWIXhnOn1UIMB9K7q7YP09rEI6jkDHMEyDqIEC43xd1hgAJSss6FVICscEjixFdvWAHPjvND4pwaOPlavEG3gTZyBmmkRdgH0CwDWtLmto8QJhuBbD5oNYK+9jXSUANt1e0sHqAD10zvAEHgcdstOagOGuLkzd9coMAeUNt2OBAZSFqct05xde7wBCCaytNOs5RoBrKF0gtw/mvBeK4AhoqGTM2ZOEmiW7R3oZsqYfBLbttX8QORYDxiKXEL7S0Ovh8igburVVqRu1Nem5nR8vFLo9hTFh1DXB/jGNraxZ7Y/AWA3i4CllroAAAAASUVORK5CYII=","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAJ1BMVEUxMTFClN4xMTFClN5SUlJjtfdzc3Olxf+1SkK9vb3WY0L3jEL///8WRu4LAAAAAnRSTlMAAHaTzTgAAADfSURBVCjPvZIxDsIwDEXJDWrlBikTneIvLoAiBjpyBy7ADRATKyNbx3ZjrLsxlkPhIkETCive8mT7f39lNvt7GfoCyWfTRotpq0Hup9N89fSpYvmKD0rgQhwSLWO5KKV0sRYRika0Ii11w33TNlJXPnbDZ1GWQK74Jl3fKqQRHriTs8LVqD907uR2aUMFjLCel+EuoVZIb6HFKYT1TnfCvubVugv7IE/4nidgjgHmwJaiOI4b9ZlbvxzvJzgn9UFX2m0WXQp3zH0CNRNVgyZjk/hUzWdGeRq+vg1lv77AA1rcSCv7FESIAAAAAElFTkSuQmCC"},"Garchomp":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAQEBApKVJBQYtaEABaYqxqOVpze4N7e829OUG9c3vFlBDFzdXmSjH/1Rj///9+tnY+AAAAAXRSTlMAQObYZgAABGtJREFUWMPtl71r5EYUwLWjhC3SSDGXKpfIMwzXGBzPZCAQOKcwARcurMmrzh9NuCKVOQLXBLYIB+7jFFvkH3ATSHBlCMRhUzmYfLgwYcurDgS243MjUN6b0fq8u/pYt8nNgmBX76f3rfc2CF6f//UJ9R2Bj3ZnJQ5/4IkDnn0wk/xbWXZgETGwm84EPMwOAMByjpdkFl+3shdARwGY9TZprQKxlTkVAFxDGxDufs3lowxujolaAPTTQAYGrNZLMXBoAZhGWflTapfeizUPYt2mIRAcUvZI6/jFnNYREm0A01okKOsOCsetQRVKJx0dxxcIzJKEgAmUizuOuBVTUlhHcLq+8/ixfpW10GCEG8uk++v+939AGdNQu5Q0Ar0v9v8ZlgCXPoeNHn25//K3s2/UPMmj9e0WvdzPh3vfYiUxXoa4OWTdTz8fnu31NedCzwQEayi/2gdYH4lz3pyNN1ZWVvv9PxX3SVe8PYEo3z8Fq5xNKmAPdtqB7zCwsB4TIXhx3Uzozwg4pfiTVQqK4rpRHhDoD0kFkAqJQLHT1KmwudrfGzoVi6hCptvNwDMY/tVfGzoVxVysIOUn9TZ1dxjA0B9UcRKfKxB6oQG4lrBZAqjiePFcpuj3cT5l09MnHsjlSMEKhXbDAXrheBLoFVeU0afdYrA5XHNAf2XtFDaOAOUhnQS6RQG7SPQe5LB5tueAM/3hClY2Anhd2JlUcDwgoneBLu/F9z2gE+wfSx2RskmL8iNqLr6YA/weBZ0RwAio6KBukSdC4ZMWBwCf4A/3SyCQGNRK4CgQvht9+66NAFYD5Il7+5jRLUs2UWkHnFU29RG9Jx0RvQIsAUE1sEMA3rEeYPbvw8Mh+kv2yerXBvMe+BdwaLMMZ5dRqgFw8uuu/gLzMQEWQCQ0aCpfZAxugPMQHiKQ/bht0jYgwud3i3tAGrKD7Uvg7cA51h8YlH8ut3NDxpt6YJ1yeC/HYOH4Bbl9aUjUA1MjwoyAAUUXsucgN5YNxcddwrQGYDk4YAtA2uXLG8DUAW4gWPpiJSznZBNDIIRKICp9t5YWAQR+MRgnAgyo6UXgFkDrAEinKcWmoL5IqoFyRBlChB9vuAolYRsgQTvXCcAFAVvVTmfCeMA9N3UXV14gFGD7pjUA09Rh8dulHg+kKdrFK9Yfagbs1HmscdJjlSSzUpViwCrWLQ8wPwKZ25qUtCa1XAihVVRlE/0o9JJbVPyAM6l2gBvbdYDbkzp+gip6OE4tsVQBvOmAsNQelzMXIaVKtVMVHrmNRnhzPaFoTnO/cU0dGfm9rLQ3nvNjHatI2kqg4zXwkXpcteIYfUgwgjZq2vxu38SdIxkFpPKQxbdvCpeYsHZPZmLCQe5NrNvEGVbDeAixxNz3+Ur5r66ohsbMBWjY2rtFb2Avx/wLG4EgLvJePmZR92oDTup36t7x0/znaHzW9AZFPdCJOvHkuOxdFG1b+xhwhJ87AUkvevcuwJPg/aRztz+NdxR/ff4r51+UwwMFoEzlqwAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAIVBMVEUxMTExMTFSUlJjY857hPe9tZy9vb3/a0r/nDr/5jr///9se4+AAAAAAXRSTlMAQObYZgAAANRJREFUKM/NkTFOxEAMReMb2BkkSLrsjLRiO49zgRl+wzU4wirS1JyBUKRNAdek251RaOhw+fTt/+Xfdf9ghH9hNh0wWQxI3HKKzyuQLDXS4RNAgDbKDUA2cG04bCtSj5lpruCKPPRQekjNepjCxA61v6z4RiKzJpSUcoUzJZaKPl7P2L2SVrEknsuCncnsJqXdpJQTUufud8e36b0s8OBeb8rRP8m22OVF4t1fnMbXj/w1e1+FctFCyDt8/RNSp30+IbfpiQkI6VDKeJEjJOnkj4X/AHnyKfNx+GW9AAAAAElFTkSuQmCC"},"Excadrill":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAALVBMVEUAAAAQEBApIBhBMSlaSkFiYmKDKTGDQUGkpKSsUlK9QUHNc2rV1dXug3v///+4W8sdAAAAAXRSTlMAQObYZgAAA71JREFUWMPtlkFr40YUx6WE9KxZ2cS7qLCJddpT5RE0pwVHwwZ8WnUR6CBy7KG3TQMC39QiOhR/iaSiKnPoRygoVKDDXPZceughUHrIZ+ibkSxbjmTLxwU/MJbg/9P7z5t5M6MohzjEZxsn7/cEAm3PBHxPICj2BAwBHGOIvo6odoxtAoFf93MUfZByiMuvdqmhoAaNKMUV4uzIcZIpakFjSmk0qHJsB9TsxADAF0Tl6vUO/4ZBZQZKe6UwimFBq+iTAio6pNTrD6gcKuQtUwwcjHd4ggpFMa2Br1lqbgeCegAQCDHG7vBWT0atjhCiNmJ3A9ILiNDgglKboMH2yYYi+dLMgLy9/jdcLqjpljGLCrmIEOvpOq2Bbk9qDrOMNJU4/zz+F/641HfXKfBBryg+jv2ff//p+xroTGEUrmjO6ycIFvYBkGxmAbDfqE12ekLlSESCR/RhpSeTLf2mHFtSv0rgdPc29JtybL/86+lRt9HKj+lsA0zy5d9/6NDSsqsdOXGoCwi49oIA8Alby6+Xf6gTQA+EvPykV0CyBAjqWEo8MN99a+kYy36erwCitQN5YUIH4BKYsYSQwXIBnobq5kICIPjz3a/wfWwx0DB2uwLIlBna5qFg5PxhhkSCs5SEMyaoGiAoeA5k/GEq9BP19iphLG0A081Tw8gNg/8g9Fh7RRgkSISsBkbPgYwX30hDyinInwPDZokWfMhj78UYQ80HcwHcCuK0XFOORfnIa+5h3Cg813NBf0SEns0AuHol2wJfRHThxk0g47E79ITRI5KUKWZXd+wXoY9hg15k/vsGkBfe0JNr4EhMApszkrI7xmziULGbCGBt3D43crfUV8AsgaFL4KI8AbI4ztb7OYiHbvl8Tq6gRoyArwQx2xF7lS8AYx3IC1ctM547ppjmRA49QaQGosU6EEeVQTBkyoVHxGyYRL8QAHiKRg2gXiqww4/nTK5vltzD3EkAUkR+A6h7RBwJ4a0AWOrciDmuAFHZzS2mdASAPHtSjE2xPGjliS7yljb6Qnxbx1UA4JijGmi7SH0HbvAqbHJ5P6080bZ7kcru1/VAXLIxokU3ME+FbFyqLfi9YTd4tJAXitabF7qRSh3pSyANdWvEC0jRflUrB4wUFUHAy5swhI2Ki+Os46oG+4C1rLIKz+FH6FrEeU6zVv355Ayh9XzoI7YUZci53wqolj450xr5kCXeETfaM4BzrfkO24J8yLJ+t0Z9PNYqoh+gTibaxoLrC/QNXd8TUJFyiEMc4vOJ/wHXK/cZgbGBawAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAKlBMVEUxMTExMTFSUlJzUkKEY1KMjJSUc2u9Wlq9vb3Wa3Pm5ubvc5z/nL3///80pldVAAAAAXRSTlMAQObYZgAAAOhJREFUKM/NkT0KwkAQhbM32CHYpHOEGH8ad8X0egIFYVtRF2tTaGtgYdgbWFoIktLec2iTu6hFdBPS2Dnlx7w3b/d53j8Mr2HsVA8BqjBIQa8qlHcNhXrFy2JSlGo9KENF9rW6KDkayi4k9MTVBzajWSuNZdNRZ2fE8L4/tjrfAAxQhofcoBbOG5iZ5fkdR3pzYB/bhurdHq9tPU+DAjJF/StKkaxpTh94AcAk3h4jIlXAADwm5E5iRNYUqd45/HYSy3FE2dS5v/SlGO6aYM/cicp8MUy4B7b8VYBvP6gU4y/qOoGf+34C9Qs5YxGzyvQAAAAASUVORK5CYII="},"Hydreigon":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAKlBMVEUAAAAQEBAYMWopICk5WpxBOUFSUlJag81iIEFzKRiLKWKcQTG9Unvm3t4iSbi5AAAAAXRSTlMAQObYZgAABM5JREFUWMPtl79vIkcUx2fZnETJmh/+IU5ynJNoWQ3rH8hFMBMRKU0QGhIlFUIeueVYaVr7zo5XyFVcITfGLoJGdKcUEZWVBqH5o/Lesj4bezZiy0Q3xQqx78N83/e9N7sQ8mX9h9Ybzk1fUxoX3hZd0408p2VTfFuIrukGsThvlY3xnYx5bwcIunq8IrbHOaev4gU1SiWHtxjP+dLNXRGujgko3oY78NZz46J4o6binNj0l6UtonjHnAMAxJ7knwF2FB9TTkufEjIZPdMUJtDJxsRTV88omTw8AeEGkUGY3HK8zZt6xulk/qQJN6BRKyH7IhPa1PqCT/QS0IlaCZf7vGYKLu4CyD4Cdjv80TeL8KV4cqjVLV6XAY4bRPHdZavsQz1XAMx+1nrkRVl7vJ0hdujUsfvSWltrfQrAvtYPTwDP2FFrvO7vqtYzANIAtHjLLpOyzXmTeFEChm6aaH2FDALcK9sdADJ04acDa9nTAEXNQBYAnpMPLgAARZA/h3QNrVENiH2FwJXWVAQ6HwJNbN6WsfFsFRCMhQ3+PglAFdntQAqx8QCoYGdGZV/pfQAdAFo8uIiNB03qzv/YkLJ6r8CuQh49Lc4CN4OHj2lAbVVq+FLCFmqiH2DCENA6gHDUZYCq76Qvj0oAKF0A1yGsCdXPhlOO3dd9gaR82ejzPQTOsEz5jaA5V2qUfwTEi8Mv1ZCNH/5s+FV1VgjnpqiDtZ2dUSf/CLw4CBD4tSVZ1cku+qczvytJf6fQCbMQrVcHAQD0J5/tn3peK2yeQQlMYAUYCUDa4scX8V9JSFrusOrYW/TPyQc0jdbDrnvVSyEg+87vdaggR0kngzv4xmux3a65clC0/uYQgckFStpSqMirUC7KZsCX2SEAjoK6Yc4h4EMObeO5SlKydzD9610d5Ia2io0R5uzUhGjGPBsy7nSay+AkLyZsKyd7zjDnCV6OacC307csYy88wrTPnM3hMNs+5nEda+VYDc6WlgCXugKuB8Phdf3YiwWI5aCipigg0H1od6fT65rDm//6RI6A7G5X0+7Npz3KTUA6oNEzGlLgBVeI9X4HzvJ+xYcfMCjaUuPfBB4OLRx7FwFZ1GO2Jx1u9MjaUiPQAVUVMF7WrNCFYVUzVnO2zW8HQfCxUluYeYxArwONonWFsW1jomml9hhbVPgYJGxIF4ExADXzIVO9l/0Ko+HghACu/cE9YyzmWNrDvlx0BKRevESgqoIKa7w3AgMAek9PcAsBvx6oXK4hTVmk7zHAye4KN1SQ2mhAY9fV+ENOGgGbStlbY3URWZiqn4N6tj9QAPjGHBq9zWHlu8fnaoW5CNTV6OsYAIbhYFgpPI4W2JlFwl2z4gBCbq5rnx9j6L/D2NnW+fZ6HGBNP9U+Ww7AEaH7SiEgvzUDN5UnO0o+ANb3So1rpfcxAHF2nj6XQjNzAxXUUr04YPkECYEgGNdSfmkloAGAhZLI9voKgN0olR8BYmVWeNUufYM+DMClFd/N9zBwKwjOMysCdjTobFUgrAzU7SjJXwZrMI4Z0Jh1NQ7YdiJgfp4ohfRklkxRehb4iRSl9aVMBkwue4n+iKXnfyQDSJEmBXZ5JhFgtUWHJiLygopyoi3yx26yLCwnWRJf1v9q/QMagg+lzIaevAAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAHlBMVEUxMTExMTFSQkpahM5rWlp7c3OEOoyErfetQq21tbUbJTyOAAAAAXRSTlMAQObYZgAAAQZJREFUKFOtjbFugzAQhu/ewI6AsmI52GvJwAwySldQeAGWssZue3M9pJ77xCUDRk2iTv3GT9/9B/A/4APFEnbreNLcy9xLWcCika8KOYap/cQeMB3Xgzzw4Fuf9JCORSzDRQcd9gzHMZaQBT3Ni0zHU9wEnOyh8oKlZnOQKapdGYpTA3zVGJSzSntjBN9GdzW9qEqa1nTxPQoi76RopZDdWuZe1VS1YRkQRdxU1n1Lo/1FGrNO5nQUci9KmoukgbW0R9l2+pVsgyxKsv1uHOiNCrZZ3jEcBpJWPac9RAtYKuVETe+xvJJ9WVEfaAuvPM00k+O/QkDHP+gMN3Dg5zu5wNgD+Sc/+SU8sUgHlaMAAAAASUVORK5CYII="},"Dragonite":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAAAAAQQTEYamIgpHtaOSBiYmKcWkqsi0HNzc3ecznunDnuvYv2vVr/7r3///8bGGxuAAAAAXRSTlMAQObYZgAAA+pJREFUWMPtlzFrG0kUx3eL7XcwiqOVcuIgX0DZVOmC9QGsYhrJlw+QzsUhYV+jSktiDG4OnFSLESYjwrGFMezDhapTsfgLmC2uOHARFrY5iBvnvZldSwHP7KpJcWQaIfb99v3/b2bezFrWz/FDx+6G8c6/daL4hoCTrel441YDbxpr6msAzj/qJ5I/e7WBIexuCMSM/ixqmN5jWCbn8hAanNdIYFl2knCrBTBKkmRRa7YYS/pXN5cJZ8ytOcG8laZ/cAC39pJA4HfYALDh6gbjISz/V4mzQQ0FOHwYixnTRzPGsEgQtRTAhxD7/ivR19VoIObRRwSaJzEB/BDDaYjHVTXEGT6kDLkEbCjiGZs9qkfIp0MEGrmQgP+y5/tdtPCoiwFjBHxOEfgggdjv9Xa62iLRi7b8bpregBAEeGfPe71eRVG3nhFAhKuA11XzhhONJgYIoKcX1QCtVQIGCGDNnheKOOcGYA4XM8zQWgF8DjHXLo0LfIiSwth/ueO/LuIBZtpiCcGTAyGiMyzqiy4tKIyP+a5pE40OxBy2cNp2fpVNAYCbfG+PEgV05dJ2MP7C2DvaCQIAW8VGoATGxjxsoySUHRX8vCpB9DdKghVgqpBMEGGPOcSoWCnyKhQ5gMA1AVALcIawnSS376DUZAsjgPHQHo2Pb6HUZGOBY9cUj4qy7BZahSZbyKWuj0fgugSiEgh1BSIh2xQfQFRoMgE0RZggCIKjpQJCMyBXcZjRQNOkicR7WhN2jhUU7fpA54Qe/VICpEn2Di3AntA+W6KFgOYhEhA/AI+b6OR80D+mBMsA365eLU1rgCY7ZUpRlr2vAzD7xHoAUA4GzvqeAbBs185WgGgM+CdZCP1UW3YmPSOAUZ0/T5tVQD+4lp6PlyHEnZNTVgE4UaFoGeC8Nb2mpyxol+uw9JwtaFlJ30bgtxL4spBNvwpw0hJIZNePRaFoX2chbd9SlYIkebYOnE90itKncmV8CYLvgLHWQholFI93nysFSBPneuCGmhiNBZDpAhjva5sePAC0+fBoDGWCff1xFT+V8csJta9YAudjrSIERFtW6WghhDx7Q3E+mk70Zy5GFJqKCQhH4+nUNQJHSlMJBOPxxNC6MUyaCIKJAranwb5rBkJpYjryCmBivGvQBmYjHGOVIjS/X6UQTOYIGAGVt1fZI5hCPMPOXF2yBnLxMxpODYAPDla7pQbA4HJtw3sH+q1ZGPhvHq9tx2qg03wLqwTyNDRrepJ/xfjypfZ8dRvQSep8ffsQj8A8hgpNbP0mb4u7v8Rd/c8ItHR3f3e/EZDf5xsBdt5h+Ubfu65tudbP8X8Z3wABqg07+4Uz/wAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAIVBMVEUxMTExMTFKlIRSUlJSvaW1hFq9vbXWxXv3tWP35r3////mXL4fAAAAAXRSTlMAQObYZgAAANJJREFUGBnFwbFKxEAUBdD7/uA91sXJlmJhGxdhYqdY2IZhINj7AVulnoSBi91iY2rxP0XYdUa3svIc/D8BIIqfGgXWLURRaRQSezSKiuxVroPtYaic79zcLSpUFNLm8GqQKaHi2HmFm64U38wzU+EuHhVHFvjimGS6f0g4kGfPtGFyl3eWcCDRM9+S6UyhOFr7zC9JUYiRgZ5MUBS27YaZfLceldXyRv9xE3sUEsYxz9sYFYXEbhk4xx61VRgHslXUxBpPKn4RY8KpzZPihBj+6hNmkTOybZRC8gAAAABJRU5ErkJggg=="},"Tyranitar":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAKlBMVEUAAAAASosQEBAge71KWjlKnOZzc3NznGKUKQCszZzFxcXVUgDe5s3////uM8O7AAAAAXRSTlMAQObYZgAAA6dJREFUWMPtl79rHEcUx4dlUX+4crd5vmgzilVIS3plPWYZcCqxvQmpAmqWhce2rlIPQ4ZPqyJNyF/gv0BwlTAyCPK/pJg7OUKnu73anup+vM++ed+Z950dY76Nr3a4iwPjqQ6LvwkHZSlXVKacn6V8dxOM84SZ4RfvbmiXqnMTlGGVHCHqMHNC/vVqtYqWbm4F7Wp101qIcyV6vcIB4JxzbpakbgJgAmYU/o72PgMAMqPmePx5OiC+5MuYZsSbIrlWugzMW4gTuf3jgwcgzpKpNT98/JAzpHkymR8/eg6Rqfj7U372zHhTuAk9QCZjLDodIpMpVCfArWWa0adLBUbxAKozZOomSCIWSDpHJgsMIhYmnSXTEhBZzpapEEh5PwVj5myO9aIphNLtN5syy5NaIUq332xKn+VpRfCx3m82HksCkusiBK32eGxJALW5HwDZ47GlJ5DGDHgg7PFYP2FJb84eAOqdZZdMWPRNYzdAGnaW7YgBxqZ5uQEm6l0JEjGQxsvmHKCDyO4K8FjS275pLBAnPLhql4n5ZNGf++bsJRB18iSWbgcQBxj7xeLFOUA9TkyE4fkZMQ6kse8v85zqUafpeWsqJnS0pLd9f5l1Cksdeb7s363TC4tm4BxIQz3q8+736/U/UuDHvu8vm6ax0OmwVH0WOL27NUXw46Lvm2axCBDqYahH/5w/XUllisq2Py0Wi0VzhiUMMhRyHU/ebwVyw1v/fd83TfOSYGvVwRR3J7e7uk541TdNcwaEWlUrc1zc7T6zQrMGUBWtjDHHe4AXTd4aJNFO9poAfLdYLAAISWWfCxTWE9b9gEd03OPG/hHgkrbdsHtCdoRXuadjhFGWe4AwQsgJooVWZPd7kKW2mxOxhSj7ACFsgOShdaobncqLrVbvkY17Z1NWHSR73LZMZbRpyGeojpkbXavuwhi/dZeXoFpPkHQDtCI6xXZJrIwpnxizRXVQVVUdITqHtrUqRBeWzj1NU9aqWmfC4sGptqoKEMQ+7e8y1g8pbATo8tcpf35SR8HwkGKIAMOGB7ftFLYqOkj9BdB6DejW+DImlboqJBcBSYd1SSpb4o8867UVqXXIC5eBcdsWObqysNkMhUjNWmUR2XqgXsn1cafDQ1sWtaq2ImKMKbYBcv/bv9f/7+Ji6bTd/Lml9wo5va4eG3r35cFb/aB49OPRpz9vu1/ez79tXV2f3svJ3XxAqtP7Sv465EZ3dLsx3dlJvl2zv+bxH3YYQRdTAnqZAAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAJFBMVEUxMTExMTFSUlJjSs5rY85rjGNzc3N7e96ExWucpf+t72v////K2UMeAAAAAXRSTlMAQObYZgAAANFJREFUKJG1z78KwjAQBvDcG/RAUZqpBbHUsUsfoE9QKISOvoKDODYQCFl9glaUcE4WBB/P0fwRnLzxR767fIz9cTD5YhQj0AiRpjZPQwSjaAq3giXb6gBTuve2xQCv3JAYfFwaIlLhzl1HNI1+HqW+lb328qALQ9QJL89lX1FO0nuJ8+VUT5YSBp+ygKvmbEs7sNQtuzgeyo16oMmcS/umknIuhB4dlNta6VyrwUnzLheFlkK6n8KXQqHExqsEiGwtVMbCgWeXxMh5jAwgtl/zBisyOg2ZN1q/AAAAAElFTkSuQmCC"},"Corviknight":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAKlBMVEX///8BAQEYFz0lHU4sK1guJi8wM2A+PW1DRHVNVIhOQVBkbKjzAQH/qKhHQ2usAAAAAXRSTlMAQObYZgAAArhJREFUeNrt1sGSnDgQhGGSZLKrRt73f91VlUC9Q3hPpZ4TfwTYfckvJHzw9vT09PT0m/HT+xYCyY/td4D5Xp107htpnwDYpNhvY9+XCzDvhMyakwxgvfCj9QIoyyTyAwDNUhDBYLwtFSSGQOIfQHYK6wg1N0b48wcyKQXHsn13G5GUZIv3GcuRbOYObOsA8jtjWABiXgsBAt9nNBzHDogLgWgQwNH3X69dkuHi6+vs7egdvb4fgnEIbI31ebf9mL2igwmQXgbobtxf7/X+V45y3sqAzPZ+KWM+AVrrw349WzFKtndiRrMU8nFnFYCk+34Mj8StGmL/mPsHc1+i4mEdoOIT9OW/7YtWFaBzfM/9ALzNfaMZy0AvjEDGAcyoHI+qAqX92F9p7HGAjHalogAlMIxjADPVhQRw9HJ+AloMjPE7MAVvrAEIIBXcgPyTbQnQX4AHcDuCs3npjmCG2Abc2w0wmrdGM9QAg/dadBMam1sJ2BCAWvOW4b+AJ1gGmMCIsDOm6BYCDNX/9rbMKdEib3k5vTqQQqw71YNdcb4BbEWhzyv6uwBWATa9ww2AQdyKgvx/BQoB1MIA7gKBACQuFgDM6wcCWCFQV4Q5MAC7jlAVCPC9b01Cz9YJtAbkPAPw+SVWCYxNgBHsFDgFloUESAADaMqfnEL1S7M1Z4Ye/fx5JwoCxAzf39gQY9PjmygJOIEpXJ4CmR97qxH4SmAD9PbUw9lWCggAkzs9hsBktnIJTG4AugQsAXD3JCEFbIsOQP74HdUviIy5uJGvL4m8HQhRZZ2NZMxHXRAnwN5WinQ2Y2PfxuzHJ6jtm9EtCAA/3OvGyv/4B3HbiRORXUi1Tgj3fSObd6S+n8R9Jm+tP3Rs68t9qT9s9iHAyGZGuj4DAN2w/nJi+1A0jNenAsbrt3p6enp6+hdBrypGD0Cm+AAAAABJRU5ErkJggg=="},"Volcarona":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAAaqQAxf8YGCAYUmIxMTk5c4NSlJxiYmJ7IACUzdWkKQi0tLTFSkHm5ubucxgPDG9MAAAAAXRSTlMAQObYZgAAA9hJREFUWMPtl89rG0cUxwU6iZBL8xeU0vuCMMhQyYdeSiAEahat1ChX/QF2ukG3YBYGsZFVVB+WZOpTLLMng+nBCNGDKWxhES1rQwYx0aEXGZS5iFKLIKbv7eqHo65mnXP8DjpI389839t583aUSt3FXXzO0el0Tj5Jzvkn6O+BnLP11v/Td0HPm2uADOcrRCbUs7X+dJWgXA2AxUdEJtSvzWgmaK4aKIBQwVYNkoDl7/SWQGThLAyYYptov8touGKGzQwcNXBZYWehgjYRYPSylACUGMOkM7yJGR1ULn9QAhkAOOZE+3OgqwYg5VcMJGddLQISikYRhSKghzQ6kJINbgP0abDJ+9qhDCPhsSLAD4xz1s3NAKkGfuWsc2pYm5R/sz8DZBLAc4TscX46nAMTZUoDGhAI2m+N0OI6CRjIVzkLgIoTiH055WQ/AZATbhgAlHggvOm79wj8qQDuy3E/BCoADN+JAdbQVO2DHDNikBdfVVhLDMX7pJpTaTn+CYAvH5ToayEa4irBIJXaGv/1HXnxxQblBdFrXA0SDMBi6nxNvn9Q4i0xEkMfdhs2XzUXO07+QN/eoKwghBj+AduMzbHuOXW6Uk5PA13f7qJeiK1QD1/GD+NO1Gv5DX0zQLkv8s6sOz7EEfdQDasFre2ryEAs+k9+iNkz3CQCH4VfCn+jetQT2H/TcPPkSaxeQieMCZZLenOLt/uxZfBonWsEngpB4AMRL1wjNilnkS7mr+thUiN/L8wyjP4KEZ3I69/GpCHmYZ/LG3Gy2ndzwMKUerDTI8/fugFM+3EWsqE/hZqxkIYPGb1cAk4q1sITsxpgfTBYABMn5rhB2PYQiYLwfc/3ljVMYro8jcTUtnsj4T/xIexlCZPYU4HEW5DB4kYE5OfTbM0pSmc3X3soJTpi5FxOol1orR8bxeeeb3sWAt7xHpwftT7zT/2N5T8hln7s26T9rUSLcVYxZv51DeN3i+jFtm3X249x9aymONKHD9u6rhuWXnPt524IqIfGofkMxphl6a77rOyaycBF7Q2OYr1Yc/X6kfkY2l05ZjIXrhECbrvmutVdOAxTpgbKCFhlF4gjE4CX/FaAe1x2j0zzEdd5EuDCQyJF16q71epu4k0jRS/a4GBARkdVc/dRCJypgRpmZN7Qc+VjpbwMQNH9sWru5FF9oAbgtf4QgHK9be5otwFgsv+MDxX1qXR0WVIUncZrALxzrbYZ9lt+cYG7v54ItBzRd6J2Ts8I1gzWesDKObKt3bTE0JTvLGv5c8YJkUD9ktv7eOQ62WzC/V+7+4N1F59x/AeLHO9486NA5QAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAKlBMVEUxMTEZjL0xMTExvf9SUlJjY2NjjK17e3uMxf+cSjG9vb3WY0L3lCn///96KtFZAAAAAXRSTlMAQObYZgAAAPJJREFUGBnNwTFKA0EUBuCfOYMHeDxswlQeIQqJsjO1QixtrdxlirQRbGwWmxB7K5thLcJLuWGRnXJAm7mLWOwsIZWd34d/QDGO6S3hiBLGL2ZCphohACzikU3kygMsIoRMN1KzkmIhhEy3m2unX2ThMdLth3NVE8RjpMLUuVLMvsaIzYV7KNemJ2TqtZi6s2Jraoz0vo3lybqJ58iUdJ21m8bGnpHpXZtSnCcTloSB0tam9J5iuPXI1OV3ivbNhCCEgZ6tvtLzvel6j0w3j656umuDJwyU1HN3szKfTBgxnboZ75aEA6piTMTjEAOKCX/0AzgnW6Dwr4dhAAAAAElFTkSuQmCC"},"Pelipper":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAALVBMVEUAAAAQEBAxYotapM1zc4N7ze6LQTGk5v/FezHNQVLN1e72tDH/3kr//6z///+bzC2uAAAAAXRSTlMAQObYZgAAAslJREFUWMPtlr9r20AUx6VQREc9yxElBIElsmQoWEeXDqGFTBky1IhCp5pCSO2kW/GcxYhm6lLw6DZDuCHgRRjOcylIf0CHeFDrycP9DX0n24ld68cpFLr4O9hgv89931enk56ibLTRRv9Xtg16mXqn0yAulKnvfCSE1GTrtzoIPKeUyHa1h8AbiqpLAjuvOx5NJGnx6Bs5iKEEoP4mBxa3KO3LpjZIPKnGnEpvhfkujiHmsfQ+nH2fcF4C0KKoFcOEy3Xk+92zKBxMqlMZwPf9SCi4tDiXAPxxUh6Fp2xg8uIMj8e3WMyE8Mv8UAhoAG3GmmCyKEIokAmhAp6CJ4JDnRbutHbyFj/B7342sd4PirZaa7MAAOvf93oA5lnY6iNxeJi9wUNfSNT3el/aUdiifahy/iLL4IffPTkRtWgD7UgAlN5kX17tZ/f8NmoCnC+2QwD0ZpqVXRtj/bJYa3busoHV+gcCR/JAyFpHCXCRdVn/ihAGn7D6qjxwnQ2MVyMEQwToznXmDaKtAVdTBC4lgZC1E6A/lAYu2QVHYJB9u66kZkOWANSUA5KjOrRo7gNzuafkzDFr+gAg79zd9RSGoRSgLYDRaOYw4PkhlPN54IVDIaDO2h/dOxT0pOzO0y5UFEJ5OQqX65sJkNfTMSxbNInF81+OW3wKuwuPAHAa4DTXYu8p3e/DbHXQVXcOZFpsea9s13bEgwwqRAB1cZns/ayxY88jdVIXE4PhuAg4jmv9sr+SGqmkGzxrEIPYAlDrxNAVw65bDnEIMVw9vaOG64hClG7gm0LV9YowJdhbfkfCY7YmAuiKLnqqAf5XWw2oYpsuEQulAeSuo3tteyRJkWKx3Vjq6N7CEz+nWhhinfVpEtdJUqwDFbHMurHtkcRCT3nn6mnT6qIn+al020vPnH0M0QJKjL34qm+4pQZrJEDZaKON/o3+ADHGP3DiNTUpAAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAKlBMVEUxMTExMTE6a4RCjK1SUlJrrc57e3uUc3u9vb3OnGPW3t7mxVL/5kL///8nBvrkAAAAAXRSTlMAQObYZgAAAMdJREFUKM9jYBjEQFBQAFMsNFgRXYwxNNhqlQCGoNXduxj6hVf0XsQwU/jiDQxBxp03bqBpZxSUOTnx7t2Lgshi0mfOnDlde/fuLSS10mdOuri4z717F9lRjCIu5eXec3tvrEA2VdK93OX03NxrK5FVHnFxObN7Z+61hcgWzTlzZjdQ8G4ispOkdwPBzml3G1HcORsoOHPK3csozheZuXvnzCm9oYbIgqJGkjNnCrqamgqg+JNRUJBB1DQYM/QZgwWxxROpEQsAKlxE9b5qJgwAAAAASUVORK5CYII="},"Mandibuzz":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAQEBBKMTFSUlJaUjliSkF7e3ODMUGUe2K0UmK0pIPFrIPVOSDmg5Tu7sX///90RBFfAAAAAXRSTlMAQObYZgAAA09JREFUWMPtl79r20AUx6XQP+CeZPlXKic6CEnoJATeCg106mCQ4f4AYbitEHfxEDI4kyCTp6ChFEMmDQFnKuivMIGaDjccZOpwa8f0neJk1J3n5lloeh++753fe/fkOG/2ZnYGZEcgSHckXJbCjhKMIfHZOgU0JN6pT5bujKUowfrlrV38aAPJgKXlbGalgAJKwd2SzYSwI4L0TiklUyEsCRcG6o8MQhEicW5FpEoGEPY6CGzs/um7JbhiCpogVrWE1eSK9QGEG7G2LRNXbA7e/+2IJCO2gICnp0sx5BNLiVBsfiyEz3cAtD1wzu1iopH2D6dtPrECaD4XoifWvdhPzACle3meh2LRK4oEYrM/dgMCc/F7oVsjMCns6QrvXuVTIYqbi2oVpAbgSANpRQt9ThdVBWOLFmJsvzotnoEqOLQB0uq++I7VWlXeamwaGc9A1UPipqrugR1aABjTqiiKGx0SI7sCqQ2AMXWKYh+BVSOwzbkGulOodgJO8msN/GRNSbwCTEfzbAHdCZhXXgNA6SvQ3QKrDw0AFt746AXYZnAFTQqQBq8KWOLXFb482pSD9n8W0T1Rm0ejpmMNGK1F0mzrf2IAYgAtkLZfADAASRyjO7Q5zHOdxjymjTk4fpwAtIece5BTDChKwAjECdcARY286yc+mICMI5BhJF73CpLETxqv7XbGJ/irAdoFqhUbWxTDr4E+YOxRBEsT4A75sAbKWxxjrXJpmpU1gCmUW/N9w6zcAn3trO9fSEwAHtGEZ2dlqWqTpukNdc6t8gte12gtaRKg7QkfZv1yqeRIglR9g4CHwIR7/fJMqdHocaT6SyMwnECkShgpiREpeUuaI/Law5hGStKBkgMFSpbNANZChg2gPAS8SJ0NHlu3hqQj7OFIUtpCYCRdRZo3xmCsiy7yjhE6pgPpDIhpo/Rq4vQbyN4xSMc1AcDGFJPoTB3iFsS8wALOynRMSW+B+cxslgC95TJwb6YIFGR2bgGkDjidYkGcabHoLYwi9ao+u5yJqaNfvnFz0KfiflyLjiAdcXm5ji3ScNoT/2v4kLkcQm616PsxDr5fmesTN7HalnyCoePe4xP92GyIxI0d/Tj6sfyKcJxdP4Xe7M3+R/sH3kSbbTvdaaUAAAAASUVORK5CYII=","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAMFBMVEUxMTExMTFSUlJra2t7Y1qUc2uUlJSle1q9vb3WQkLWc6XetXvmvYz/nLX/773///8IsK6pAAAAAXRSTlMAQObYZgAAALJJREFUKM9jYBgcQJBREEOMcZ9oqACG4NPQIEV0QSFVP1d0pYx3b2m/QzdU9u7VRQ/RdUvd+nQJ3R7GNktMQYm0rNyYQjRBsWTlpWeOo1uetOpuTBGa7aKqa+/GqISgKhXVib16XDUUXfBozKHQUEdUM7cfP1MUGhqIKvg6zj0oNDUR1Sa5d0+cmtsa0QTj3j1qy0B3aFRcnIYFmnbGxtaooGY07QwCgo2NghjxARQmPbYBEtIzxIc/bT0AAAAASUVORK5CYII="},"Dragapult":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAM1BMVEUQEBD///8QEBAsMj8wi4Y4anBETmJIqbBWb4l41Mu1o2rMQGbV//vb053rSXL6VJT/4yJusaftAAAAAnRSTlMAAHaTzTgAAAQNSURBVHjaYmCkMQC0Z6eLjaNKFMcvpwQIERu9/9PeOiXGUarjBKLZxyf79v8Ju/WpX8ALGNwLEBH/jWuAr68J4Tz/jQsA62tizgFyHbB6a5pnzQM0BbOA6D7ka63sw/drNWDFLFBromH1JK0DPiO11SrzQBcSDWlKVQKuzx0ygtSESYCCEQ1N3wwQqPc50Oo0YEKVJgrgAJAontcMqJBGZhIwAQJITgZIssnalxIBiAFSIb/ua4ACmojkLApoj4T0eAcqKAgdpPOq4t8AFGTRiY79DwdIBwCdARCc20qLfH+jyd6Wxlewb8QRtzcFeNk8AqEm5zjrA8DSln1PYv0H0BEC4OOHKjxHk+Yu/Xsg7MuOHZVtA3qbSwpIlZSlKtSau/RBQBYVak33uzuAAXxU9IVPhbv0CSDZHbdTeAfu9/uaErOLfm9ZxNXHgYD/BSGA4wzsM29Ca7IooW9w9QmAk5rSvj+A+x37vrPf0PZ94T+DhCtAEEl9Ctx35lcCItixLFAgYRJww/km44TjLcYTmI9LQMAZSCLbtgFVAT7FPBmFacAL8l4XYKv6kQLSweISEMALfdQT41tVA9rvNCaBUoojjjo7kg6AxKZxUJgEytvbW3GnAHrkEOrt1pSQDiTMANb3wslK261pnoSkVVZuFiihPAUCVgKNxE3WhC5MAs8nWLebPUbCJfkJQOFLoNnVc0nsCBmzT/InhOiC8K54ACIGxHngV0IYZDFhvenYTk2AyH4uGAdM8I8T80mQtN+Bxhesec1ALlOAFw5AX+yGCFi3DgDIMUeUWGIMEYMABQ8wJz2AbAAUKCWrAM3bK0YBLxBAQ+hANOFGIPOFgr1cA/AAtElhA4oJUaGY2R8GKHjg8TmKbrttpY8Xn3VxDvBPMt4/Ldy5fwDIuABwsffdFKAQS45PgJF+RIgFHbDiBwB8pvXtx0DUOoEYoxzRM0ABRAcB9h0AzdBgLx6Adbn+2Rzg+iaQsDmA3z76gwD7HogROUc2eMkGnAT7pi6GnwNs54LMsXwCHkzGIJDZ9w8RWD4DXmB/BsjBjXEcAh/1zH0AEAaBaE9xDJ8ICOAtlePRj74/CLwVfSHgBTYQSRhA6rd8RBgGcqFwAhzDPoGD6HmEYQCluBO4ASfAEN5hUwCXw/M5QDcLcPErYPH9CSB+C8RyBUDuQP6jgRKn+hPA4o/wRwElDvbnAS+4/twBngMU4kB/EgiRwhMiTvc94I9gRDci8+xfBih4o9fn+x5wj5Hfwv5VgEcYzrM/C4T4ROjJ6wCyCsvzi/f9aYACieURZ36+7wEvmOHiM30PeGFgCBOAF3C974FZAmEemCCAcBkggav5DkwZYP4i4I0HAl+/AniEe/1/8gt4AX9P4P8aYmpRhOkKqwAAAABJRU5ErkJggg=="},"Gible":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAQEBAxQVI5rMVBaoNB1d5SlKxaEABaYmJ7GBCLxdWsORDFzdXNc3PeWin///9N+f5/AAAAAXRSTlMAQObYZgAAAidJREFUWMPtlrFu1EAQhtf7BJ6TZQFBR7JYLqwoEcQPgM3gEiSEH+AsZwregZegu4ICCaVIF0R3ElUKCppc74ImTaSViNIfs7YjOu9uC/6L0xXz3cw/OzM6IWbNmvV/SO57xqeNH5CRHyDP/ACZEZGPiezMD5DnHN94J1B+CUiVfgla9ABMAsR9v4o8AP+KPIGhIg+gT8AeCrdwxL5HJsULp/jTt+cDQKgcnloSjRXxS1OrrJ1NGbiPr2sim3FZUTsCzauaCdvESsRytMC5GOAMk0YSBr6Y8NWCP07rd6WQn6eACFUPwGX5nr3XeaiyZipFgGVWET2By5gra0/yRTX5gDIBZGD1+8FdbMb15BkpxHDSMzyqKPrx+C5CVh5T1k52ln8vppbe7GjF8SVwdy0jpRjotQJWv0bh9EskhRk7gN1hOkygbWbZ99ro+OO4FKFwIj5tt9emnhLsZ18ecHzXXTHQqqfPlf3sB+t1NwDUvswj68QKaRJ0R7rvUV5ad1sqBpRaauMZc7T36SdXdLxb6mvCHrBu3aGxcKu1xgGwNrboPWv9/Ru3NbdfmwAfMrDU+uaG9ymxA4oY2B5xhq8VvzQ6HI7XH7qFSXBhzp/9YKZt8Qs4frNJTGPtN59XZ0/rDSsygLVHAvip9kz8RcQeHICAu18Ax0O/pnbApAgFQGiKc7n5QdOMPxs4AnEKf/07VCRgcf8tTtNQ+CgAmP+Zzpo169/TH/ni8t2m6v8eAAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAG1BMVEUxMTExMTFSUlJSe5RrnLVrzv+9Y2P3a0r///+UXZ2AAAAAAXRSTlMAQObYZgAAAI5JREFUKM/dkLENAjEQBP868OEPSDkdIv6HBmzvF2AJGiCgBEwBBF82Kb57iZwNR6vd1Q7Df4g4eDbCwxEOEgPJ+qICyYTSDOQjPJTbNbgaXarrTrocTDmwFzGZO2R+m6E0C1YAlTvYRMoFdfq28qm9FMhTH9qemkvum6I87go2m84c/U0cqKSN6zee/6UPrJAXnjWa60MAAAAASUVORK5CYII="},"Larvesta":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAAi94A1f8QEBgxMTlSUlpaQRBqIACDg4uLYimsKQi0ezm0tLTVORje3ub///+n98m3AAAAAXRSTlMAQObYZgAAAfJJREFUWMPtlbFLw0AUxgMZUlylf0L3wLWDUtshdXBVTzqp4NRN6BAaCA4idmqHghA6OgQKXYXSzSKolHZwEAo3uXQI5yAFkdjnXVIdc3dDF8kXyJLvl3fvvpeLpqVKlSrVP5WhCjiqBWaKgEvOVYGXNQPG2gGXmIoFFIENVaBPyO16AYfMVIBM89rpxYBhC7z8eaYNAA9x064v2n/7PPIDLOLtNYWB+eXID0tmNVxh3jp5gZU+DNuRGJCd8i8ALpHZXH3667eZXyLv9nLlD7m/rskA7yukL5N2JoQQ4iJf/ZkcMGUXPPK7P2mKVzRdshJwhXkXPHAh8M47uM/iuPGxcJeisfjczFWBRp2MkQDh7//E2dzxX3zJQCYAmGO8n23DJF7U6DQ55/byCnP9FajdJQMIFbj/BMIovvBp0E0uoRXHrEQ1miUbgqfhsCso0ZwsYv83IRcwYIAnKFGNP4YyEGJ7w+6gJgDsVpQEPvhiw9rwauzqJJ6Rr7TJ2l1gi8oBzmsdtygtVKzguU/8hggwSK9wyIB8pUTpeLvnM6CTmLVdz1uU0ssSfaN7HdSo3YiGSUPFYM4QulXa83aPzpD4G9LfgtacjrzdCsIVqUPfLB2MighhS8tbcoexfmjqJnfrsn+VaOG62j8oVapUqf6vfgA5rHECXPZ/gQAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAJ1BMVEUxMTEZjL0xMTExvf9SUlJzWhB7e3uchCm9pUK9vb3WUkLehCH///+oUtS2AAAAAXRSTlMAQObYZgAAAKVJREFUKM9jYBgWgAmboJYCFoWrFDC1Mi3C1MqktBtdpdYmzTMnNzEooWpfeebMmZMqaMbqAAV370I1lmkOUPD0ElSFTCdPAkU9D6HqnjPnjIjPmTMoSjXPHHEy8zkzJQhZUMnFLdnkzDSPChSlWsfS5pze5d7ehGzRapD1u5e0F6Ho95lz8qRreCmKdiZNTU/X0lIltHBiclJRUcIITwUmJtKjCwA8fTbQ2jNESQAAAABJRU5ErkJggg=="},"Barraskewda":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAKlBMVEUAAAAQEBBUNilpRDR7LSSKaEKtMyWtj1jRzrjVwVXlPyft7e307Yr7+/so/D8dAAAAAXRSTlMAQObYZgAAAjdJREFUeNrtlOGu2yAMRvvZ2A1N8/6vO4g/sXLDujS6/cfRJDOpOQdCdG+TAZPJZDKZTCaTiQi+qzcdBeR3uiL35u/kamb4DX3xqwS3IOTmD7koRad/ITK0F3DNb6BdbAz17rjm3wO03/cj5OfzmS0WmQmvEbkUUFB/F0Gon4VYxMjGUwgu+BUS9jLwPBChbAE+9teAGS9Ah4GWcffPA8oP5dW/5hicJKt+HBDrUNAbo/m5VNPk+Mx/P/gpWzuYMp7hql/Ri5ec80L/3lRTAT7xHw4Qxpw5KytR1fqbKxegXCFnqo9zWTV+c8Ev2lbCRJgby9+CIn0agG7bLm+JMYuqihjW1DgRCH8paJHzPQX4gVZklaXefvKdfzek+UV0wx5QpT/c7bdwhyePxlIKEvpgnJBN1IiKFD9vQlDpNgZnoCwhsq7p1T7+4yHa9P2HBKi6P/zxaA0GQoRlSSyQBBz1bfdbs4vu+pK2EiiFQtxiuBMLaUlpiULsf6RvX8y2BzYGAd48CxWUAOComZhL8lpIAGri6IcFQmgPTYFHiAIfRw3UVgRi64npA4B10N5OK2Yv+29wHQHfK5EegNcGKlofSbcuADDQA/dW4BMj0Kj/UeUBWHC+/TeBGLidAup9wCIwBNw/r/icX/vtyH8Cqf5DHWcDzm+QwPxdoZoddZbMWX//xmHF//YI4OJUwBN+2oT7fxu4AadeEjCSvHnwRcudXQC3E4Gvge8FyHf9k8lkMplMJpPJ5A+0RyIr9jUCRgAAAABJRU5ErkJggg=="},"Torkoal":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAALVBMVEUAAAAAAAA5OTlaMTliYmJqKSmDg4OsUjm9rKTNYkrVzcXug0Hu3tX/ICD/rGq0z8DFAAAAAXRSTlMAQObYZgAABBRJREFUWMPtlkFrG0cUxyVcVB93HUV2iAvxVhUUX1IMVYROEoPw1QEdA7YjpovbS2qwTA3FqoMyGXSoUEi8+JQ6hO10cwiFquo7BUpQl736qE9g0GfomxnZbejOWoYe9ZB3x9r3m/ef2d3/Uyo1i1nM4v+OecYOr5PPOlE0ZFNPfsgiFdPVmO9Ew0ADQzZNESlG5wcBF0xVTCyAmR2VH4ahEOJQVjycCogCIaLQ5zjyk1aMU0+AUKhDgH/GEvNcSvejCaExIXw/YcUoPfogEBAsYQFYQe1qyCeAjwV8g6b5QFbQmYJxDTLOjc/JjlTjM5mIszJJhnjG2IwHvkE5IV4OQi6nZUyIycAAZMJwyHToieVZDtqGRWcu0v4JXcBIUGYKg6bU2tr1gLXx+ZqrpUwFfAzgwZd42WUuipcoddW/hjV8Px5Ds0dZGz++/7rtMprKyAM1FBiPz/vQv4uXKRWincpQuXXU+Gyvjs8BnFVL33WxeeXbuQoAffj2VzlO7/hb9p3k/DRA9wAlvcWxveAQQrfsq4Dl24ODHgJ2zanRbUob9hXA/i/QK/etNN0uUEoLtEYSidvQDW4ADKxcw8Z8amcblbqVANzqLnb+KgI8op/Vc5Ru1TdIpb6RALQWm9+FHsDbCgK12s16PVsdJZXgxeZ+8PMJ9O36KNto3HxwtkE+OUsCHhabPDwBCMI3WOHT0Qg1jRKW3dmcwxIC/sBXOU8wd1TPkoWsnQB0Sh5Hg0QXIISsPBhtVEm+umAU1XkfleHY70RoF68IyTln9zEfP47Jxt6HBzBAr1BAtUFWcqRaJRVKLYNPDv0DgGPGFFBpEISwQAIQ+U8AfmfSwX8iBVwGQvl8hVTvJACDdYbuHW6THAJIsTzqMlvxS0LWueohKxpYF63GDwYLkECLkBeyAjbExxLIcYEea/AA2Xhe4qPkqhLREIsJn8t24reNzaGFbykaizL6x4QLFeg4cZoyUvlRGeA3ta9R9M7RAGc+o/FAyEplta+Mi07ECEf9Qvl3nIW4speUSkoSU2mtJUyXFRB7HQPgfEfeC89zZYJMY6ofqhYgYpYtJy55Hr5EClCOLHS/aMc2iAwTrDzwes29S+Ay3Nht2hGn6N7e4p5aw4dArL+64vQEBt6jRfc/7ST+Tmd2TsnJwPNsx9Uy9FGeHxp6YvkZqTorzClgztfPFbDtFLCd7Bre0TI8cxwLV0gZBe85zo3ai3v0q6Zl8krweqqDZPFtc9D98MvibrN4zwh4CKgRivv8rhrO7e8+WYoHPnpa6nk665bc4B+1qS/ZrXQ8kP7z6LikL81JoDv52jJZWdp+tzy5Noc35AJIailW+mLU9Uq9q4F/ocfFo/0vrvPrexnlWdcB0qlLebOYxSxM8Td//NIWxyTurgAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAJFBMVEUxMTExMTFSUlJra2uMjISUWjqtraXOc1LW1tbmY1rvlGP////4A938AAAAAXRSTlMAQObYZgAAAKxJREFUKM9jYBiuQFAAi9iqhRhijMvLqwQEBVEFpVatWqWYliaILhi6KEktE9lgxlWrlq4KSktzmSiAIrhQMMjFc4qzI7rKmZ5TTFyQlEotWhW6XNPF2MUR1dBV5crGLkqKyFYJlpeXF7k4GZWjeEyovLxKSdlISRFZf6h6+apVyortjUiCoqGB5karFgqghIuoq4CgsrEhWogIgvyKGVIM0tWFmIKM2AKaAAAAnGItef/ZkFsAAAAASUVORK5CYII="},"Ninetales-Alola":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAKlBMVEUAAAAAerUQEBA4hY1RYHdms9d6ipyBwsWGqMCh4d6w0+q9y9fq/v79/f0XA7zRAAAAAXRSTlMAQObYZgAABBJJREFUeNrtl4mCo7gSBJ9zytVFqvT/v/ukBJur3WD23nXMPcNEIITU8v/+5Xz48OHDB/8j3f77+SNi76/VHb/LcCIyM1a5UKBu/LjoT2HLXEbzA9sxvV2IDpkN2iqX69t39yuFyCVhtvyrirEvfe0T4vX9gNkyQVsEEDF2I7q+dvD23FouCiQXwVimq6Pz/vOx+1wQDDPb+ZOj+0LgNhW4G8eKN/3CmEm73e7BXmLjWaDlxQGsC4y43+7sKQMopgJWfgUujuF+J023rIQamwAvFixFt6nQE2YUlrkuRITPK+6s/3aLqYDnzKInClb+iPFV9XHFnX4+t3rnFEglRp2X4syZphdabQVooSN3o/+nu/xjIAMM6g8tAM4FplChljYXAA4KuN1zhlQh0miUXwEl1pzeK8C1XoFMPAJenGJb0QDOF0K+ZSDkbwEV3J1X1xtgZsEZU4BGQoHirkeVl9cbAM5kItkDw4DuLaXWqsBFv8Azko8A7etLhYbX4uvJisY7AVvucUY+C3pEw+DVydwQcX4p++jNUQJyANALA2rxFuoB+v5l9XMNr/2G5FdgGL4a1gq6+R7oUw2Sm0LjOOHyG3MufHVQ/Gv4QguooDW9oYqDgjYtBcSi4AVSqwCtmCsFr4CTkd8HxkJjyO8DAH4s6AQFGnNX8KpfgOIvA9ox8EPAoSWDyG3AFRBAmw3mHsqvwAHGVYHNjMkv8F2AfATqYcFW/mBXY/KLgbsANQAB/FSw9n1zbLTu/rX0D9uClqX8h8B0qBDUwC2x9o+NuUBhp78kmD3WKOOxYe8C6/coAif1Kiyw8UuOjX5ldgXxznYKGBkUALKDnV+BJSq8kxDIEet6+Y8KB2cw/ZMhsPZPs3Au4AXwF3av1RUI03uRgmPhKJDuz8+cePVovAUsU0OwCC4+0uDIn7X4OICfnv4jECCmAKeOQRPx63Wg6sxxFHBXIICpQGMKQvZv/TEeIMWPgVJrYaaF6AEthhzB6wcUtRYFDpYcxsMbGNEjRirAWBcG+VeY/MC5gxfIRSAWT+nVbprWR+Bnt6NNIJ4BmwL7z8zUUeD0ycvIOaBfJGEfgnW4KZA461cAVEEBBPjEzFKMyUeISeCs3+sj0CDLHHDZl1AFvvV5U4H0ooCV0gMhvf5hFxjJci7gPgbMungORNfv/JwD5VygSbqoFvSAzQH9bd37iSL9WT9QO+3qVcC9VJFJIT17ASjCFTgBxosVCAv0gJeibIMrNLOPBHCyoAutaASmXinaZzDCmcmJqXGuIEzXR0Cjl7/LxJRYv/eAvxOAbhuAOvrJO32aZGtsbW8GTJfDW6jXvIjWeCVxDfE00x3CivWA0IDww8xdAZ35HTmwXKUX/gjzevzX+fDhw4cPH/4POSp1PyN3rVUAAAAASUVORK5CYII=","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAHlBMVEUxMTExMTFCY8VSUlJjjMVzlMWl1u/O5v/39/////+jkjenAAAAAXRSTlMAQObYZgAAAPdJREFUKJG1kD1uhTAQhL038Arx7BOkj5BNTpA+QkBtWR6UEhDsa1Eajp2G37w6U36e8eyuUv8r0i9IK/MXMvXUK6X4YifJe+pZ0WoPSEZEZ060eS6H0ZTTF7WthJLPdC6NzkWk7c8RSObIfu5EJrZ7njqUzgMQKZ9H/lEPzgOAjHwWzcNYJTSYwzm6+X6TIiUgBeKjaPjsRpeAprPr9qmROWKKrm64W3mrz1B5oIk+arvseWIGElBIuJ6PgORTFLld74HGR/g7zBJcJR43SEWsS/kI6garWKw/q+YrzF1QdrHLcnP6d2U17etsYq1oUbf09vCKTv0CUthDuX+trUAAAAAASUVORK5CYII="},"Ferrothorn":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAJFBMVEUAAAAAAAAAtFoYUjEgi1IxMTFaWlqDg4u0vb3FiynuvUr///9FgvyOAAAAAXRSTlMAQObYZgAAA4ZJREFUWMPtlj2Po0gQhkGMHYONB99lAyS30WAIJlwwwYRGowbCcYCNdBHS4naKvOCKT9pks7twfsFJ9+euGmyPP5jGk9wlLll8mHqot6qruxGE/83mnwWWsiAkHT6zo2tlOSf9jO/fy9+v+/F9ROcdwAgV9HZRnsZFFsUjmeefFDSZRQ0gPY8zKEHjAVIJY8i1BhCfKw3K7ThryW5vDj4flcWqAUwA2M7BYtcotC0ZB8ga4mL3aGKvkbBdvExnC7Jq0TZ4wpfG2aZ5NNCntm37LMLyHmhSXBIDA4EyaoA7Q0fzfbkuRj4+RD6yoc5UgFMDkqkw/zqFHIsRZ98ez/zZOw2mon4gKYLtu0OWgobFgCr+dq5JMie6bvq++94clshuhpCwijkXgCIOUIT9/r9oCQqeVJv529OWOomqP3SPbu1dblgv339oG+xhI2JvTTTR05lW57EFQA/lmG9U2Ej4ltcmyZbPAtYn1VJ8V7ZagbP7HSDv0Qtgela4RoZyEHcB+Gd/TB5Ps7mwydeze6MDUM2vZ+1yUuAWTZ5xQtztR8v5aKra+gmxB6TphxNbOYnh7QH346XA8ozLKrW2xYHQDyHuzEa65HOXp4F5GLidkskDd/0T9b0Ap2kIx5T5K+ZgetKLjj7sWMPFh6Pekxxd6doYxLpOj3WLSp5ud+4kIiuK9MAaCP2tDu9AZhOgR15qYNKtJ8Y1UR3FMDHIiyx5nf5CHypFtWDjmeOSqG73VtgDkqoubHR9DIUvX7F5LnJAoMAIsHFXV0RYJ+sNLvxsvVOnVXeIGJIUaivXGCnoJ+ErPwVI4n/+jmoEAaJRyo0SLqAMYWcojVSUt1f3Qtj+XhFGRPWvCuH+lZsA7nKQkEOMJIaC20UabHGQf5AdkhA8vPKJDGDy9gtBZIEHLFjK/aIh2bgC5+evRkJI4w/rkpf0PMdMnS9/GfD9y59vuA9v11DNeBE0VL3RjSf4/lsNpBWU3HHQkgi2L+ybwHv7w4AKtmnOBcQVSfN6nDe6+QQFljngT89lvq+p4wAUKeR8oJ9TLBDAkjUfHudawW/YiGqMSJtRhooEo441QAmWdMXGDbE1NgkNO2dEQGmNMAtpQmddQBjQJd1ZHoZK56QLBFL7MirKrvuKJnmI3kmg0CsBQaMLZRTKQng9gJ6izPRdZyKVhU+ZmAmfNFm42c1udrOb/Yf2LyNWGwuvtyS6AAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAIVBMVEUxMTExMTFKhFJSUlJjrWtzxXt7e3utra21axnOztb/vSleBJahAAAAAXRSTlMAQObYZgAAAORJREFUGBnNwcFKw0AQBuB/3mCmWS3xlnUF6y21VDxuslTwpm9QIsm5l4aefYKE0jBHoQ8qmKglxbvfh3+OhHHGBI8Rokwc45cIw0QJJh4/JAQv7joFeXyjIJGbzR87jqxgYBLQJOt22rjMY2AYl2q1DTq3CXrkIbdL1daGomZ8oSiX+O5qpXqwuaBHr9kLvR3372VVO0aPFiGlbbz/OBYPhUePWttgelg/P1XLjccgVgbttCzvazaMHgmAqNJuu4ZhnKCNyJRhGCeIAWJZpIyxC3fDGItCzhiL7YwxRtrgnDD+8AmGeitIhCLwbQAAAABJRU5ErkJggg=="},"Toxapex":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAMFBMVEX///8QEBAXFTk6P21FW4VSWJhvl8RxGmqGPHmT0deUNzK3QprXb6XdrALiUCXyjE8ithE/AAAAAXRSTlMAQObYZgAABAlJREFUeNpiGNRgFIyCUTAKAO2ZiXLjIBBEqw2ZyYAs/f/f7jQyFMIXUdZ1pjeXyuK97QHnTPi0YMOnBSs+LJiskNJpwYoPjpICEXxwktHMBOcGOS94Z4gm63nBewPvOcevAhO8K6mqvxIIXt6huiw/7aD7gktgBkN35HkD8R0/eWYEC+DLv0rcgP7MNABvCF95WTIqfeKZkxjlIpDOBBHcC8in4CtnfF18WjFujn97orB5TBcqqsBGQeVT4PEbL2W3J/jFYLvgK7QK6J5VNFQ+E3hbMEbInzAYDdlXjRUoUAoav1nqeZsJYBaUywaBH/ekiybVe8E8n0G4NT/OCItq5ivIHwXz/DaAUUDDsoz8Kqj8M4Z6UJF56rPiMsE/UUF1Kcnz/PkKqHjP7THV7hCQf8qgqAaie4Eu6A7ZifQYCkZ+Xpqb/LMGvX3KGAX8NIfuhJ02aHbUzun5TDj//x8+X5bcC278nH9nYPoKGPhLpiHh94ZRUKU0pA3/q8LIp0DSdkqQ8MCA43XCspziM+ytGAw48jcXGAU4Jdg0Y+sMF7mE9nHhu8DMJIrgjCDasvSGcLmE3RBC5VNgImcMKZpFg1NuUI8LmMIvAqPgp4YYI98VPtcaAtMLOKDykIn93AAne8jfI82AVuAGPmkQIz02hqCQge/6gTSBxd4QPXOGGDu+oOSbKR/0AolNwDVzPaKUOVUBAnSNos5XiatS8MAQbY5PgUFqe9kFV8HVBVfI1UU4CDz7bsg03yKkCRCKQIpABkGMBKM+3zDLNyJagWJwsKP5zgXl4VYSxggwVyGWZYhtByjw8V/V4Ts/HGaEulsMJvlMLcCg8HcJQhMY52LSGfCefxQg7Llq1uwvqriEzgBQY/OGWmAUXADVb08vqJGZIcWSgd8JuBF7gEEwVwHGPCvABjk7PfMtADlWQFchMo8MshueTMjRNaquGAV1RXz+jEaRM/cTgnOhhc4mbjgIDN1u9PzRgPFTJBofKJaMALihCcYKpfebT0L3EwJQa5R5PdiE99tcPwkxQwFntiL1Ap2gn6xEPBHczii4FU8FCKOgRfCyQkqkFzJgTbAbgF0QEEZB+4zXDwkP8OuaeGtZ1E8TACsDoQYIg0AYvNqFtDp/26INgv4+MNV23GUQL68EAJyf7F7wIt0mAMcZRcG4lPytCfhOZgU1veB+balgNdIXmBYYTKQJVmCsQAGw87ftpwJewKiQEt9WDPwNlAIm5hfkvxeIHARrPd1YGfR8APXCaCP/naDuWs2G1RUFhJL+GA1ttqlfj9EQjUyAc6UhvV2Y5vgUUBEB1MtpAfmzhgYEimFKQP6kgYJOAeB//skBvYCZwM/dVAMKPhp8WtD6/uUvf/nL+fwDFRJTGy8veVEAAAAASUVORK5CYII=","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAKlBMVEUhISEhISFSUlJrY4Rzra2Ma72tUpS17//Frd7Oe1rWY7X3rXP/nIT/1jpGnpXXAAAAAXRSTlMAQObYZgAAAOFJREFUKFO90a0OwjAQB/DeG/QWyAIoCKXJcEwjVlNPuMxPoDAsRyp4AYJDEhQCg0Mh8DwXw7C1THPyn19yX0L8uUC2ZIMqxCDsTaWAewA/4eDo2z7lEqxEz0KUyz7hzu/WzWWk8szLRHeZEZU+hCsZWg59KJASMpdgAaCRSm6XQCpFyW3vUTBbtXAH9tvH5TxyrMdNitasI2vL5lBgXDp5adY8bGzf4XS20s648am2MafpqGCnuZboSsRVUcnnF8LTbqpDFY6zXn08RPk5n93dIXwJPPD8877qR9gWttSXvQGpLi78PBm/zAAAAABJRU5ErkJggg=="},"Blissey":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAJFBMVEUAAAAQEBBqamqLOUG0tLTFWmLVSmLeg6Te1dX/rMX/xc3///+QyUFmAAAAAXRSTlMAQObYZgAAAq5JREFUWMPtls1u00AUhe34BTKUyEHdpKESqbIpssANrMoKqRtQZYX0DVgaK7rt0i6LK2WVhipMWFYIZboqASloXo47U5e4FZ5J9j6yoizON/fc+bHHcSpVqlSpKC/Y0H8iAlbfAOgJIcJ4A2IwE+IKYieK3ql41nwe57M5h2FfiB+R90qI5zagMeCcX55QMDFX8YQlnXtGfq794juneGJsBnzln2q/oH8zMR/vG4FQ+fm33K/pLWMi4AE/42NxPed3wJN9I5AAFZnwsTYnPc5hYMwUAui2J7fDTzhAPzY2DbCyB3xKA0BsbiJRudmWxkLwbYDDemrslx/zPD4MwdhDraWBRDUyAQUkYFzr7QVfyYcYIDQn2j4vADGjApbD0ekVgCnZfbPfxSJATQNYgGIiAtrPLJPqBveAXZlagCC575c3ZsC73Ui5LqSUvrkJH4o9H1GBdtsEeHALXLQ1QAXeyqVpXl2IFXBxJN+o47mYEYLGhdCblHfJt0dAj18v0TJNT/Ne5U99KE4x841ATW29Lwr4pYDpacbMK9f9nSeSyz0ecmiiilTeRE3KeQGAGBEP4VPWKgNoZf/kAO5NfVWAeviKaWkiOTqa89caoPEZ7DDlRywJVRstu115dakSHSegpeydshIupgQs+GUQ9EEBZ6iVlWZij2QmF/lZw1wdxJ16+TRlIznQR+0D4mf9ENAqP9FLbGKoj+aBinL3lAJNTGt4rppVidKRTDvypmMAHmPdRXwBMDxQ8bsy7cobFw/L9zdTVTAItB+35S5VcJjtTfNPmWxmMrN+qZsrgmHablkBt7MicK0rQSEUW+/6wDb0Ox7TfaTr+oMoes9Ijf01xweIomPHI2w9wO3DkNaqEcFwzWsTpaHfhvXb8LBQw/Km/8/GqjuVKlWq9FB/AbzHyqAFznSXAAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAHlBMVEUxMTExMTFSUlKlxb29Y3vmSinvhJz3rb3/xc7///8SXBVdAAAAAXRSTlMAQObYZgAAAMpJREFUKJHNkT0Kg0AQhXdv4Coolv7gYhk3jWWM4BGsI8FeSXzxBNZqQOa2aXejkDav/GbezPCGsf+QOGKwdoxPhRBMmAXeSwwCncEs9wWgM2b48wignzwDxh02yMHVIF8rwENy0+/im3zWQOca2z2JGnjksw7tqgRwJaPTP1OFYlxP+kxK6Q15DwMNOpTQUjaxijS/kyZtQ6RUpvm5s7QpEWVK9/M8pJXSNTLW20RLvigjad5elIrUV/rCEmERsJ3c+/4hjB+97oc+Gp8y4/lIk18AAAAASUVORK5CYII="},"Gliscor":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAQEBApMWJBQVJaYqRqantzCABze8Wci+6sIDGslAC0pP/FUpTeOWr/3gD////jwsq3AAAAAXRSTlMAQObYZgAAA+NJREFUWMPtlkFrG0cUx3c3gl41npWlxBgSdanWKTlMpyJX7/bRXRC0GKMP4GJMDA1UYmEFOWlZ2Ac+6WLwobeeDQmGCPbgLxDIxRh60MXHHHvNpW9mrbTIu7J8bNE7CEm837z/ezPz3hjG2ta2tv+jwQP9a/j0oUCy3MFfBE6m4Ow+QEF4+RnDVBNf/baKAgWkmKpleu//IWpwGzVcBNyTKWKoiW/zi7k26OXjObCgyUVUgFpnI59Gt8vneTYoyGkVQH+bOeIuaamF5O/UdYlI8AJgKSAtAILTXn4RYo7tQwVYTgVQaDIPEd/kOYnA9qmnw+sMy4C0SAIxz3PtrwFLa13cCJ1EgqpOmyRG+SfHZ1qRm2A1kEVPDdvFN+/px87pTAEmlgLWSAGJA3XD/AVHI0wd//RaKTIBlH+2CEBMgOPDs7p57uIofX7jnx2pI9fSGeBg8bQ4EMcx+PC1YOd/hPj80w3sHLbacyDzFgELlPk+4/LJDcInAr7xlXJbpZdFdwAKoYBOi7EW5fPTOUVrIvosoF9xBHcBqyCQC49EpNB2vADRExCQVID63TNvdiKKEP8gvL/C1G9feg4dX8agsBLAMBnrxDGXzc3Ljx8//GwDFZeLwt9jrPQq2vFgIppR+9cPwEAp4tIpACnLYlCQx6fbB3HMlBTK1ptIWwOMi9IIphTHrydOHMW+qk76eCLGyn9QEYAAuXnE3ZjqROUPmThmSNoGXIqKfsKlZALTUF8OT4rfrzBjtJkVAXQIKaaMtixJcSzl9gGqwlUDKoRgUriYiNFb+v6aCqcWMZYAygRjk+8JkNt/KkFLAK2J8WfHZwdSe7JigWqg2xUBJpvXR1e3wbTVq4H9/WaO7o+z2dVY9lcAjIZw8wRfzGavkPf7+/cDfIsOKb64BgTW/UJUAzXRa2Uu7rzCdJQ2+gUhWDWwlWICBIR6qwmgPMQSQXSNIPGaGCG+pJvf1yGW+RuP6DhzQfc+toNIA/3KPaipQcKFTZelRffeBruhgdIANTWsLuiDbgqX3wWpA573lumsS1fv7RoQ5Lod0lnonOAQvK1pOCZgrxxIIU+mxeQzuUtjizVaUcC7VRFC7H1+Nx+V1ijHqNFvQsgZ65bXqENTJJv3dCvADHh/D1RvMcsBK/rXEIA2tUAC2JLyW77u0Y561QCqGsm9pftltKmrZODSyKrRmfB9vnx/SSr13MgPERzVwIZ1U9z3AlIdzh9h4qbUkYaGUb8PMJ1g4AQ4RISSeVPeVzf0gKDjDf5q7zKrAIYQ1FcDjDYE9iirmgXlI0XNggc9FzdW1/MlyPoVv7a1/Xftb52KlpeJmnxeAAAAAElFTkSuQmCC","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAIVBMVEUxMTExMTFSUlJzc86UnO+1hFq9SlLFrSn3Y1L39yn///8+W9IDAAAAAXRSTlMAQObYZgAAAOZJREFUKM/F0cFOwzAMBuD4Dex0mrjWiRDX1EFCu9WxeBH2BjxCpAlxHbwvKerarjdOWDl9+a1EtnP/XYDT2dVhdDDuFCwinHfacIQ3S+SIaOlu6I5mhawMuKAaHrM1fqkrxoIPX5Nd0q29MxXsrqVZxdvfIAdBL/Z8vSSgcUYZEmiV7/eKBy1ztJPg9VRFepjenKMknPn0ydmv6Jz/iIU5W1ReEBpkK6ZBbZPkwg0fg8SyYIuGln4KLMlt8fUceZANUlTN2m5CWrutPRxiZu43U6VQQu+FPN7NWQhB8H5VvyOnv+/8B2l3LeqWPGLGAAAAAElFTkSuQmCC"},"Skarmory":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAQEBAxUntie6x7lL2DGCCUEBictNW9zebFMUrNlADe7v/uWmL/g5T/3gD///+IOA/7AAAAAXRSTlMAQObYZgAAA7JJREFUWMPtlr9rG0kUx2fHS5o0O7YixQQSabywBsM50gYcuMa7mbAOqq5InVOzYLhGWsEIUmkJaGCrNIEFX3f/gHUHWW6KkCaVUqRJpz/iTOCKFLo3u/I5hv2lgysCfo0KfT/z3vvOm9lB6CZu4rsOtqFe/+P/Bvr/AdCPNwT67U1akPONAT26BuiMHVcA8luA9aUsy3hbzvvfCHQmpaSlPV8D9H6VHoDwCtBPKvUKiJK23s70UbneXQNrY/UTIRO3RO+FIIoUkBoL+iiZHpcZOkIICxmKzNgTIZJXBrrl+/7P+dXzFIhCEZ4kbcQEBLnl/7pcLnMB/S1/qAARiml/jjAkEI7/ywL0PioA2imwL6aTOdqHgqb+YrEo0kNFV4AI4TcSzbPF4uNygEqBCQCWCO8l4FAcQ4IiPVSUAhzklujADr/aVcAAlQDKJW9iTVrClDJpxgAMii8XADhFmHGLtyYHUp6D/uy9gQq2QX8pAYCiTAWM+jKBguIPTf80fxvSMQZgikzP5K1h2nF81jxVvvq5MwrxtkMIMpnpso4QKsEgBl8XeXqs9HPCHHXEAGhMVILXpwogeR1Dj/LP+795AGDWcFjDgwRvUltJwamR8of7HjcywG0wEKe25uuxqofzYNTWSAY4qgHoOl8PwNzQKPjpUptsU9phjmogjglsQm7PBGq5Q/mIOfZOF3qHipRLBFxdfirYae1pi5OGE+x07YYDCZQeevj42Siaped/D5G2w9fAbqo/WwyK9OjOT0dDyHOUAs9ep/r4Q9a0nXdVPnihTEWEA+A2d5X+DcmWt1ke0ArS1XaOAGDEJyBfL2+L3LtJy/7W7Jbdmiliu52qbSFY2eUNQHBXzhjzuIu2QC2YmrCSIPbwpUzU2Qi2Hgs+ZowZpcCe3ZUZwE3OiVWVAGq6CycjBR55Q4THFQmgJnEJjECLx6Tqq7gnIsl71hqwKvXqUp0F8ndq8ZHpIFLjw9sCg6ScBbSDaa0vNbZSgPNOzU87di3+ozLWqAmghkuhLD6s/XqAE9o54gGtDezBWGNC3bp67YlaG27lum8anHnfVbd/rTC7l723a7a8tlOj1Sn0Y0z55TRovFf93rvYn7EeXpdCKn3S3+2HlNsH8/VQjau2Qv+LrqzA7omsi87osKJtbByuLnqEkFSHx41RlU/465wY/w7t2Ku0CZ9fHZjDL4xVlYS0q4nGq5Bsry7qP3gPE4K06Et94EAVR1b1n+1ZMw82eudfb+ombuI7i38Ahp197O0OnXQAAAAASUVORK5CYII=","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAIVBMVEUxMTExMTFSUlJSY5yEhJSElM6crb3O1u/WY0L39yn////1Lm5cAAAAAXRSTlMAQObYZgAAANRJREFUGBm9wTFqwzAUBuD/3eA9J9igzRrsrsb0AAnFF8gJVIw02xgJcgKdIHsnQ06ZDhFIeOrS78M/I/wSlBQDtAgKqhWclwU52vvAjbswMrSHBY2bGJmzDy15bwBBQs6thvxmIAMS2sNkyG9MIyOp9/nBtM0sWpAof3kMNF8l3J+MN7Xa063S1+B1i6QxQp+97byOkfHWMOjWr05H3SIhAFVYvz90jIxMHdZORxHkame/ZkGpsnayjAKNna0NSkqM0ICSQIAT44DGAQdKfnAgEPzRC6mxKk0d4fcUAAAAAElFTkSuQmCC"},"Slowbro":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAMFBMVEUAAAAYGBhSUlp7MTGDWiCLlJS0vb3NpGLe3tXmUinmanvu1YP/lJT/vaz/7rT///8VWWkMAAAAAXRSTlMAQObYZgAAA3BJREFUWMPtlzFr21AQxyXSD+CTo9goAdcCd655lAThEAyCQBsKz/C8lhSs3RDQUCiEdOoSSqeMQtvDUAyFDIJCyVKMsnWM5w4FgVsKpRTUu6ekzaJnZS0+PHi4H3f/u/O9s2GsbGUr+49tjd0R8OTDa/BhtQBSxupLL40qAaaUEQDU1tJU1qoB8e78Kr1gKasGGM7WfD5P01ksvWqAmV5iBAIqRmilaJ9+SulVE220fiNwmr+W0d8AoM3oGwF565e8DmAZptDlZua+f5Dm+a8bCfZ9Ww+8yrL3B5TSDcCHIx3gv8yybHob2AhGllWK3MuUjZtSkggTP0Eg2uVJbWZfsqdZ9nXqKGDjvmG5HcG5UQ4o+5qMC+A5DANu83IRmx8UkCQhhqiZw8NhEASHXFOk8z5AI0nOwyMCxAb6ByNd52DBWBf2w4YCeDBCwOW6PtQZYy0AihBVAvqMnb1h2+FjAizXdYPRQNtqYGdnZ29DnxphkwAXhBZoAPpvY1URwBIJ0qwfppBhQg4BckMBgbC1AIRhCPIGIBMoul0KbKW4NAp/qTSj6E7NPSwNMEln5DtJiwgj1xaiYw15+Q7oKUKtgYgS4kjwctlOGuMKk71/ABEaYCu9IN/JLUDwgWa+FUBRUumRiAcBWEIz36QZ0/EIcBQAz3LB25q9pwCSEKkyHeatXDcaCKDgC5QgIzUcIzf/MehoIkxmEcqQWFqajkgI4XYGHa57Ht6t+3XyVb3GHqBpAMOJdhZJyyOA+oEAgC065SJgD2D6E0M41Ap6jfI61wHN5iKZwmkd+rT2pWwdP6oL3XZtwmYYjhenDacAmvUu4xpg7fOTJMEQi3Dr8oqASOJSsAflwByXEhKN8YReOlUsLbA7Xw8ROD/q/wNiZrulQO/qY4I/UX9fRZgVQNduaybj4wuMgLonqKEAmGXpgNk6+YdjqYqEQAy8PCOavcjfD8Ojvmo09i8G0dYBmEXjyEem2EwScO+VZ4SjRFk0MKUbAIdpADU9UBBqWdJ8D9pLrh9yg3V/37leZW39yaGWXhcXJhDQXepvGDjZsboaTC9mqHmZP+BhVbzp5qTKUWae9GbXAM33bOkJ1NzzqPiqYGwyY0sByL9jjQoxuRfn3aUpwV+ZzfxkJz++w8Vr5rgAancA6HKD1V+Lla1Mb38AESMNVqa5auMAAAAASUVORK5CYII=","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAeBAMAAACs80HuAAAAJFBMVEUxMTExMTFSUlKEhHOllFKta2vOvXPOzs7WhIT35pz/raX///+oiypnAAAAAXRSTlMAQObYZgAAAQVJREFUKJG90b9LAzEUB/CX/yBprSk6+SLteU5tNsdyizj1QIS7rchBRy2S+YZC6NiCkNGAcDwnOx34zzmZu/4At37HD9+XhBeA04aJI9izHATfw/5yKrIpANsZJ/LVB4Bsty+Ial+yXTxLvi4rLoVpIXPu4cdyOcQXCO84n2/ea8uZMiM2+sPO9t49W9591aobkE0wmVkuDWoVTu1f4220KpUxuinaNJkQ+e1w0TSZzTD+zLweI+qAb0SUkVf6exEQOnfkiWJUWjfNdKPHNcV5qloXpXO3ztEvc9RXAR8HRYFkI1StpfZu3JrIimYYAJgoZquq3F++EJEt4SDyiR/i0Q/9L7+LU0O5vmy6+QAAAABJRU5ErkJggg=="},"Clodsire":{"front":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAAG1BMVEUJAAQAAAAkGxo6KylVPz5oUlGIaGCzorPexd6zHiOyAAAAAXRSTlMAQObYZgAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfkCgUKFjeV3Y6pAAABy0lEQVRYw+2Vz3KCMBDGEV7AiA+g6PQOC3pGFntuS5ieRXL31HNvPnY3RCh/guKlM53Jd1BHvh/fZhMWyzIyMjIyMvqXciDwPG812Y8p54h4WM+n3R45KUOJMOtxkJPyBkBcuxDcJ5yIt4H0m4i7QKj8HG+6ErF6uIAmAPHz+nY3IsS0E4DIk3sRjiy7df9KvgJsbwQYaO/KmuwNeLqKNHq9yIgNgKY0LZB8ucHKBmBsMREAH4INMAC/f1ZsjLUAuGSmksCfBCDAxfVdCcC8D1BXcyFK2de4Bewvyt+PICAVlbIu0KgPZNK/K+ijW9KvujXZolGpzoUQfCIg1yGXI9Gbt+pXD8iE+KBLkWirrOxqi/ptigB2ZCk6SBVRb2kPeKlNClEtO7fWH1sjgCotr1s8CjhiKNWvQFtRp021bgGeLqBTUycgFeWW5tRwsnnagBDpxztjQ7+NL8OAZLuVQKobBTYeBv5cnLaYn0WhB3DR8x/p60SnJEq0o5lWtshbxwlDCQj6O4y1g2lGlxiv7GqYLQk4l/Rs+COzf8aYxVizs2yZiqMIY12H2mK1rBnmRTZSjj6R2orh/In3HSOAPfWGlIUZGRkZ/bF+AKmJFEyQa9UwAAAAAElFTkSuQmCC"}};
+const SETS={"Hippowdon":{"sets":[{"tier":"OU","name":"Special Wall","moves":["Earthquake","Slack Off","Stealth Rock","Toxic"],"ability":"Sand Stream","item":"Leftovers","nature":"Careful","evs":{"hp":252,"atk":8,"spd":248},"roles":["Rocks setter","Sand setter","Wall"]}],"roleTiers":{"Rocks setter":{"base":92,"tier":"OU","set":"Special Wall"},"Sand setter":{"base":92,"tier":"OU","set":"Special Wall"},"Wall":{"base":92,"tier":"OU","set":"Special Wall"}}},"Rotom-Wash":{"sets":[{"tier":"OU","name":"Defensive Pivot","moves":["Volt Switch","Hydro Pump","Thunder Wave","Pain Split"],"ability":"Levitate","item":"Leftovers","nature":"Calm","evs":{"hp":252,"spd":168,"spe":88},"roles":["Pivot"]},{"tier":"UU","name":"Pivot","moves":["Volt Switch","Hydro Pump","Pain Split","Will-O-Wisp"],"ability":"Levitate","item":"Leftovers","nature":"Timid","evs":{"hp":252,"def":40,"spe":216},"roles":["Pivot"]}],"roleTiers":{"Pivot":{"base":92,"tier":"OU","set":"Defensive Pivot"}}},"Garchomp":{"sets":[{"tier":"OU","name":"Swords Dance","moves":["Swords Dance","Earthquake","Fire Fang","Scale Shot"],"ability":"Rough Skin","item":"Leftovers","nature":"Jolly","evs":{"atk":252,"spd":4,"spe":252},"roles":["Setup sweeper"]},{"tier":"OU","name":"Tank","moves":["Stealth Rock","Earthquake","Toxic","Rest"],"ability":"Rough Skin","item":"Rocky Helmet","nature":"Jolly","evs":{"hp":252,"def":136,"spe":120},"roles":["Rocks setter"]}],"roleTiers":{"Setup sweeper":{"base":92,"tier":"OU","set":"Swords Dance"},"Rocks setter":{"base":92,"tier":"OU","set":"Tank"}}},"Excadrill":{"sets":[{"tier":"OU","name":"Sand Rush","moves":["Swords Dance","Earthquake","Iron Head","Rapid Spin"],"ability":"Sand Rush","item":"Leftovers","nature":"Jolly","evs":{"atk":252,"spd":4,"spe":252},"roles":["Hazard remover","Sand abuser","Setup sweeper"]},{"tier":"OU","name":"Utility","moves":["Earthquake","Iron Head","Stealth Rock","Toxic"],"ability":"Mold Breaker","item":"Leftovers","nature":"Jolly","evs":{"atk":4,"spd":252,"spe":252},"roles":["Rocks setter"]}],"roleTiers":{"Hazard remover":{"base":92,"tier":"OU","set":"Sand Rush"},"Sand abuser":{"base":92,"tier":"OU","set":"Sand Rush"},"Setup sweeper":{"base":92,"tier":"OU","set":"Sand Rush"},"Rocks setter":{"base":92,"tier":"OU","set":"Utility"}}},"Hydreigon":{"sets":[{"tier":"OU","name":"Three Attacks","moves":["Dark Pulse","Earth Power","Flash Cannon","Roost"],"ability":"Levitate","item":"Leftovers","nature":"Timid","evs":{"spa":252,"spd":4,"spe":252},"roles":[]},{"tier":"OU","name":"Nasty Plot","moves":["Nasty Plot","Dark Pulse","Earth Power","Roost"],"ability":"Levitate","item":"Leftovers","nature":"Timid","evs":{"spa":252,"spd":4,"spe":252},"roles":["Setup sweeper"]}],"roleTiers":{"Setup sweeper":{"base":92,"tier":"OU","set":"Nasty Plot"}}},"Dragonite":{"sets":[{"tier":"OU","name":"Offensive Dragon Dance","moves":["Dragon Dance","Dual Wingbeat","Earthquake","Roost"],"ability":"Multiscale","item":"Heavy-Duty Boots","nature":"Jolly","evs":{"atk":252,"spd":4,"spe":252},"roles":["Setup sweeper"]},{"tier":"OU","name":"Defensive Dragon Dance","moves":["Dragon Dance","Dual Wingbeat","Heal Bell","Roost"],"ability":"Multiscale","item":"Heavy-Duty Boots","nature":"Adamant","evs":{"hp":248,"atk":52,"def":56,"spe":152},"roles":["Setup sweeper"]},{"tier":"OU","name":"Utility","moves":["Ice Beam","Earthquake","Roost","Heal Bell"],"ability":"Multiscale","item":"Heavy-Duty Boots","nature":"Relaxed","evs":{"hp":252,"def":252,"spd":4},"roles":["Wall"]}],"roleTiers":{"Setup sweeper":{"base":92,"tier":"OU","set":"Offensive Dragon Dance"},"Wall":{"base":92,"tier":"OU","set":"Utility"}}},"Tyranitar":{"sets":[{"tier":"OU","name":"Specially Defensive","moves":["Stealth Rock","Rock Blast","Earthquake","Thunder Wave"],"ability":"Sand Stream","item":"Leftovers","nature":"Careful","evs":{"hp":252,"def":4,"spd":252},"roles":["Rocks setter","Sand setter"]},{"tier":"OU","name":"Choice Band","moves":["Stone Edge","Crunch","Fire Punch","Ice Punch"],"ability":"Sand Stream","item":"Choice Band","nature":"Adamant","evs":{"atk":252,"spd":4,"spe":252},"roles":["Sand setter","Wallbreaker"]}],"roleTiers":{"Rocks setter":{"base":92,"tier":"OU","set":"Specially Defensive"},"Sand setter":{"base":92,"tier":"OU","set":"Specially Defensive"},"Wallbreaker":{"base":92,"tier":"OU","set":"Choice Band"}}},"Corviknight":{"sets":[{"tier":"OU","name":"Defog","moves":["Body Press","U-turn","Defog","Roost"],"ability":"Pressure","item":"Leftovers","nature":"Impish","evs":{"hp":248,"def":168,"spd":92},"roles":["Hazard remover","Pivot","Wall"]}],"roleTiers":{"Hazard remover":{"base":92,"tier":"OU","set":"Defog"},"Pivot":{"base":92,"tier":"OU","set":"Defog"},"Wall":{"base":92,"tier":"OU","set":"Defog"}}},"Volcarona":{"sets":[{"tier":"OU","name":"Bulky Quiver Dance","moves":["Quiver Dance","Roost","Flamethrower","Psychic"],"ability":"Flame Body","item":"Heavy-Duty Boots","nature":"Timid","evs":{"hp":248,"def":156,"spa":16,"spe":88},"roles":["Setup sweeper"]},{"tier":"OU","name":"Offensive Quiver Dance","moves":["Quiver Dance","Flamethrower","Bug Buzz","Psychic"],"ability":"Flame Body","item":"Heavy-Duty Boots","nature":"Timid","evs":{"def":4,"spa":252,"spe":252},"roles":["Setup sweeper"]}],"roleTiers":{"Setup sweeper":{"base":92,"tier":"OU","set":"Bulky Quiver Dance"}}},"Pelipper":{"sets":[{"tier":"OU","name":"Defensive","moves":["Scald","Roost","U-turn","Defog"],"ability":"Drizzle","item":"Damp Rock","nature":"Bold","evs":{"hp":248,"def":252,"spd":8},"roles":["Hazard remover","Pivot","Rain setter","Wall"]},{"tier":"OU","name":"Choice Specs","moves":["Weather Ball","Hurricane","Scald","U-turn"],"ability":"Drizzle","item":"Choice Specs","nature":"Modest","evs":{"def":4,"spa":252,"spe":252},"roles":["Pivot","Rain setter","Wallbreaker"]}],"roleTiers":{"Hazard remover":{"base":92,"tier":"OU","set":"Defensive"},"Pivot":{"base":92,"tier":"OU","set":"Defensive"},"Rain setter":{"base":92,"tier":"OU","set":"Defensive"},"Wall":{"base":92,"tier":"OU","set":"Defensive"},"Wallbreaker":{"base":92,"tier":"OU","set":"Choice Specs"}}},"Mandibuzz":{"sets":[{"tier":"OU","name":"Defensive","moves":["Foul Play","Roost","Defog","U-turn"],"ability":"Overcoat","item":"Heavy-Duty Boots","nature":"Impish","evs":{"hp":248,"def":92,"spd":152,"spe":16},"roles":["Hazard remover","Pivot","Wall"]}],"roleTiers":{"Hazard remover":{"base":92,"tier":"OU","set":"Defensive"},"Pivot":{"base":92,"tier":"OU","set":"Defensive"},"Wall":{"base":92,"tier":"OU","set":"Defensive"}}},"Dragapult":{"sets":[{"tier":"OU","name":"Choice Specs","moves":["Shadow Ball","Draco Meteor","U-turn","Hydro Pump"],"ability":"Infiltrator","item":"Choice Specs","nature":"Timid","evs":{"def":4,"spa":252,"spe":252},"roles":["Pivot","Wallbreaker"]},{"tier":"OU","name":"Offensive Pivot","moves":["Hex","Draco Meteor","U-turn","Thunder Wave"],"ability":"Infiltrator","item":"Heavy-Duty Boots","nature":"Timid","evs":{"def":4,"spa":252,"spe":252},"roles":["Pivot"]}],"roleTiers":{"Pivot":{"base":92,"tier":"OU","set":"Choice Specs"},"Wallbreaker":{"base":92,"tier":"OU","set":"Choice Specs"}}},"Gible":{"sets":[],"roleTiers":{}},"Larvesta":{"sets":[{"tier":"LC","name":"Pivot","moves":["Flare Blitz","U-turn","Will-O-Wisp","Morning Sun"],"ability":"Flame Body","item":"Heavy-Duty Boots","nature":"Jolly","evs":{"hp":76,"def":236,"spe":196},"roles":["Pivot"]}],"roleTiers":{"Pivot":{"base":55,"tier":"LC","set":"Pivot"}}},"Barraskewda":{"sets":[{"tier":"OU","name":"Choice Band","moves":["Liquidation","Close Combat","Flip Turn","Aqua Jet"],"ability":"Swift Swim","item":"Choice Band","nature":"Adamant","evs":{"atk":252,"def":4,"spe":252},"roles":["Pivot","Rain abuser","Wallbreaker"]}],"roleTiers":{"Pivot":{"base":92,"tier":"OU","set":"Choice Band"},"Rain abuser":{"base":92,"tier":"OU","set":"Choice Band"},"Wallbreaker":{"base":92,"tier":"OU","set":"Choice Band"}}},"Torkoal":{"sets":[{"tier":"OU","name":"Support","moves":["Lava Plume","Rest","Rapid Spin","Sleep Talk"],"ability":"Drought","item":"Heat Rock","nature":"Bold","evs":{"hp":248,"def":252,"spd":8},"roles":["Hazard remover","Sun setter","Wall"]},{"tier":"UU","name":"Sun Setter","moves":["Stealth Rock","Lava Plume","Rapid Spin","Toxic"],"ability":"Drought","item":"Heat Rock","nature":"Bold","evs":{"hp":248,"def":252,"spd":8},"roles":["Hazard remover","Rocks setter","Sun setter"]},{"tier":"RU","name":"Sun Support","moves":["Stealth Rock","Lava Plume","Yawn","Body Press"],"ability":"Drought","item":"Heat Rock","nature":"Bold","evs":{"hp":248,"def":252,"spd":8},"roles":["Rocks setter","Sun setter"]}],"roleTiers":{"Hazard remover":{"base":92,"tier":"OU","set":"Support"},"Sun setter":{"base":92,"tier":"OU","set":"Support"},"Wall":{"base":92,"tier":"OU","set":"Support"},"Rocks setter":{"base":84,"tier":"UU","set":"Sun Setter"}}},"Ninetales-Alola":{"sets":[{"tier":"OU","name":"Aurora Veil","moves":["Aurora Veil","Freeze-Dry","Hail","Hypnosis"],"ability":"Snow Warning","item":"Light Clay","nature":"Timid","evs":{"hp":252,"spa":4,"spe":252},"roles":["Snow setter"]},{"tier":"UU","name":"Aurora Veil","moves":["Aurora Veil","Freeze-Dry","Moonblast","Hypnosis"],"ability":"Snow Warning","item":"Heavy-Duty Boots","nature":"Timid","evs":{"spa":252,"spd":4,"spe":252},"roles":["Snow setter"]}],"roleTiers":{"Snow setter":{"base":92,"tier":"OU","set":"Aurora Veil"}}},"Ferrothorn":{"sets":[{"tier":"OU","name":"Utility","moves":["Spikes","Knock Off","Leech Seed","Body Press"],"ability":"Iron Barbs","item":"Leftovers","nature":"Careful","evs":{"hp":252,"def":4,"spd":252},"roles":["Spikes setter"]}],"roleTiers":{"Spikes setter":{"base":92,"tier":"OU","set":"Utility"}}},"Toxapex":{"sets":[{"tier":"OU","name":"The Pex","moves":["Knock Off","Recover","Haze","Toxic Spikes"],"ability":"Regenerator","item":"Rocky Helmet","nature":"Bold","evs":{"hp":252,"def":252,"spd":4},"roles":["Phazer","Spikes setter","Wall"]}],"roleTiers":{"Phazer":{"base":92,"tier":"OU","set":"The Pex"},"Spikes setter":{"base":92,"tier":"OU","set":"The Pex"},"Wall":{"base":92,"tier":"OU","set":"The Pex"}}}};
+
+/* ---------- rating model: structured data only ---------- */
+const TIER_BASE={OU:92,UU:84,RU:77,NU:71,PU:65,ZU:59,LC:55};
+const EV_ADJ={F:-12,D:-9,C:-6,B:-3,A:0,AA:2,AAA:4};
+const IV_PTS={A:2,B:0,C:-2,D:-4,F:-6};
+const STATS=[["hp","HP"],["atk","Atk"],["def","Def"],["spa","SpA"],["spd","SpD"],["spe","Spe"]];
+const STAT_LBL=Object.fromEntries(STATS);
+const GRADES=[["F",0,30],["D",20,45],["C",35,60],["B",50,70],["A",62,80],["AA",75,90],["AAA",90,100]]; // grade, growth needed, % of the set's EVs
+const ROLE_DESC={"Rocks setter":"Sets Stealth Rock","Spikes setter":"Lays Spikes","Hazard remover":"Clears hazards",
+  "Rain setter":"Starts rain","Sun setter":"Starts sun","Sand setter":"Starts sand","Snow setter":"Starts snow",
+  "Rain abuser":"Stronger in rain","Sun abuser":"Stronger in sun","Sand abuser":"Stronger in sand","Snow abuser":"Stronger in snow",
+  "Pivot":"Switches out with momentum","Setup sweeper":"Boosts, then sweeps","Wallbreaker":"Breaks defensive walls",
+  "Wall":"Takes hits and outlasts","Phazer":"Forces the foe to switch","Revenge killer":"Fast finisher after a faint"};
+const STRATS={
+  bulky:{name:"Bulky Offense",slots:[["Rocks setter"],["Pivot"],["Wallbreaker"],["Setup sweeper"],["Hazard remover"],["Wallbreaker","Setup sweeper"]]},
+  hyper:{name:"Hyper Offense",slots:[["Rocks setter"],["Setup sweeper"],["Setup sweeper"],["Wallbreaker"],["Wallbreaker"],["Revenge killer","Setup sweeper"]]},
+  balance:{name:"Balance",slots:[["Rocks setter"],["Hazard remover"],["Wall"],["Pivot"],["Wallbreaker"],["Setup sweeper"]]},
+  stall:{name:"Stall",slots:[["Rocks setter"],["Spikes setter"],["Wall"],["Wall"],["Hazard remover"],["Phazer","Wall"]]},
+  hazard:{name:"Hazard Stack",slots:[["Rocks setter"],["Spikes setter"],["Phazer","Wall"],["Hazard remover"],["Pivot"],["Wallbreaker"]]},
+  rain:{name:"Rain",slots:[["Rain setter"],["Rain abuser"],["Rain abuser","Wallbreaker"],["Pivot"],["Rocks setter"],["Hazard remover"]]},
+  sun:{name:"Sun",slots:[["Sun setter"],["Sun abuser","Setup sweeper"],["Wallbreaker"],["Pivot"],["Rocks setter"],["Hazard remover"]]},
+  sand:{name:"Sand",slots:[["Sand setter"],["Sand abuser"],["Rocks setter"],["Pivot"],["Wallbreaker"],["Hazard remover"]]},
+  snow:{name:"Snow",slots:[["Snow setter"],["Snow abuser","Setup sweeper"],["Wallbreaker"],["Pivot"],["Rocks setter"],["Hazard remover"]]},
+  volt:{name:"Volt-Turn",slots:[["Pivot"],["Pivot"],["Pivot","Wallbreaker"],["Rocks setter"],["Wallbreaker"],["Hazard remover"]]}
+};
+const GROUPS=[["active","Active"],["backup","Backup"],["practice","Practice"],["ir","Injured reserve"]];
+const MONS=[
+ {id:"hippowdon",n:"Hippowdon",t:["ground"],age:29,g:"active",gr:56,sal:7.4,yrs:2,iv:{hp:"A",atk:"C",def:"B",spa:"D",spd:"A",spe:"C"}},
+ {id:"rotom-wash",n:"Rotom-Wash",t:["electric","water"],age:27,g:"active",gr:64,sal:8.2,yrs:3,iv:{hp:"B",atk:"D",def:"B",spa:"A",spd:"A",spe:"B"}},
+ {id:"garchomp",n:"Garchomp",t:["dragon","ground"],age:26,g:"active",gr:68,sal:11.8,yrs:3,iv:{hp:"B",atk:"A",def:"C",spa:"C",spd:"B",spe:"A"}},
+ {id:"excadrill",n:"Excadrill",t:["ground","steel"],age:28,g:"active",gr:55,sal:9.6,yrs:2,iv:{hp:"B",atk:"A",def:"C",spa:"F",spd:"B",spe:"B"},inj:{k:"out",txt:"Out 2–3 wk"}},
+ {id:"hydreigon",n:"Hydreigon",t:["dark","dragon"],age:26,g:"active",gr:52,sal:9.0,yrs:2,iv:{hp:"C",atk:"D",def:"B",spa:"A",spd:"B",spe:"B"}},
+ {id:"dragonite",n:"Dragonite",t:["dragon","flying"],age:25,g:"active",gr:71,sal:10.2,yrs:3,iv:{hp:"B",atk:"A",def:"C",spa:"D",spd:"B",spe:"B"}},
+ {id:"tyranitar",n:"Tyranitar",t:["rock","dark"],age:30,g:"backup",gr:58,sal:7.1,yrs:2,iv:{hp:"A",atk:"B",def:"B",spa:"C",spd:"A",spe:"C"}},
+ {id:"corviknight",n:"Corviknight",t:["flying","steel"],age:31,g:"backup",gr:44,sal:3.6,yrs:1,iv:{hp:"B",atk:"C",def:"A",spa:"D",spd:"B",spe:"C"}},
+ {id:"volcarona",n:"Volcarona",t:["bug","fire"],age:27,g:"backup",gr:50,sal:4.8,yrs:1,iv:{hp:"B",atk:"F",def:"C",spa:"A",spd:"C",spe:"B"}},
+ {id:"pelipper",n:"Pelipper",t:["water","flying"],age:25,g:"backup",gr:45,sal:2.2,yrs:2,iv:{hp:"C",atk:"D",def:"B",spa:"B",spd:"B",spe:"C"}},
+ {id:"mandibuzz",n:"Mandibuzz",t:["dark","flying"],age:33,g:"backup",gr:40,sal:3.1,yrs:1,iv:{hp:"A",atk:"C",def:"B",spa:"D",spd:"B",spe:"D"}},
+ {id:"dragapult",n:"Dragapult",t:["dragon","ghost"],age:23,g:"backup",gr:57,sal:5.4,yrs:3,iv:{hp:"C",atk:"B",def:"B",spa:"A",spd:"C",spe:"A"}},
+ {id:"gible",n:"Gible",t:["dragon","ground"],age:21,g:"practice",gr:38,sal:0.6,yrs:3,iv:{hp:"B",atk:"A",def:"C",spa:"D",spd:"C",spe:"B"}},
+ {id:"larvesta",n:"Larvesta",t:["bug","fire"],age:21,g:"practice",gr:30,sal:0.5,yrs:3,iv:{hp:"C",atk:"B",def:"B",spa:"C",spd:"D",spe:"C"}},
+ {id:"barraskewda",n:"Barraskewda",t:["water"],age:22,g:"practice",gr:42,sal:1.4,yrs:3,iv:{hp:"D",atk:"A",def:"C",spa:"F",spd:"C",spe:"A"}},
+ {id:"torkoal",n:"Torkoal",t:["fire"],age:32,g:"practice",gr:36,sal:1.2,yrs:1,iv:{hp:"B",atk:"D",def:"A",spa:"C",spd:"B",spe:"F"}},
+ {id:"ninetales-alola",n:"Ninetales-Alola",t:["ice","fairy"],age:24,g:"practice",gr:40,sal:2.1,yrs:2,iv:{hp:"B",atk:"F",def:"C",spa:"B",spd:"B",spe:"A"}},
+ {id:"ferrothorn",n:"Ferrothorn",t:["grass","steel"],age:30,g:"practice",gr:55,sal:2.2,yrs:2,iv:{hp:"A",atk:"C",def:"B",spa:"D",spd:"A",spe:"F"}},
+ {id:"toxapex",n:"Toxapex",t:["poison","water"],age:28,g:"ir",gr:52,sal:2.8,yrs:2,iv:{hp:"A",atk:"D",def:"A",spa:"C",spd:"B",spe:"C"},inj:{k:"ir",txt:"IR"}}
+];
+const BY={}; MONS.forEach(m=>BY[m.id]=m);
+const CAP=100, USED=Math.round(MONS.reduce((s,m)=>s+m.sal,0)*10)/10;
+const CLUB={name:"Vermilion Volts",short:"Volts",div:"Kanto East",rec:"4–1",week:6,weeks:14,season:2026};
+/* attacking type of each move in the inlined sets (status moves omitted) */
+const MOVE_TYPE={"Earthquake":"ground","Earth Power":"ground","Volt Switch":"electric","Hydro Pump":"water","Scald":"water","Liquidation":"water","Flip Turn":"water","Aqua Jet":"water","Weather Ball":"water",
+  "Fire Fang":"fire","Fire Punch":"fire","Flamethrower":"fire","Lava Plume":"fire","Flare Blitz":"fire","Scale Shot":"dragon","Draco Meteor":"dragon","Iron Head":"steel","Flash Cannon":"steel",
+  "Rapid Spin":"normal","Dark Pulse":"dark","Crunch":"dark","Foul Play":"dark","Knock Off":"dark","Dual Wingbeat":"flying","Hurricane":"flying","Ice Beam":"ice","Ice Punch":"ice","Freeze-Dry":"ice",
+  "Rock Blast":"rock","Stone Edge":"rock","Body Press":"fighting","Close Combat":"fighting","U-turn":"bug","Bug Buzz":"bug","Psychic":"psychic","Shadow Ball":"ghost","Hex":"ghost","Moonblast":"fairy"};
+/* next opponent; OPP.team stays a list of names, OPP.mons holds scouting detail per name */
+const OPP={name:"Saffron Sages",short:"Sages",rec:"3–2",style:"Stall",venue:"away",day:"Saturday",format:"Best of 3",last:"Lost 1–2, last season",
+  ace:"Blissey",aceRole:"Wall",aceOvr:90,team:["Blissey","Gliscor","Skarmory","Slowbro","Clodsire"],
+  mons:{
+    Blissey:{n:"Blissey",t:["normal"],role:"Wall",ovr:90,weak:{fighting:2},immune:["ghost"],moves:["Seismic Toss","Soft-Boiled","Toxic","Stealth Rock"]},
+    Gliscor:{n:"Gliscor",t:["ground","flying"],role:"Spikes setter",ovr:88,weak:{ice:4,water:2},immune:["ground","electric"],moves:["Earthquake","Spikes","Toxic","Protect"]},
+    Skarmory:{n:"Skarmory",t:["steel","flying"],role:"Hazard remover",ovr:84,weak:{fire:2,electric:2},immune:["ground","poison"],moves:["Brave Bird","Defog","Roost","Whirlwind"]},
+    Slowbro:{n:"Slowbro",t:["water","psychic"],role:"Wall",ovr:85,weak:{electric:2,grass:2,bug:2,ghost:2,dark:2},immune:[],moves:["Scald","Slack Off","Future Sight","Teleport"]},
+    Clodsire:{n:"Clodsire",t:["poison","ground"],role:"Rocks setter",ovr:83,weak:{water:2,ground:2,psychic:2},immune:["electric"],moves:["Earthquake","Stealth Rock","Recover","Toxic"]}
+  }};
+
+const setsOf=m=>(SETS[m.n]&&SETS[m.n].sets)||[];
+const rolesOf=m=>Object.keys((SETS[m.n]&&SETS[m.n].roleTiers)||{});
+const gradeOf=m=>{let g=GRADES[0];GRADES.forEach(x=>{if(m.gr>=x[1])g=x});return g};
+const nextGrade=m=>GRADES[GRADES.indexOf(gradeOf(m))+1]||null;
+const available=m=>!m.inj;
+const stage=a=>a<=23?"Rising":a<=29?"Prime":"Past prime";
+const money=v=>"$"+v.toFixed(1)+"M";
+const sgn=v=>v<0?"−"+Math.abs(v):"+"+v;
+const invested=set=>STATS.map(s=>s[0]).filter(k=>(set.evs[k]||0)>=40);
+function ivAdj(m,set){const ks=invested(set);if(!ks.length)return {list:[],adj:0};const adj=Math.round(ks.reduce((s,k)=>s+IV_PTS[m.iv[k]],0)/ks.length);return {list:ks.map(k=>[STAT_LBL[k],m.iv[k]]),adj}}
+function rate(m,si,role){
+  const set=setsOf(m)[si],g=gradeOf(m)[0],base=TIER_BASE[set.tier],ga=EV_ADJ[g],iv=ivAdj(m,set),raw=base+ga+iv.adj,o=Math.min(99,raw);
+  return {m,si,set,role,tier:set.tier,base,g,ga,iv,raw,o};
+}
+const roleIn=(set,roles)=>roles.find(r=>set.roles.includes(r));
+function fitSets(m,roles){return setsOf(m).map((s,i)=>i).filter(i=>roleIn(setsOf(m)[i],roles))}
+function bestFor(m,roles){let b=null;fitSets(m,roles).forEach(i=>{const r=rate(m,i,roleIn(setsOf(m)[i],roles));if(!b||r.o>b.o)b=r});return b}
+function bestRole(m){let b=null;rolesOf(m).forEach(r=>{const x=bestFor(m,[r]);if(x&&(!b||x.o>b.o))b=x});return b}
+function formula(R){return `${R.role} in ${R.tier} ${sgn(R.base)} · Grade ${R.g} ${sgn(R.ga)} · IVs (${R.iv.list.map(x=>x[0]+" "+x[1]).join(", ")||"none invested"}) ${sgn(R.iv.adj)}${R.raw>99?" · cap 99":""} = ${R.o}`}
+
+/* ---------- state ---------- */
+const S={lens:"lineup",focus:new Set(),strat:"bulky",lu:{},flag:true,prepared:false,played:false,hl:null,from:"#roster",monSet:{},roomTab:{}};
+const slotRoles=(i,st)=>STRATS[st||S.strat].slots[i];
+function mkSlot(id,i,st){const m=id&&BY[id],b=m&&bestFor(m,slotRoles(i,st));return b?{id,si:b.si}:{id:null,si:null}}
+function autoFill(st){
+  const slots=STRATS[st].slots,pool=MONS.filter(available);
+  const cands=slots.map(roles=>pool.map(m=>({id:m.id,b:bestFor(m,roles)})).filter(x=>x.b).sort((a,c)=>c.b.o-a.b.o));
+  let best={n:-1,s:-1,pick:[]};const used=new Set(),pick=[];
+  (function dfs(i,n,s){
+    if(i===slots.length){if(n>best.n||(n===best.n&&s>best.s))best={n,s,pick:pick.slice()};return}
+    for(const c of cands[i]){if(used.has(c.id))continue;used.add(c.id);pick[i]=c.id;dfs(i+1,n+1,s+c.b.o);used.delete(c.id)}
+    pick[i]=null;dfs(i+1,n,s);
+  })(0,0,0);
+  return best.pick.map((id,i)=>mkSlot(id,i,st));
+}
+S.lu.bulky=["hippowdon","rotom-wash","tyranitar","dragonite","corviknight","garchomp"].map((id,i)=>mkSlot(id,i,"bulky"));
+const FLAG_SLOT=4, FLAG_OUT="excadrill";
+const lineup=()=>S.lu[S.strat]||(S.lu[S.strat]=autoFill(S.strat));
+const starters=()=>new Set(lineup().map(s=>s.id).filter(Boolean));
+/* slot rating: role comes from the chosen set; null role if the set fills none of the slot's roles */
+function slotRate(i){const s=lineup()[i];if(!s.id)return null;const m=BY[s.id],set=setsOf(m)[s.si];const role=roleIn(set,slotRoles(i));return role?rate(m,s.si,role):null}
+function backups(i){const st=starters(),roles=slotRoles(i);return MONS.filter(m=>available(m)&&!st.has(m.id)).map(m=>bestFor(m,roles)).filter(Boolean).sort((a,c)=>c.o-a.o).slice(0,2)}
+function slotOf(id){const L=lineup();for(let i=0;i<L.length;i++)if(L[i].id===id)return i;return -1}
+function currentRate(m){const i=slotOf(m.id);return i>-1&&slotRate(i)?{R:slotRate(i),slot:i}:{R:bestRole(m),slot:-1}}
+function closestToGrade(){let b=null;MONS.filter(m=>m.g!=="ir").forEach(m=>{const n=nextGrade(m);if(n&&(!b||n[1]-m.gr<b.d))b={m,d:n[1]-m.gr,n}});return b}
+
+/* ---------- small builders (shared with extra screens) ---------- */
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const ic=(id,cls)=>`<svg class="i${cls?" "+cls:""}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const typesOf=t=>t.map(x=>`<span class="type ty-${x}">${x}</span>`).join("");
+const types=m=>typesOf(m.t);
+function icoN(n){const s=SPR[n];if(!s)return `<span class="ico" aria-hidden="true"></span>`;return s.icon?`<span class="ico" aria-hidden="true"><img src="${s.icon}" alt="" width="40" height="30"></span>`:`<span class="ico" aria-hidden="true"><img class="fb" src="${s.front}" alt="" width="40" height="40"></span>`}
+const ico=m=>icoN(m.n);
+const sprN=(n,cls)=>`<span class="spr${cls?" "+cls:""}" aria-hidden="true">${SPR[n]?`<img src="${SPR[n].front}" alt="" width="96" height="96">`:""}</span>`;
+const gchip=(g,extra)=>`<span class="grade g${g}"${extra||""}>${g}</span>`;
+const prow=(k,v)=>`<span class="row"><span>${k}</span><span>${v}</span></span>`;
+/* generic Pokémon reference with peek. o: {href, icon:true, types:[...], title, rows:[[k,v]], note, cls} */
+function pkRef(name,o){
+  o=o||{};const pop=`<span class="pop"><strong>${esc(o.title||name)}</strong>${o.types?`<span class="types">${typesOf(o.types)}</span>`:""}${(o.rows||[]).map(r=>prow(r[0],r[1])).join("")}${o.note?`<span>${o.note}</span>`:""}</span>`;
+  const inner=`${o.icon?icoN(name):""}<span class="nm">${esc(name)}</span>${pop}`;
+  return o.href?`<a class="ref peek${o.cls?" "+o.cls:""}" href="${o.href}">${inner}</a>`:`<span class="ref peek${o.cls?" "+o.cls:""}" tabindex="0">${inner}</span>`;
+}
+/* own Pokémon: icon+name link with peek */
+function monRef(m,o){
+  o=o||{};const {R}=currentRate(m),g=gradeOf(m);
+  const rows=[["Role",R?`${R.role} · ${R.o}`:"No Smogon set"],["Grade",`${g[0]} · growth ${m.gr}`],["Age",`${m.age} · ${stage(m.age)}`],["Contract",`${money(m.sal)} · ${m.yrs} ${m.yrs===1?"yr":"yrs"}`]];
+  if(m.inj)rows.push(["Status",m.inj.txt]);
+  return pkRef(m.n,{href:"#mon-"+m.id,icon:o.icon!==false,types:m.t,rows,cls:o.cls});
+}
+const nameLink=m=>monRef(m,{icon:false,cls:"inline"});
+/* other club's Pokémon by name (scouted) */
+function oppRef(n,o){
+  o=o||{};const x=OPP.mons[n]||{t:[],role:"Unknown",ovr:"—",moves:[]};
+  return pkRef(n,{icon:o.icon!==false,types:x.t,title:`${n} · ${OPP.short}`,rows:[["Role (scouted)",`${x.role} · ${x.ovr}`],["Moves",x.moves.join(", ")]],note:o.note});
+}
+function injTag(m){if(!m.inj)return "";const k=m.inj.k,cls=k==="dtd"?"t-dtd":k==="ir"?"t-ir":"t-out",i=k==="dtd"?"pulse":"health";return `<span class="tag ${cls}">${ic(i)}${m.inj.txt}</span>`}
+const focusTag=m=>S.focus.has(m.id)?`<span class="tag t-focus">${ic("target")}Focus</span>`:"";
+const info=(label,popHtml)=>`<button type="button" class="info peek" aria-label="${esc(label)}">i<span class="pop">${popHtml}</span></button>`;
+function ratePop(R){
+  return `<span class="pop"><strong>${R.role} · ${R.o}</strong>
+  ${prow(`${R.role} in ${R.tier}`,sgn(R.base))}${prow(`Grade ${R.g}`,sgn(R.ga))}
+  ${prow(`IVs (${R.iv.list.map(x=>x[0]+" "+x[1]).join(", ")||"none invested"})`,sgn(R.iv.adj))}
+  ${R.raw>99?prow("Capped at 99",sgn(99-R.raw)):""}
+  <span class="row tot"><span>${R.tier} · ${esc(R.set.name)}</span><b>${R.o}</b></span></span>`;
+}
+/* role badge: full role name | OVR. opts.plain = no peek, opts.lg = large */
+function badge(R,opts){
+  opts=opts||{};if(!R)return `<span class="noset">No Smogon set</span>`;
+  const cls="rb"+(R.o>=90?" elite":"")+(opts.lg?" lg":"");
+  if(opts.num)return `<span class="peek" tabindex="0" aria-label="${esc(formula(R))}"><span class="${cls}"><span class="rb-n"><span>${R.o}</span></span></span>${ratePop(R)}</span>`;
+  if(opts.plain)return `<span class="${cls}" aria-label="${R.role} ${R.o}"><span class="rb-r" aria-hidden="true">${R.role}</span><span class="rb-n" aria-hidden="true">${R.o}</span></span>`;
+  return `<span class="peek" tabindex="0" aria-label="${esc(formula(R))}"><span class="${cls}"><span class="rb-r">${R.role}</span><span class="rb-n"><span>${R.o}</span></span></span>${ratePop(R)}</span>`;
+}
+/* scouted badge for another club's Pokémon */
+const oppBadge=(role,ovr)=>`<span class="rb" aria-label="${role} ${ovr}, scouted"><span class="rb-r" aria-hidden="true">${role}</span><span class="rb-n" aria-hidden="true">${ovr}</span></span>`;
+function gradePeek(m){
+  const g=gradeOf(m),n=nextGrade(m);
+  return `<span class="peek" tabindex="0" aria-label="Grade ${g[0]}: ${g[2]}% of set EVs, ${sgn(EV_ADJ[g[0]])} to ratings">${gchip(g[0])}<span class="pop"><strong>Grade ${g[0]}: ${g[2]}% of the set's EVs</strong>${prow("Rating adjustment",sgn(EV_ADJ[g[0]]))}${prow("Growth",m.gr+"/100")}${prow("Next grade",n?n[0]+" at "+n[1]:"Top grade")}</span></span>`;
+}
+/* page head: h1 + sub line + equal-width actions */
+function head(title,sub,act){return `<header class="l-head"><div><h1 tabindex="-1">${title}</h1>${sub?`<p class="sub">${sub}</p>`:""}</div>${act?`<div class="l-actions">${act}</div>`:""}</header>`}
+/* cap meter: used on Roster's Contract lens and Moves pages */
+function capMeter(extra){return `<span class="capm"><span>Cap room</span><b>${money(CAP-USED)}</b><span class="fitbar" role="img" aria-label="${money(USED)} of $${CAP}M used"><i style="width:${(USED/CAP*100).toFixed(1)}%"></i></span><span>${money(USED)} of $${CAP}M${extra?" · "+extra:""}</span></span>`}
+
+/* ---------- threat model for "Watch out for" ---------- */
+function watchOut(){
+  const L=lineup().map(s=>s.id?{m:BY[s.id],set:setsOf(BY[s.id])[s.si]}:null).filter(Boolean);
+  let best=null;
+  OPP.team.forEach(n=>{const o=OPP.mons[n];if(!o)return;
+    const hits=L.map(x=>({m:x.m,mv:x.set.moves.find(mv=>o.weak[MOVE_TYPE[mv]])})).filter(x=>x.mv);
+    const blank=L.map(x=>({m:x.m,mv:x.set.moves.find(mv=>o.immune.includes(MOVE_TYPE[mv]))})).filter(x=>x.mv);
+    const score=hits.length-(blank.length?0.5:0);
+    if(!best||score<best.score)best={o,hits,blank,score};
+  });
+  if(!best)return null;
+  const {o,hits,blank}=best,weak=Object.keys(o.weak);
+  const why=(hits.length?`Only ${hits.map(h=>`${h.m.n} (${h.mv})`).join(" and ")} ${hits.length===1?"hits":"hit"} it super-effectively.`:`None of your starters hits it super-effectively.`)+
+    (blank.length?` It is immune to ${[...new Set(blank.map(b=>MOVE_TYPE[b.mv]))].join(" and ")}, so ${blank.map(b=>`${b.m.n}'s ${b.mv}`).join(" and ")} ${blank.length===1?"does":"do"} nothing.`:"");
+  return {o,hits,blank,weak,why,short:`${hits.length} of ${L.length} starters hit it super-effectively`};
+}
+
+/* ---------- This week ---------- */
+function viewWeek(){
+  const flagOpen=S.flag,fs=slotRate(FLAG_SLOT),out=BY[FLAG_OUT],outR=bestFor(out,["Hazard remover"]);
+  const cg=closestToGrade(),exp=MONS.filter(m=>m.yrs===1),expSum=exp.reduce((s,m)=>s+m.sal,0);
+  const startsNow=S.lu.bulky[FLAG_SLOT].id?BY[S.lu.bulky[FLAG_SLOT].id]:null;
+  const items=[
+    {cat:"health",icon:"health",word:"Injury",done:!flagOpen,
+     txt:flagOpen?`${nameLink(out)} is out 2–3 weeks. ${fs?nameLink(fs.m):"Nobody"} was auto-filled as Hazard remover at ${fs?fs.o:"—"} (${out.n} was ${outR.o}).`
+                 :`Hazard remover reviewed. ${startsNow?nameLink(startsNow):"Nobody"} starts while ${out.n} is out.`,
+     act:flagOpen?`<a class="btn sm" href="#lineup" data-hl="${FLAG_SLOT}" id="reviewBtn">Review ${ic("arrow")}</a>`:`<span class="done">${ic("check")}Done</span>`},
+    cg?{cat:"growth",icon:"up",word:"Growth",txt:`${nameLink(cg.m)} is ${cg.d} growth from grade ${cg.n[0]}. A practice focus could get it there this week.`,
+     act:`<a class="btn sm" href="#mon-${cg.m.id}" aria-label="Open ${cg.m.n}'s page">Open page</a>`}:null,
+    {cat:"deal",icon:"deal",word:"Contracts",txt:`${exp.map(m=>m.n).join(", ").replace(/, ([^,]*)$/," and $1")} expire after this season; ${money(expSum)} comes off the cap.`,
+     act:`<a class="btn sm" href="#roster" data-lens="contract">Contracts</a>`}
+  ].filter(Boolean);
+  const feed=[
+    ["health","health","Injured",`${nameLink(out)} hurt in game 3 vs Celadon. Out 2–3 weeks.`,"Wk 5"],
+    ["league","trophy","Series won",`Volts beat Celadon Florals 2–1 to go 4–1.`,"Wk 5"],
+    ["growth","up","Graded up",`${nameLink(BY.gible)} reached grade C in practice.`,"Wk 5"],
+    ["deal","deal","Offer",`Pewter Peaks asked about ${nameLink(BY.corviknight)} for a 2nd-round pick.`,"Mon"],
+    ["scout","scout","Report ready",`Scouting report on ${OPP.name} is in.`,"Tue"]
+  ];
+  const w=watchOut();
+  const act=`<a class="btn" href="#lineup">Set lineup ${ic("arrow")}</a><button class="btn go" type="button" id="playBtn">${ic("play")}${S.played?"See result":"Play week 6"}</button>`;
+  return head(`Week ${CLUB.week}`,`of ${CLUB.weeks} · at ${OPP.name} · ${OPP.format}, ${OPP.day}`,act)+
+  `<div class="l-cols side-first">
+      <section class="l-panel l-section" aria-labelledby="h-adv"><h2 id="h-adv">Before you play</h2>
+        <ul class="l-list wrap ev">${items.map(a=>`<li class="${a.done?"resolved":""}"><span class="chip c-${a.cat}">${ic(a.icon)}${a.word}</span><p>${a.txt}</p>${a.act}</li>`).join("")}</ul>
+      </section>
+      <section class="l-panel l-section" aria-labelledby="h-opp">
+      <div class="opp-h">${sprN(OPP.ace,"md")}<div><span class="cap">Next opponent</span><h2 id="h-opp">${OPP.name}</h2><p class="muted">${OPP.rec} · plays ${OPP.style} · ${OPP.venue}</p></div></div>
+      <div class="l-facts">
+        <div><span class="cap">Series · ${OPP.format}</span><span class="pips" aria-label="${S.played?"Won 2–1":"Not started"}">${S.played?`<i class="w">W</i><i class="l">L</i><i class="w">W</i>`:`<i>1</i><i>2</i><i>3</i>`}</span></div>
+        ${w?`<div><span class="cap">Watch out for</span>
+          <div class="l-row">${oppRef(w.o.n)}${oppBadge(w.o.role,w.o.ovr)}${info(`Why ${w.o.n}?`,`<strong>Why ${w.o.n}?</strong><span>${w.why}</span>${prow("Weak to",w.weak.join(", "))}`)}</div>
+          <p class="muted">${w.short}.</p></div>`:""}
+        <div><span class="cap">Likely team</span><ul class="l-wrap" aria-label="Likely team">${OPP.team.map(n=>`<li>${oppRef(n)}</li>`).join("")}</ul></div>
+        <div><span class="cap">Last met</span><p>${OPP.last}</p></div>
+      </div>
+    </section>
+      <section class="l-panel l-section" aria-labelledby="h-feed"><h2 id="h-feed">Since last week</h2>
+        <ul class="l-list wrap feed">${feed.map(f=>`<li><span class="chip c-${f[0]}">${ic(f[1])}${f[2]}</span><p>${f[3]}</p><span class="when">${f[4]}</span></li>`).join("")}</ul>
+      </section>
+  </div>`;
+}
+function simResult(){
+  const L=lineup(),find=r=>{const i=L.findIndex((s,k)=>s.id&&slotRoles(k).includes(r));return i>-1?BY[L[i].id]:null};
+  const swp=find("Setup sweeper")||BY.dragonite,wb=find("Wallbreaker")||BY.tyranitar,rk=find("Rocks setter")||BY.hippowdon;
+  return {games:[
+    {g:1,w:true,score:"3–0",txt:`${rk.n} got Rocks up early; ${swp.n} cleaned up.`},
+    {g:2,w:false,score:"0–1",txt:`${OPP.ace} walled ${wb.n} and stalled out the game.`},
+    {g:3,w:true,score:"2–0",txt:`${wb.n} broke ${OPP.ace} on turn 9.`}],mvp:swp,kos:5};
+}
+function resultDialog(){
+  const r=simResult();
+  return `<div class="l-dialog-head"><div><span class="cap">Week ${CLUB.week} · simulated</span><h2 id="dlg-title">Volts win the series</h2></div><button class="x" type="button" data-close aria-label="Close">${ic("x")}</button></div>
+  <div class="l-dialog-body">
+    <div class="score"><span>${CLUB.name}</span><b>2–1</b><span>${OPP.name}</span></div>
+    <ol class="l-list games" aria-label="Game by game">${r.games.map(x=>`<li><span class="cap">Game ${x.g}</span><span class="chip ${x.w?"c-growth":"c-health"}">${ic(x.w?"check":"x")}${x.w?"Won":"Lost"} ${x.score}</span><span>${x.txt}</span></li>`).join("")}</ol>
+    <div class="mvp">${sprN(r.mvp.n,"md")}<div><span class="cap">Series MVP</span><b>${r.mvp.n}</b><span class="muted">${r.kos} KOs across 3 games</span></div></div>
+  </div>
+  <div class="l-dialog-foot"><div class="l-actions"><a class="btn" href="#battle">Watch battle</a><button class="btn go" type="button" data-close autofocus>Done</button></div></div>`;
+}
+
+/* ---------- Roster ---------- */
+const ROSTER_COLS=`<colgroup><col style="width:30%"><col style="width:22%"><col style="width:20%"><col style="width:12%"><col style="width:16%"></colgroup>`;
+function viewRoster(){
+  const lens=S.lens,expSum=MONS.filter(m=>m.yrs===1).reduce((s,m)=>s+m.sal,0),cg=closestToGrade();
+  const roleInfo=info("About the Role column",`<strong>Role</strong><span>The role each Pokémon fills in its ${STRATS[S.strat].name} starting slot. Pokémon not starting show their best role. Roles come from the set: a different set can fill a different role.</span>`);
+  const growInfo=info("About grades",`<strong>Grade</strong><span>Grade sets the share of a set's EVs a Pokémon gets, from F (30%) to AAA (100%). Growth moves it up.</span>`);
+  /* every lens has 5 columns sharing one colgroup, so headers never move */
+  const L={
+    lineup:{cols:["Pokémon",`Role ${roleInfo}`,"Set","Age","Salary"],cls:["","","","","num"],bar:`<span>Roles and ratings for the <b>${STRATS[S.strat].name}</b> lineup. Non-starters show their best role.</span>`},
+    growth:{cols:["Pokémon",`Grade ${growInfo}`,"Growth","Age","Stage"],cls:["","","","",""],bar:`<span>${cg?`${cg.m.n} is closest to a new grade: ${cg.d} growth from ${cg.n[0]}.`:"Nobody is close to a new grade."}</span>`},
+    contract:{cols:["Pokémon","Salary","Years left","Ends","Cap share"],cls:["","num","","","num"],bar:capMeter(`${money(expSum)} expires`)}
+  }[lens];
+  const row=m=>{
+    const who=`<td><span class="who">${monRef(m)}${injTag(m)}</span></td>`;let c="";
+    if(lens==="lineup"){const {R}=currentRate(m);c=`<td>${badge(R)}</td><td>${R?`${R.tier} · ${esc(R.set.name)}`:'<span class="dash">—</span>'}</td><td>${m.age}</td><td class="num">${money(m.sal)}</td>`}
+    if(lens==="growth"){const n=nextGrade(m);c=`<td>${gradePeek(m)}</td><td><div class="gbar"><span class="fitbar" role="img" aria-label="Growth ${m.gr} of 100"><i style="width:${m.gr}%"></i>${n?`<b style="left:${n[1]}%"></b>`:""}</span><small>${m.gr} · ${n?n[0]+" at "+n[1]:"max"}</small></div></td><td>${m.age}</td><td><span class="l-row">${stage(m.age)}${focusTag(m)}</span></td>`}
+    if(lens==="contract")c=`<td class="num">${money(m.sal)}</td><td><span class="l-row">${m.yrs} ${m.yrs===1?"year":"years"}${m.yrs===1?`<span class="tag t-exp">${ic("clock")}Expiring</span>`:""}</span></td><td>${CLUB.season+m.yrs-1}</td><td class="num">${(m.sal/CAP*100).toFixed(1)}%</td>`;
+    return `<tr class="${m.inj?"off":""}">${who}${c}</tr>`;
+  };
+  const body=GROUPS.map(([k,l])=>{const ms=MONS.filter(m=>m.g===k);return `<tbody><tr><th class="grp" colspan="5" scope="colgroup">${l}<span>${ms.length}</span></th></tr>${ms.map(row).join("")}</tbody>`}).join("");
+  const tabs=[["lineup","Lineup"],["growth","Growth"],["contract","Contract"]];
+  return head("Roster",`${MONS.length} Pokémon · ${money(expSum)} expires after this season`)+
+  `<section class="l-panel flush" aria-label="Roster">
+    <div class="l-tabs" role="tablist" aria-label="Lens">${tabs.map(([k,l])=>`<button type="button" role="tab" id="tab-${k}" data-setlens="${k}" aria-selected="${k===lens}" aria-controls="rosterpanel" tabindex="${k===lens?0:-1}">${l}</button>`).join("")}</div>
+    <div class="lensbar">${L.bar}</div>
+    <div class="l-table-wrap" id="rosterpanel" role="tabpanel" aria-labelledby="tab-${lens}"><table class="l-table roster">${ROSTER_COLS}
+    <thead><tr>${L.cols.map((c,i)=>`<th scope="col"${L.cls[i]?` class="${L.cls[i]}"`:""}>${c}</th>`).join("")}</tr></thead>${body}</table></div>
+  </section>`;
+}
+
+/* ---------- Lineup ---------- */
+function emptyText(roles){
+  const hurt=MONS.filter(m=>!available(m)&&roles.some(r=>rolesOf(m).includes(r)));
+  if(hurt.length)return `Only <b>${hurt.map(m=>m.n).join(", ")}</b> fills ${roles[0]}, and is ${hurt[0].inj.txt.toLowerCase()==="ir"?"on IR":hurt[0].inj.txt.toLowerCase()}.`;
+  return `No one on your roster fills <b>${roles.join(" or ")}</b>.`;
+}
+function viewLineup(){
+  const A=STRATS[S.strat],L=lineup();
+  const rs=L.map((s,i)=>slotRate(i)).filter(Boolean),teamOvr=rs.length?Math.round(rs.reduce((t,r)=>t+r.o,0)/rs.length):0;
+  const cards=A.slots.map((roles,i)=>{
+    const s=L[i],full=roles.join(" or ");
+    const flagged=S.strat==="bulky"&&i===FLAG_SLOT&&S.flag;
+    const top=`<div class="slot-h"><div><h3 id="sh-${i}">${roles[0]}</h3><p>${roles.length>1?"or "+roles.slice(1).join(" or "):ROLE_DESC[roles[0]]||""}</p></div><button class="btn sm" type="button" data-chg="${i}" aria-label="Change ${full} starter${s.id?", now "+BY[s.id].n:""}">Change</button></div>`;
+    if(!s.id)return `<article class="l-card slot${S.hl===i?" hl":""}" id="slot-${i}" aria-labelledby="sh-${i}">${top}
+      <div class="l-empty slot-empty">${ic("empty")}<p>${emptyText(roles)}</p><a class="btn sm" href="#freeagents">Free agents</a></div>
+      <div class="slot-foot"><span class="si">Empty · team plays a Pokémon down</span></div></article>`;
+    const m=BY[s.id],R=slotRate(i),set=setsOf(m)[s.si];
+    const bk=backups(i);
+    const bkHtml=[0,1].map(k=>{const b=bk[k];return b?`<button class="bk" type="button" data-swap="${i}:${b.m.id}" aria-label="Swap in ${b.m.n}, ${b.role} ${b.o}">${ico(b.m)}<span class="bn">${b.m.n}</span>${badge(b,{plain:true})}</button>`:`<span class="bk-none">${k===0?"No other "+roles[0].toLowerCase():"—"}</span>`}).join("");
+    const foot=flagged?`<span class="chip c-decline">${ic("alert")}Auto-filled · ${BY[FLAG_OUT].n} out</span><button class="btn sm" type="button" id="keepBtn">Keep</button>`
+      :`<span class="si">${esc(set.item)} · ${esc(set.ability)} · ${esc(set.nature)}</span>`;
+    const opts=setsOf(m).map((st,si)=>{const fits=roleIn(st,roles);return `<option value="${si}"${si===s.si?" selected":""}${fits?"":" disabled"}>${st.tier} · ${esc(st.name)}${fits?"":` (fills ${st.roles.join(", ")||"no role"})`}</option>`}).join("");
+    const fills=set.roles.length?set.roles.map(r=>R&&r===R.role?`<b>${r}</b>`:r).join(", "):"no roles";
+    return `<article class="l-card slot${flagged?" flagged":""}${S.hl===i?" hl":""}" id="slot-${i}" aria-labelledby="sh-${i}">${top}
+      <div class="slot-mon">${sprN(m.n)}<div class="l-stack tight">${monRef(m,{icon:false})}${badge(R)}</div></div>
+      <div class="slot-set"><label for="set-${i}">Set</label><select id="set-${i}" data-slotset="${i}">${opts}</select><p class="fills" id="fills-${i}">This set: ${fills}</p></div>
+      <div class="l-stack tight"><span class="cap">Backups</span>${bkHtml}</div>
+      <div class="slot-foot">${foot}</div>
+    </article>`;
+  }).join("");
+  return head("Lineup",`Week ${CLUB.week} at ${OPP.name} (${OPP.style}) · ${OPP.format.toLowerCase()}`)+
+  `<section class="l-panel flush" aria-label="Lineup">
+    <div class="lbar"><label for="strat">Strategy</label><select id="strat">${Object.entries(STRATS).map(([k,a])=>`<option value="${k}"${k===S.strat?" selected":""}>${a.name}</option>`).join("")}</select><span class="avg">Starters average <b>${teamOvr||"—"}</b></span><button class="btn" type="button" id="autoBtn">${ic("wand")}Auto-fill</button></div>
+    <div class="l-grid slots">${cards}</div>
+  </section>`;
+}
+
+/* ---------- Pokémon page ---------- */
+function rng(seed){let h=2166136261;for(const c of seed)h=Math.imul(h^c.charCodeAt(0),16777619);return ()=>{h+=0x6D2B79F5;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function career(m){
+  const R=rng(m.id),n=Math.min(Math.max(m.age-21,1),6),rows=[],clubs=["Celadon Florals","Pewter Peaks","Cerulean Tide"];
+  const start=m.age>24&&R()>.5?1:0,br=bestRole(m),best=(br||{o:50}).o;
+  for(let k=0;k<n;k++){
+    const yr=CLUB.season-(n-1-k),cur=k===n-1,base=cur?{active:5,backup:3,practice:1,ir:1}[m.g]:Math.round(8+R()*6)*(m.g==="practice"?0.4:1);
+    const series=Math.max(1,Math.round(base)),games=Math.round(series*(2.4+R()*.5));
+    const kos=Math.round(games*(best/100)*(0.7+R()*.7)),fn=Math.round(games*(0.25+R()*.35));
+    const gr=Math.max(0,m.gr-(n-1-k)*Math.round(5+R()*4)),gd=GRADES.reduce((g,x)=>gr>=x[1]?x:g,GRADES[0])[0];
+    rows.push({yr,club:k<start?clubs[Math.floor(R()*3)]:"Volts",role:br?br.role:"—",grade:gd,series,games,kos,fn,cur});
+  }
+  return rows;
+}
+function awards(m,rows){
+  const R=rng(m.id+"aw"),best=(bestRole(m)||{o:50}).o,out=[];
+  const pool=[["Series MVP","star"],["All-Kanto second team","trophy"],["Team MVP","trophy"],["Most improved","up"],["All-Kanto first team","trophy"]];
+  rows.filter(r=>!r.cur).forEach(r=>{if(R()<(best-60)/45){const a=pool[Math.floor(R()*pool.length)];out.push({t:a[0],i:a[1],yr:r.yr,club:r.club})}});
+  if(m.id==="gible")out.push({t:"Prospect of the week",i:"up",yr:CLUB.season,club:"Volts"});
+  return out;
+}
+function overallIV(m,keys){const avg=keys.reduce((s,k)=>s+IV_PTS[m.iv[k]],0)/keys.length;let best="B",d=99;Object.entries(IV_PTS).forEach(([g,p])=>{if(Math.abs(p-avg)<d){d=Math.abs(p-avg);best=g}});return best}
+function potential(m){const gi=GRADES.indexOf(gradeOf(m)),steps=m.age<=23?2:m.age<=27?1:0;return {g:GRADES[Math.min(GRADES.length-1,gi+steps)][0],steps}}
+function viewMon(id){
+  const m=BY[id];if(!m)return head("Not found","No Pokémon with that name.")+`<a class="btn" href="#roster">Back to roster</a>`;
+  const {R,slot}=currentRate(m),g=gradeOf(m),n=nextGrade(m),foc=S.focus.has(m.id),sets=setsOf(m);
+  const rows=career(m),tot=rows.reduce((t,x)=>({series:t.series+x.series,games:t.games+x.games,kos:t.kos+x.kos,fn:t.fn+x.fn}),{series:0,games:0,kos:0,fn:0});
+  const aw=awards(m,rows),pot=potential(m);
+  const kpg=(k,gm)=>gm?(k/gm).toFixed(2):"—";
+  const backTo=S.from&&S.from!==location.hash?S.from:"#roster",backName=(ROOMS.flatMap(r=>r.tabs).find(t=>t[0]===backTo)||[0,"Back"])[1];
+  const inv=[...new Set(sets.flatMap(invested))],ivKeys=inv.length?STATS.map(s=>s[0]).filter(k=>inv.includes(k)):STATS.map(s=>s[0]);
+  const ov=overallIV(m,ivKeys),strong=ivKeys.filter(k=>m.iv[k]==="A").map(k=>STAT_LBL[k]),weakS=ivKeys.filter(k=>"DF".includes(m.iv[k])).map(k=>STAT_LBL[k]);
+  const ivLine=strong.length?`Strong in ${strong.join(", ")}`:weakS.length?`Weak in ${weakS.join(", ")}`:"Even spread";
+  const ivPop=`<strong>IVs</strong>${STATS.map(([k,l])=>prow(l+(ivKeys.includes(k)?"":" (not used)"),gchip(m.iv[k]))).join("")}<span>${inv.length?"Only stats its sets invest in count. Each set's rating adds the average: A +2, B 0, C −2, D −4, F −6.":"No Smogon set, so no stats are invested yet."}</span>`;
+  const roleRows=rolesOf(m).map(r=>bestFor(m,[r])).filter(Boolean).sort((a,c)=>c.o-a.o);
+  const rolesBlock=roleRows.length?`<div class="l-table-wrap"><table class="l-table roles"><colgroup><col style="width:34%"><col style="width:16%"><col style="width:28%"><col style="width:22%"></colgroup>
+    <thead><tr><th scope="col">Role</th><th scope="col">Best tier</th><th scope="col">Set</th><th scope="col" class="num">OVR</th></tr></thead>
+    <tbody>${roleRows.map(x=>{const cur=R&&slot>-1&&x.role===R.role;return `<tr class="${cur?"cur":""}"><td>${x.role}${cur?' <span class="sr">(starting slot)</span>':""}</td><td><span class="tierb">${x.tier}</span></td><td title="${esc(x.set.name)}">${esc(x.set.name)}</td><td class="num">${badge(x,{num:true})}</td></tr>`}).join("")}</tbody></table></div>`
+    :`<div class="l-empty"><b>No Smogon set</b><span>${m.n} has no competitive set in any tier, so it can't fill a lineup slot yet.</span></div>`;
+  let msi=S.monSet[m.id];if(msi===undefined)msi=R?R.si:0;
+  const set=sets[msi],pct=g[2];
+  const mvBlock=set?`<div class="slot-set"><label for="monset">Set</label><select id="monset" data-mon="${m.id}">${sets.map((s,i)=>`<option value="${i}"${i===msi?" selected":""}>${s.tier} · ${esc(s.name)}</option>`).join("")}</select><p class="fills">This set: ${set.roles.length?set.roles.join(", "):"no slot role"}</p></div>
+    <ul class="moves" aria-label="Moves">${set.moves.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+    <dl class="l-kv"><dt>Item</dt><dd>${esc(set.item)}</dd><dt>Ability</dt><dd>${esc(set.ability)}</dd><dt>Nature</dt><dd>${esc(set.nature)}</dd>
+      <dt>EVs at ${g[0]}</dt><dd>${STATS.filter(s=>(set.evs[s[0]]||0)>0).map(([k,l])=>`${Math.round(set.evs[k]*pct/100)} ${l}`).join(" · ")} <span class="muted">(${pct}% of ${STATS.filter(s=>(set.evs[s[0]]||0)>0).map(([k])=>set.evs[k]).join("/")})</span></dd></dl>`
+    :`<div class="l-empty"><b>No Smogon set</b><span>Nothing to show until a set covers ${m.n}.</span></div>`;
+  const facts=[R?(slot>-1?`Starts as ${R.role} in ${STRATS[S.strat].name}`:"Best role shown"):"No set yet",`Age ${m.age}`,`${money(m.sal)} · ${m.yrs} ${m.yrs===1?"yr":"yrs"} left`];
+  const potPop=`<strong>Scouts' view</strong><span>${pot.steps?`Could reach about grade ${pot.g} if growth keeps pace.`:"At or near peak; growth will be slow from here."}</span>${prow("Stage",stage(m.age))}`;
+  return `<a class="back" href="${backTo}">${ic("back")}${backName}</a>
+  <header class="mh">${sprN(m.n,"xl")}
+    <div class="l-stack tight"><h1 tabindex="-1">${m.n}</h1>
+      <div class="l-row even">${types(m)}${badge(R)}${injTag(m)}</div>
+      <p class="muted">${facts.join(" · ")}</p></div>
+  </header>
+  <div class="l-cols">
+    <div class="l-stack loose">
+      <section class="l-panel ${roleRows.length?"flush ":""}l-section" aria-labelledby="h-role"><h2 id="h-role">Roles</h2>${rolesBlock}</section>
+      <section class="l-panel l-section" aria-labelledby="h-mv"><h2 id="h-mv">Moveset</h2>${mvBlock}</section>
+    </div>
+    <section class="l-panel l-section" aria-labelledby="h-gr"><h2 id="h-gr">Development</h2>
+      <div class="ladder" role="list" aria-label="Grade ladder">${GRADES.map(x=>`<span role="listitem" class="step${x===g?" cur":""}">${gchip(x[0],x===g?' aria-current="true"':"")}<small>${x===g?"Now":""}</small></span>`).join("")}</div>
+      <div class="l-stack tight">
+        <div class="grow-top"><span class="cap">Growth</span><b>${m.gr}<small> /100</small></b></div>
+        <div class="track" role="img" aria-label="Growth ${m.gr} of 100${n?", next grade at "+n[1]:""}"><i style="width:${m.gr}%"></i>${n?`<b style="left:${n[1]}%"></b>`:""}</div>
+        <div class="grow-foot"><span>Grade ${g[0]} · ${g[2]}% of EVs · ${sgn(EV_ADJ[g[0]])} to ratings</span><span>${n?`${n[0]} at ${n[1]}`:"Top grade"}</span></div>
+      </div>
+      <dl class="l-kv">
+        <dt id="pf-l">Practice focus</dt><dd class="l-row"><button type="button" class="switch" role="switch" aria-checked="${foc}" aria-labelledby="pf-l" data-focus="${m.id}"></button>${info("About practice focus",`<strong>Practice focus</strong><span>Extra practice reps for this Pokémon this week: about +4 growth. Others on the practice squad grow a little slower.</span>`)}</dd>
+        <dt>IVs</dt><dd class="l-row">${gchip(ov)}<span>${ivLine}</span>${info("IV details",ivPop)}</dd>
+        <dt>Stage</dt><dd class="l-row"><span>${stage(m.age)}</span>${info("Potential",potPop)}</dd>
+      </dl>
+    </section>
+  </div>
+  <section class="l-panel flush l-section" aria-labelledby="h-hist"><h2 id="h-hist">History</h2>
+    <div class="l-table-wrap"><table class="l-table history"><colgroup><col style="width:9%"><col style="width:17%"><col style="width:17%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:11%"></colgroup>
+    <thead><tr><th scope="col">Season</th><th scope="col">Club</th><th scope="col">Role</th><th scope="col">Grade</th><th scope="col" class="num">Series</th><th scope="col" class="num">Games</th><th scope="col" class="num">KOs</th><th scope="col" class="num">Fainted</th><th scope="col" class="num">KO/G</th></tr></thead>
+    <tbody>${rows.map(x=>`<tr class="${x.cur?"cur":""}"><td>${x.yr}${x.cur?' <span class="sr">(current season)</span>':""}</td><td>${x.club}</td><td>${x.role}</td><td>${gchip(x.grade)}</td><td class="num">${x.series}</td><td class="num">${x.games}</td><td class="num">${x.kos}</td><td class="num">${x.fn}</td><td class="num">${kpg(x.kos,x.games)}</td></tr>`).join("")}
+    <tr class="tot"><td>Career</td><td>${rows.length} ${rows.length===1?"season":"seasons"}</td><td></td><td></td><td class="num">${tot.series}</td><td class="num">${tot.games}</td><td class="num">${tot.kos}</td><td class="num">${tot.fn}</td><td class="num">${kpg(tot.kos,tot.games)}</td></tr></tbody></table></div>
+  </section>
+  <section class="l-panel l-section" aria-labelledby="h-aw"><h2 id="h-aw">Awards</h2>
+    ${aw.length?`<ul class="l-grid awards">${aw.map(a=>`<li class="award"><span class="chip c-honour" aria-hidden="true">${ic(a.i)}</span><div><b>${a.t}</b><span>${a.yr} · ${a.club}</span></div></li>`).join("")}</ul>`:`<p class="muted">No awards yet.</p>`}
+  </section>`;
+}
+
+/* ---------- rooms, nav, router ---------- */
+const ROOMS=[
+  {k:"team",label:"Team",icon:"home",tabs:[["#week","This week"],["#roster","Roster"],["#lineup","Lineup"]]},
+  {k:"moves",label:"Moves",icon:"swap",tabs:[["#trades","Trades"],["#freeagents","Free agents"],["#offers","Offers"]]},
+  {k:"draft",label:"Draft",icon:"scout",tabs:[["#scouting","Scouting"],["#draft","Draft"]]},
+  {k:"league",label:"League",icon:"trophy",tabs:[["#standings","Standings"],["#playoffs","Playoffs"],["#schedule","Schedule"],["#history","History"]]}
+];
+const TABBAR=[["week","#week","week","This week"],["roster","#roster","roster","Roster"],["lineup","#lineup","lineup","Lineup"],["moves","#trades","swap","Moves"],["league","#standings","trophy","League"]];
+function routeOf(h){
+  if(h.startsWith("#mon-"))return {room:"team",tab:"#roster",bar:"roster"};
+  if(h==="#battle")return {room:"team",tab:"#week",bar:"week"};
+  const r=ROOMS.find(x=>x.tabs.some(t=>t[0]===h));
+  if(!r)return {room:"team",tab:null,bar:null};
+  return {room:r.k,tab:h,bar:r.k==="team"?h.slice(1):r.k==="moves"?"moves":"league"};
+}
+const flagCnt=()=>`<span class="cnt${S.flag?"":" off"}" aria-label="${S.flag?"1 slot to check":""}">1</span>`;
+function subnavHtml(room,tab){
+  const r=ROOMS.find(x=>x.k===room);
+  const link=t=>`<a href="${t[0]}"${t[0]===tab?' aria-current="page"':""}>${t[1]}${t[0]==="#lineup"?flagCnt():""}</a>`;
+  let alt="";
+  if(room==="league"||room==="draft"){const o=ROOMS.find(x=>x.k===(room==="league"?"draft":"league"));alt=`<span class="alt"><span class="sep" aria-hidden="true"></span>${o.tabs.map(link).join("")}</span>`}
+  return `<nav class="l-tabs subnav" aria-label="${r.label}">${r.tabs.map(link).join("")}${alt}</nav>`;
+}
+function navHtml(room){
+  document.getElementById("sidenav").innerHTML=ROOMS.map(r=>`<a href="${S.roomTab[r.k]||r.tabs[0][0]}" data-room="${r.k}"${r.k===room?' aria-current="page"':""}>${ic(r.icon)}${r.label}${r.k==="team"?flagCnt():""}</a>`).join("");
+}
+function tabbarHtml(bar){
+  document.getElementById("tabbar").innerHTML=TABBAR.map(([k,h,i,l])=>`<a href="${k==="moves"||k==="league"?(S.roomTab[k]||h):h}"${k===bar?' aria-current="page"':""}>${ic(i)}${l}</a>`).join("");
+}
+function comingSoon(h){
+  const t=(ROOMS.flatMap(r=>r.tabs).find(x=>x[0]===h)||[h,h==="#battle"?"Battle":"Not found"])[1];
+  return head(t,"Coming soon")+`<div class="l-empty"><b>${esc(t)} isn't in this prototype yet.</b><span>It will live here, in the same place, when it is built.</span><a class="btn" href="#week">Back to This week</a></div>`;
+}
+const view=document.getElementById("view"),subnav=document.getElementById("subnav");
+function render(focusTitle){
+  const h=location.hash||"#week",rt=routeOf(h);let html,after=null;
+  if(rt.tab)S.roomTab[rt.room]=rt.room==="team"?rt.tab:h;
+  if(rt.room==="draft")S.roomTab.league=h;
+  try{
+    if(h.startsWith("#mon-"))html=viewMon(h.slice(5));
+    else if(h==="#roster")html=viewRoster();
+    else if(h==="#lineup")html=viewLineup();
+    else if(h==="#week")html=viewWeek();
+    else{const ex=window.EXTRA_ROUTES&&window.EXTRA_ROUTES[h];
+      if(typeof ex==="function"){html=ex();if(typeof ex.after==="function")after=ex.after}else html=comingSoon(h)}
+  }catch(err){console.error(err);html=comingSoon(h)}
+  subnav.innerHTML=subnavHtml(rt.room,rt.tab);navHtml(rt.room);tabbarHtml(rt.bar);
+  view.innerHTML=html;
+  hideFloat();
+  if(after){try{after(view)}catch(err){console.error(err)}}
+  if(focusTitle){
+    if(h==="#lineup"&&S.hl!==null){const c=document.getElementById("slot-"+S.hl);if(c){c.scrollIntoView({block:"center"});const b=c.querySelector("#keepBtn")||c.querySelector("[data-chg]");if(b)b.focus({preventScroll:true})}}
+    else{window.scrollTo(0,0);const t=view.querySelector("h1");if(t)t.focus({preventScroll:true})}
+  }
+  S.hl=null;
+}
+function rerender(sel){const y=scrollY;render(false);window.scrollTo(0,y);if(sel){const e=view.querySelector(sel);if(e)e.focus({preventScroll:true})}}
+
+/* ---------- dialog (shared): openDialog(html,{returnFocus: element|selector, onClose}) ---------- */
+const dlg=document.getElementById("dlg");let dlgReturn=null,dlgOnClose=null;
+function openDialog(html,o){
+  o=o||{};hideFloat();closeChooser(false);dlg.innerHTML=html;dlgReturn=o.returnFocus||document.activeElement;dlgOnClose=o.onClose||null;
+  dlg.setAttribute("aria-labelledby",o.labelledby||"dlg-title");dlg.showModal();
+  const f=dlg.querySelector("[autofocus]")||dlg.querySelector("button,a[href]");if(f)f.focus();
+}
+function closeDialog(){if(dlg.open)dlg.close()}
+dlg.addEventListener("click",e=>{if(e.target.closest("[data-close]")||e.target===dlg)dlg.close()});
+dlg.addEventListener("close",()=>{const cb=dlgOnClose,r=dlgReturn;dlgOnClose=null;dlgReturn=null;if(cb)cb();
+  const el=typeof r==="string"?document.querySelector(r):r;if(el&&document.contains(el))el.focus()});
+
+window.addEventListener("hashchange",()=>{closeChooser(false);closeDialog();render(true)});
+function toggleFocus(id){S.focus.has(id)?S.focus.delete(id):S.focus.add(id)}
+function setStarter(i,id){
+  const L=lineup(),prev=L[i].id,j=slotOf(id);
+  L[i]=mkSlot(id,i);
+  if(j>-1&&j!==i){L[j]=prev&&bestFor(BY[prev],slotRoles(j))?mkSlot(prev,j):{id:null,si:null};
+    if(!L[j].id){const b=backups(j)[0];if(b)L[j]={id:b.m.id,si:b.si}}}
+  if(S.strat==="bulky"&&(i===FLAG_SLOT||j===FLAG_SLOT))S.flag=false;
+  S.prepared=true;
+}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("a[href^='#']");
+  if(a){ if(a.dataset.hl!==undefined){S.hl=+a.dataset.hl;if(S.strat!=="bulky"&&a.dataset.hl==String(FLAG_SLOT))S.strat="bulky"} if(a.dataset.lens)S.lens=a.dataset.lens;
+    if(a.getAttribute("href").startsWith("#mon-"))S.from=location.hash||"#week";
+    if(a.getAttribute("href")===location.hash){e.preventDefault();closeDialog();render(true)} return; }
+  const b=e.target.closest("button");if(!b)return;
+  if(b.getAttribute("aria-disabled")==="true")return;
+  if(b.id==="playBtn"){openDialog(resultDialog(),{returnFocus:"#playBtn",onClose:()=>{if(!S.played){S.played=true;rerender()}}});return}
+  if(b.dataset.focus){toggleFocus(b.dataset.focus);rerender("[data-focus]");return}
+  if(b.dataset.setlens){S.lens=b.dataset.setlens;rerender(`[data-setlens="${S.lens}"]`);return}
+  if(b.id==="keepBtn"){S.flag=false;S.prepared=true;rerender(`[data-chg="${FLAG_SLOT}"]`);return}
+  if(b.id==="autoBtn"){S.lu[S.strat]=autoFill(S.strat);if(S.strat==="bulky")S.flag=false;S.prepared=true;rerender("#autoBtn");return}
+  if(b.dataset.swap){const [i,id]=b.dataset.swap.split(":");setStarter(+i,id);rerender(`[data-chg="${i}"]`);return}
+  if(b.dataset.chg!==undefined){openChooser(+b.dataset.chg,b);return}
+});
+document.addEventListener("keydown",e=>{
+  const t=e.target.closest&&e.target.closest('[role="tab"][data-setlens]');
+  if(t&&(e.key==="ArrowRight"||e.key==="ArrowLeft"||e.key==="Home"||e.key==="End")){
+    const tabs=[...t.parentNode.querySelectorAll('[role="tab"]')],i=tabs.indexOf(t);
+    const n=e.key==="Home"?0:e.key==="End"?tabs.length-1:(i+(e.key==="ArrowRight"?1:-1)+tabs.length)%tabs.length;
+    e.preventDefault();S.lens=tabs[n].dataset.setlens;rerender(`[data-setlens="${S.lens}"]`);
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="strat"){S.strat=t.value;S.prepared=true;rerender("#strat");return}
+  if(t.dataset.slotset!==undefined){const i=+t.dataset.slotset;lineup()[i].si=+t.value;if(S.strat==="bulky"&&i===FLAG_SLOT)S.flag=false;S.prepared=true;rerender(`#set-${i}`);return}
+  if(t.id==="monset"){S.monSet[t.dataset.mon]=+t.value;rerender("#monset")}
+});
+
+/* ---------- chooser: eligible Pokémon only ---------- */
+const ch=document.getElementById("chooser"),scrim=document.getElementById("scrim");let chFrom=null,chSlot=null;
+function openChooser(i,anchor){
+  const roles=slotRoles(i),L=lineup(),curId=L[i].id;chSlot=i;chFrom=anchor;hideFloat();
+  const list=MONS.map(m=>({m,b:bestFor(m,roles)})).filter(x=>x.b).sort((a,c)=>(available(c.m)-available(a.m))||(c.b.o-a.b.o));
+  ch.innerHTML=`<div class="ch-h"><div><b id="ch-title">${roles.join(" or ")}</b><small>${list.length} eligible on your roster</small></div><button class="x" type="button" id="chX" aria-label="Close">${ic("x")}</button></div>
+  ${list.length?`<ul role="list">${list.map(({m,b})=>{const dis=!available(m),j=slotOf(m.id);return `<li><button type="button" data-pick="${m.id}"${dis?' aria-disabled="true"':""}${m.id===curId?' aria-current="true"':""}>${ico(m)}<span><span class="nm">${m.n}</span><span class="where">${dis?m.inj.txt:j>-1?`Starts as ${slotRoles(j)[0]}`:"Not starting"} · ${b.tier} ${esc(b.set.name)}</span></span>${badge(b,{plain:true})}</button></li>`}).join("")}</ul>`
+  :`<div class="l-empty">${emptyText(roles).replace(/<\/?b>/g,"")}</div>`}`;
+  ch.hidden=false;scrim.hidden=false;
+  const rc=anchor.getBoundingClientRect(),W=ch.offsetWidth,H=ch.offsetHeight;
+  let left=Math.min(Math.max(8,rc.right-W),innerWidth-W-8),top=rc.bottom+6;if(top+H>innerHeight-8)top=Math.max(8,rc.top-H-6);
+  ch.style.left=left+"px";ch.style.top=top+"px";
+  (ch.querySelector('[aria-current="true"]')||ch.querySelector("[data-pick]:not([aria-disabled])")||ch.querySelector("#chX")).focus();
+}
+function closeChooser(restore){if(ch.hidden)return;ch.hidden=true;scrim.hidden=true;if(restore!==false&&chFrom&&document.contains(chFrom))chFrom.focus();chFrom=null}
+scrim.addEventListener("click",()=>closeChooser());
+ch.addEventListener("click",e=>{
+  if(e.target.closest("#chX")){closeChooser();return}
+  const b=e.target.closest("[data-pick]");if(!b||b.getAttribute("aria-disabled")==="true")return;
+  const i=chSlot;setStarter(i,b.dataset.pick);closeChooser(false);rerender(`[data-chg="${i}"]`);
+});
+ch.addEventListener("keydown",e=>{
+  const items=[...ch.querySelectorAll("[data-pick]")],i=items.indexOf(document.activeElement);
+  if(e.key==="ArrowDown"&&items.length){e.preventDefault();(items[i+1]||items[0]).focus()}
+  else if(e.key==="ArrowUp"&&items.length){e.preventDefault();(items[i-1]||items[items.length-1]).focus()}
+  else if(e.key==="Tab"){const f=[ch.querySelector("#chX"),...items];const j=f.indexOf(document.activeElement);e.preventDefault();f[(j+(e.shiftKey?-1:1)+f.length)%f.length].focus()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!ch.hidden){e.preventDefault();closeChooser()}hideFloat()}});
+
+/* ---------- peeks (one floating layer) ---------- */
+const fl=document.getElementById("float");let flOwner=null;
+function showFloat(p){if(!ch.hidden)return;if(dlg.open&&!dlg.contains(p))return;
+  const pop=p.querySelector(":scope>.pop");if(!pop)return;
+  fl.innerHTML=pop.innerHTML;fl.hidden=false;flOwner=p;p.setAttribute("aria-describedby","float");
+  if(dlg.open&&fl.parentNode!==dlg)dlg.appendChild(fl);else if(!dlg.open&&fl.parentNode!==document.body)document.body.appendChild(fl);
+  const rc=p.getBoundingClientRect(),fw=fl.offsetWidth,fh=fl.offsetHeight;
+  let left=Math.min(Math.max(8,rc.left),innerWidth-fw-8),top=rc.bottom+8;if(top+fh>innerHeight-8)top=Math.max(8,rc.top-fh-8);
+  fl.style.left=left+"px";fl.style.top=top+"px";
+}
+function hideFloat(){if(flOwner)flOwner.removeAttribute("aria-describedby");fl.hidden=true;flOwner=null}
+document.addEventListener("pointerover",e=>{const p=e.target.closest(".peek");if(p&&p!==flOwner)showFloat(p);else if(!p&&flOwner&&e.pointerType==="mouse")hideFloat()});
+document.addEventListener("focusin",e=>{const p=e.target.closest(".peek");if(p)showFloat(p);else if(flOwner)hideFloat()});
+document.addEventListener("pointerdown",e=>{const p=e.target.closest(".peek");if(p)showFloat(p);else hideFloat()});
+window.addEventListener("scroll",hideFloat,{passive:true});
+document.addEventListener("scroll",hideFloat,{passive:true,capture:true});
+
+/* ---------- extra screens are inlined here; they share this scope ---------- */
+/*@@EXTRA_JS@@*/
+
+render(false);
+})();
+</script>
