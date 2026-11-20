@@ -94,7 +94,7 @@ function matchupTiles(opp: TeamId): string {
   const theirs = span(sc.lo, sc.hi);
   return stats([
     stat('Scouted', `${sc.known}<small>/ ${sc.n}</small>`, {icon: 'scout', title: `${sc.known} of ${sc.n} likely starters' ratings known exactly`}),
-    stat('Last met', lm ? `<span class="${lm.won ? '' : 'muted'}">${esc(lm.text)}</span><small>wk ${lm.week}</small>` : '<span class="dash">—</span>', {icon: 'clock', title: lm ? `Week ${lm.week}` : 'First meeting'}),
+    stat('Met', lm ? `<span class="${lm.won ? '' : 'muted'}">${esc(lm.text)}</span><small>wk ${lm.week}</small>` : '<span class="dash">—</span>', {icon: 'clock', title: lm ? `Week ${lm.week}` : 'First meeting'}),
     stat('Avg rating', vs(mine == null ? '—' : String(mine), theirs, mine, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null), {icon: 'target', wide: true}),
   ], 4, 2);
 }
