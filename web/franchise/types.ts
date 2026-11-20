@@ -163,7 +163,6 @@ export interface Team {
   scoutingPoints: number;
   deadMoney: {season: number; amount: number}[];
   draftPicks: DraftPick[];
-  practiceFocus?: MonId[];   // 2–3 picks that get extra practice XP this week
   savedLineups?: Record<string, LineupSlot[]>;  // the user's manual lineup per strategy, restored on switching back
   tagSeason?: number;        // season the franchise tag was last used
   /** this week's goal (model/goals.ts): bonus XP when met */

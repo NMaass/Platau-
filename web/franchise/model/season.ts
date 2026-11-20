@@ -14,7 +14,7 @@ import {teamExport} from './export.ts';
 import {buildSchedule, seriesOfWeek} from './schedule.ts';
 import {reverseStandings} from './standings.ts';
 import {advancePlayoffs, finalSeries, startPlayoffs} from './playoffs.ts';
-import {XP, addXp, ageMon, battleXp, levelUp, retireChance, type GrowthEvent} from './progression.ts';
+import {XP, addXp, ageMon, battleXp, levelUp, practiceXp, retireChance, type GrowthEvent} from './progression.ts';
 import {applyInjury, healAll, rollInjury, tickInjuries} from './injuries.ts';
 import {FAME, hallOfFameWorthy, seasonAwards, seriesMvp} from './awards.ts';
 import {gameSummary, seriesSummary} from './summaries.ts';
@@ -90,13 +90,12 @@ export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState
   return state;
 }
 
-/** Contracts, strategies, practice focus and the season 1 draft class, once every club has its 18. */
+/** Contracts, strategies and the season 1 draft class, once every club has its 18. */
 function startRosters(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: TeamId[]): void {
   for (const t of teamIds) {
     assignContracts(catalog, state, rng, t);
     chooseStrategy(catalog, state, t, true);
   }
-  state.teams[state.userTeamId].practiceFocus = defaultFocus(catalog, teamMons(state, state.userTeamId));
   generateClass(catalog, state, rng, 1);
 }
 
@@ -378,32 +377,13 @@ function settleWeek(catalog: Catalog, state: LeagueState): void {
   }
 }
 
-/** The three practice-squad prospects with the most to gain: an evolution within reach first, then
- * the most Growth left below their potential (youngest first on ties). */
-export function defaultFocus(catalog: Catalog, mons: Mon[]): MonId[] {
-  const gain = (m: Mon) => {
-    const room = Math.max(0, GROWTH_BAND_HI[m.potential] - m.growth);
-    const next = catalog.species[m.speciesId]?.evolvesTo.filter(e => e.level <= GROWTH_BAND_HI[m.potential]).map(e => e.level - m.growth).filter(d => d > 0) ?? [];
-    return room + (next.length && Math.min(...next) <= 30 ? 40 : 0);
-  };
-  return mons.filter(m => m.tier === 'practice' && canBattle(m))
-    .map(m => ({m, g: gain(m)}))
-    .sort((a, b) => b.g - a.g || a.m.age - b.m.age || a.m.id.localeCompare(b.m.id))
-    .slice(0, 3).map(x => x.m.id);
-}
-
 function practice(catalog: Catalog, state: LeagueState, rng: Rng, byTeam: Map<TeamId, Mon[]>): GrowthEvent[] {
   const events: GrowthEvent[] = [];
-  for (const [teamId, mons] of byTeam) {
-    const team = state.teams[teamId];
-    // AI clubs focus their best prospects every week; the user's club starts with the same picks
-    // (shown under Practice in "Before you play") until the user chooses
-    if (!team.human || team.practiceFocus === undefined) team.practiceFocus = defaultFocus(catalog, mons);
-    const focus = new Set(team.practiceFocus ?? []);
+  for (const mons of byTeam.values()) {
     for (const m of mons) {
-      if (m.injury && m.injury.kind !== 'day-to-day') continue;
-      const base = m.tier === 'active' ? XP.practiceActive : m.tier === 'backup' ? XP.practiceBackup : XP.practiceSquad;
-      addXp(catalog, m, base + (focus.has(m.id) ? XP.focus : 0) + rng.int(10));
+      const xp = practiceXp(m);
+      if (xp) addXp(catalog, m, xp + rng.int(10));
+      // battle XP from this week was banked in applyResults: level everyone up
       events.push(...levelUp(catalog, state, rng, m));
     }
   }

@@ -10,7 +10,7 @@ import {setForRole} from './ratings.ts';
 /** XP knobs (tunable). */
 export const XP = {
   played: 15, win: 20, ko: 25, damageDealt: 0.2, damageTaken: 0.05, status: 8, hazard: 10, seriesMvp: 60,
-  practiceActive: 30, practiceBackup: 60, practiceSquad: 75, focus: 200, seriesWinTeam: 10,
+  practiceSquad: 190, seriesWinTeam: 10,
   pastPotential: 0.25,
 };
 
@@ -24,6 +24,15 @@ export function battleXp(box: MonBox, won: boolean): number {
   if (!box.played) return 0;
   return Math.round(XP.played + (won ? XP.win : 0) + box.kos * XP.ko + box.damageDealt * XP.damageDealt
     + box.damageTaken * XP.damageTaken + box.statusInflicted * XP.status + (box.hazardsSet + box.hazardsRemoved) * XP.hazard);
+}
+
+/** Weekly practice XP: only the practice squad trains for XP. Starters and backups grow from the
+ *  battles they play (`battleXp`), so a backup that never sees play earns nothing that week.
+ *  Hurt Pokémon (anything worse than day-to-day) skip practice. */
+export function practiceXp(mon: Mon): number {
+  if (mon.tier !== 'practice') return 0;
+  if (mon.injury && mon.injury.kind !== 'day-to-day') return 0;
+  return XP.practiceSquad;
 }
 
 export function addXp(catalog: Catalog, mon: Mon, xp: number): void {

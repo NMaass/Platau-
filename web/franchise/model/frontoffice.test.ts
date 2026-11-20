@@ -104,7 +104,7 @@ test('AI offers reach the user and can be accepted', () => {
   assert.equal(rosterCount(teamMons(s, s.userTeamId)), 18);
 });
 
-test('lineup actions: strategy, assign, tiers, practice focus, cut', () => {
+test('lineup actions: strategy, assign, tiers, cut', () => {
   const s = api.newLeague(C, {seed: 34, start: 'random'});
   const me = s.userTeamId;
   api.setStrategy(C, s, me, 'stall');
@@ -116,8 +116,6 @@ test('lineup actions: strategy, assign, tiers, practice focus, cut', () => {
   assert.equal(s.teams[me].lineup.auto, false);
   assert.equal(teamMons(s, me).filter(m => m.tier === 'active').length, 6);
   const prac = teamMons(s, me).filter(m => m.tier === 'practice');
-  api.setPracticeFocus(s, me, prac.map(m => m.id));
-  assert.equal(s.teams[me].practiceFocus!.length, 3);
   api.moveTier(s, prac[0].id, 'backup');
   assert.equal(s.mons[prac[0].id].tier, 'backup');
   assert.equal(teamMons(s, me).filter(m => m.tier === 'backup').length, 6);

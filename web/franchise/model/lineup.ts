@@ -239,5 +239,4 @@ export function removeFromLineup(state: LeagueState, teamId: TeamId, monId: MonI
     if (sl.monId === monId) { sl.monId = null; sl.setId = undefined; }
     sl.backups = sl.backups.filter(b => b !== monId);
   }
-  if (team.practiceFocus) team.practiceFocus = team.practiceFocus.filter(x => x !== monId);
 }

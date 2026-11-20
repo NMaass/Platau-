@@ -130,10 +130,6 @@ export function moveTier(state: LeagueState, monId: MonId, tier: Mon['tier']): v
   m.tier = tier;
   if (tier === 'practice') lu.removeFromLineup(state, m.teamId, m.id);
 }
-/** Up to 3 picks get extra practice XP this week. */
-export function setPracticeFocus(state: LeagueState, teamId: TeamId, monIds: MonId[]): void {
-  state.teams[teamId].practiceFocus = monIds.filter(id => state.mons[id]?.teamId === teamId).slice(0, 3);
-}
 export function cut(state: LeagueState, monId: MonId): void {
   const m = state.mons[monId];
   if (!m?.teamId) return;
