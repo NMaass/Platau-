@@ -66,7 +66,7 @@ export function viewLineup(): string {
     const flagged = out(m);
     const foot = flagged ? `<span class="chip c-decline">${ic('alert')}Injured · backup will start</span>` : `<span class="si">${esc([set?.item, set?.ability, set?.nature].filter(Boolean).join(' · '))}</span>`;
     return `<article class="l-card slot${flagged ? ' flagged' : ''}" aria-labelledby="sh-${i}">${top}
-      <div class="slot-mon">${spr(sp)}<div class="l-stack tight"><span class="l-row">${monRef(m, {icon: false})}${injuryTag(m)}</span>${monBadge(m, sl.role, {full: true})}</div></div>
+      <div class="slot-mon">${spr(sp)}<div class="l-stack tight"><span class="l-row one">${monRef(m, {icon: false})}${injuryTag(m)}</span>${monBadge(m, sl.role, {full: true})}</div></div>
       <div class="slot-set"><label for="set-${i}">Set</label><select id="set-${i}" data-act="slotset" data-slot="${i}" data-mon="${esc(m.id)}">${opts}</select></div>
       <div class="l-stack tight"><span class="cap">Backups</span>${bkHtml}</div>
       <div class="slot-foot">${foot}</div></article>`;

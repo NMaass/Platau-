@@ -125,7 +125,7 @@ function orderTable(): string {
   const round = Math.min(rounds, Math.max(1, Number(store.ui.draftRound ?? curRound)));
   const rows = d.order.map((p, i) => ({p, i})).filter((r) => r.p.round === round);
   const cols: Col<{p: DraftPick; i: number}>[] = [
-    {key: 'n', label: '#', width: '48px', num: true, cell: (r) => String(r.i + 1)},
+    {key: 'n', label: '#', width: '64px', num: true, cell: (r) => String(r.i + 1)},
     {key: 'club', label: 'Club', width: '84px', cell: (r) => teamAbbr(r.p.ownerTeamId) + (r.p.originalTeamId !== r.p.ownerTeamId ? `<span class="sr">via ${esc(teamName(r.p.originalTeamId))}</span>` : '')},
     {key: 'sel', label: 'Selection', width: 'auto', cell: (r) => {
       const t = taken[r.i];

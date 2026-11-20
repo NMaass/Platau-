@@ -201,6 +201,8 @@ span.peek:not(.ref){display:inline-block}
 /* stacks and rows */
 .l-stack{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)} .l-stack>*{min-width:0} .l-stack.tight{gap:var(--s2)} .l-stack.loose{gap:var(--s5)}
 .l-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0}          /* inline things share one centre line */
+.l-row.one{flex-wrap:nowrap;min-height:28px}                                             /* one line, never wraps: a tag added later cannot push content down */
+.l-row.one>.ref{min-width:0;flex:0 1 auto} .l-row.one .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}  /* the popover child stays unclipped */
 .l-split{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);min-width:0}
 /* two sides facing each other (battle frame): never wraps; long names ellipsise; right side is mirrored */
 .l-versus{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--s3);min-width:0}
