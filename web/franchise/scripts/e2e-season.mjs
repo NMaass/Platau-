@@ -1,5 +1,6 @@
 // End-to-end season of the real Plateau app with Settings → Fast sim (no battles): start a league,
-// "Play until" every stop of a season (resuming after pauses), the draft (one pick by hand, sim the
+// Sim week from This week up to every stop of a season (deadline, end of the regular season, the
+// Indigo Plateau, the draft; offseason steps with the hero's one button), the draft (one pick by hand, sim the
 // rest), re-signing (re-sign + franchise tag), free agency (one rejected and one accepted offer),
 // into the next preseason; then a save export/import round trip. Checks league invariants on the
 // way (standings add up, rosters at 18 in season, history and awards written, rookies on rosters)
@@ -89,45 +90,53 @@ async function invariants(label, {rosters = false} = {}) {
   return s;
 }
 
-/** Play until a stop, resuming after pause dialogs ("Stopped early"). */
-async function playUntil(target) {
-  step(`play until ${target}`);
-  for (let i = 0; i < 30; i++) {
-    await closeDlg();
-    await page.goto(BASE + '#week'); await settle();
-    await page.click('[data-act="until"]');
-    const b = await page.$(`#dlg [data-until="${target}"]`);
-    if (!b) { fail('no Play until option'); return; }
-    if (await b.getAttribute('aria-disabled') === 'true') { fail(`"${target}" is not selectable here`); return; }
-    await b.click();
-    await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar') && !d.querySelector('[data-until]'); }, null, {timeout: 120000});
-    const t = await dlgText();
-    if (/Reached/.test(t)) { await closeDlg(); return; }
-    if (!/Stopped early/.test(t)) { fail(`unexpected Play until result: ${t.slice(0, 200)}`); return; }
-  }
-  fail('Play until never reached its stop');
-}
-async function continueOnce(label) {
-  step(label);
+const idle = () => page.waitForFunction(() => { const d = document.getElementById('dlg'); return !d?.open || !d.querySelector('.fitbar'); }, null, {timeout: 120000});
+/** One press of the hero on This week: Sim week in game weeks, the one step button otherwise.
+ *  Confirms auto-picks and the season-opening release; closes any result dialog. */
+async function playOnce() {
   await closeDlg();
   await page.goto(BASE + '#week'); await settle();
-  await page.click('[data-act="play"]');
-  await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar'); }, null, {timeout: 120000});
-  if (/Auto-pick/.test(await dlgText())) {
-    await page.click('#dlg [data-dlg="ok"]');
-    await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar') && !/Auto-pick/.test(d.innerText); }, null, {timeout: 120000});
+  const b = (await page.$('[data-act="play"][data-mode="sim"]')) ?? (await page.$('[data-act="play"][data-mode="step"]'));
+  if (!b) { fail('no Sim week / step button on This week'); return; }
+  if (await page.$('[data-act="until"]')) fail('Play until is still on This week');
+  await b.click(); await settle();
+  await idle();
+  if (await dlgOpen() && /Auto-pick/.test(await dlgText())) {
+    await page.click('#dlg [data-dlg="ok"]'); await page.waitForTimeout(400);
+    await idle();
   }
-  // the season can't open with more than 18: Play lists who goes and releases them only on confirm
+  // the season can't open with more than 18: Start season lists who goes and releases them only on confirm
   if (await page.$('#dlg ul[aria-label="Released"]')) {
     const n = await page.$$eval('#dlg ul[aria-label="Released"] li', (x) => x.length);
     step(`release ${n} to open the season`);
     const before = await state();
     const over = Object.values(before.mons).filter((m) => m.teamId === before.userTeamId && m.tier !== 'ir').length - 18;
     if (n !== over) fail(`release list has ${n}, roster is ${over} over`);
-    await page.click('#dlg [data-dlg="ok"]');   // releases, then Play carries on into the season
-    await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar') && !d.querySelector('ul[aria-label="Released"]'); }, null, {timeout: 120000});
+    await page.click('#dlg [data-dlg="ok"]'); await page.waitForTimeout(400);   // releases, then the season starts
+    await idle();
   }
+  // an offseason step that moved on leaves no dialog behind (no empty "moved on" message)
+  if (await dlgOpen() && /Moved on/.test(await dlgText())) fail(`a no-content dialog after a step: ${(await dlgText()).slice(0, 120)}`);
   await closeDlg();
+}
+const STOP = {
+  deadline: (s) => s.phase === 'regular' && s.week >= s.settings.tradeDeadlineWeek,
+  regular: (s) => s.phase === 'playoffs',
+  plateau: (s) => s.phase === 'awards',
+  draft: (s) => s.phase === 'draft',
+};
+/** Sim (or step) until a point on the calendar. */
+async function playUntil(target) {
+  step(`sim until ${target}`);
+  for (let i = 0; i < 40; i++) {
+    if (STOP[target](await state())) return;
+    await playOnce();
+  }
+  fail(`never reached ${target}`);
+}
+async function continueOnce(label) {
+  step(label);
+  await playOnce();
 }
 async function negotiate(nth, clicks, dir) {
   const ns = await page.$$('#view [data-fo="negotiate"]');

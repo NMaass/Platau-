@@ -1,6 +1,6 @@
 // End-to-end check of the real Plateau app (no ?fixture): build, serve web/ statically,
-// start a league, lower the think budgets, play the preseason step and one week with
-// the engine, then visit every route (core + ui/routes.ts) at 1280 and 390 px;
+// start a league, lower the think budgets, Start season, Sim week 1 and Watch week 2 with
+// the engine (no-spoiler replay walk), then visit every route (core + ui/routes.ts) at 1280 and 390 px;
 // then start a Draft league and finish its startup draft with Sim to end.
 // Fails on any console error, page error, or horizontal scroll at 390 px.
 //   cd web && node franchise/scripts/e2e.mjs [--no-build] [--shots <dir>] [--headed]
@@ -84,14 +84,15 @@ async function shot(name) {
 }
 if (shotsDir) await mkdir(shotsDir, {recursive: true});
 
-async function playOnce(label) {
+const idle = () => page.waitForFunction(() => { const d = document.getElementById('dlg'); return !d?.open || !d.querySelector('.fitbar'); }, null, {timeout: 300000});
+/** Press a hero button on This week (mode: step | sim | watch) and wait for the sim to finish. */
+async function playOnce(label, mode) {
   step(label);
   await page.goto(BASE + '#week'); await settle();
-  await page.click('[data-act="play"]');
-  await page.waitForFunction(() => { const d = document.getElementById('dlg'); return d?.open && !d.querySelector('.fitbar'); }, null, {timeout: 300000});
-  await page.keyboard.press('Escape');
+  if (await page.$('[data-act="until"]')) problems.push(`[${label}] Play until is still on This week`);
+  await page.click(`[data-act="play"][data-mode="${mode}"]`); await settle();
+  await idle();
 }
-
 /** New League wizard: 1 Pre-made teams / Draft, 2 the club (preview names it), 3 Start; then the intro plays and
  *  the team home (or the draft board) opens. `confirm`: a league is open, so Start asks first. */
 async function wizard(mode, idx, city, confirm = false) {
@@ -134,18 +135,37 @@ try {
     await page.dispatchEvent(`input[data-act="budget"][data-k="${k}"]`, 'change');
   }
 
-  await playOnce('preseason');
+  await playOnce('preseason', 'step');
+  if (await page.evaluate(() => document.getElementById('dlg')?.open)) problems.push(`[preseason] a dialog stayed open after Start season: ${await page.$eval('#dlg', (d) => d.innerText.slice(0, 120))}`);
+  const w1 = await page.$eval('#view h1', (h) => h.textContent);
+  if (!/Week 1/.test(w1 ?? '')) problems.push(`[preseason] expected Week 1 after Start season, got "${w1}"`);
+  if (await page.$('#h-last')) problems.push('[week 1] an empty Last week panel before any game');
+  // the hero: Set lineup, then two equal choices
+  const sizes = await page.$$eval('.l-hero .btn.xl', (b) => b.map((x) => `${Math.round(x.getBoundingClientRect().height)}`));
+  if (sizes.length !== 3 || new Set(sizes).size !== 1) problems.push(`[week 1] hero buttons: ${sizes.join(', ')} (want Set lineup + Watch week + Sim week, one height)`);
+  await shot('hub-week1-before');
   const t0 = Date.now();
-  await playOnce('week 1');
+  await playOnce('week 1: sim', 'sim');
   console.log(`  week 1 simulated in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  if (!(await page.$('#dlg .score'))) problems.push('[week 1] Sim week did not show the series result');
+  await shot('sim-result');
+  await page.keyboard.press('Escape'); await settle();
   const wk = await page.$eval('#view h1', (h) => h.textContent);
   if (!/Week 2/.test(wk ?? '')) problems.push(`[week 1] expected Week 2 after playing, got "${wk}"`);
 
-  step('practice focus');
-  await page.goto(BASE + '#week'); await settle();
-  await page.click('[data-act="focus"]');
-  for (const b of (await page.$$('#dlg [data-pick]')).slice(0, 2)) await b.click();
-  await page.click('#dlg [data-dlg="save"]'); await settle();
+  // Watch week: sims, then opens game 1 in watch mode with no spoilers; walk to the series result
+  await playOnce('week 2: watch', 'watch');
+  await page.waitForFunction(() => /^#battle-.+\?watch=1$/.test(location.hash), null, {timeout: 10000}).catch(() => {});
+  if (!/watch=1/.test(await page.evaluate(() => location.hash))) problems.push('[week 2] Watch week did not open the replay');
+  else {
+    if (await page.$('#h-box')) problems.push('[watch] the box score shows before the game is watched');
+    await shot('watch-game1');
+    for (let k = 0; k < 3 && !(await page.$('[data-watch="series"]')); k++) { await page.click('#view .l-actions a.btn.go[href*="watch=1"]'); await settle(); }
+    await page.click('[data-watch="series"]'); await settle();
+    if (!(await page.$('#dlg .score'))) problems.push('[watch] Series result did not open the result dialog');
+    await page.click('#dlg [data-dlg="week"]');
+    await page.waitForFunction(() => location.hash === '#week');
+  }
 
   // pick a Pokémon page and a replay from what the week produced
   await page.goto(BASE + '#week'); await settle();
@@ -218,7 +238,7 @@ try {
   await page.click('#view [data-act="saveopen"]:not([aria-disabled="true"])');
   await page.waitForFunction(() => location.hash === '#week'); await settle();
   const back = await page.$eval('#view h1', (h) => h.textContent);
-  if (!/Week 2/.test(back ?? '')) problems.push(`[your leagues] reopening the first league shows "${back}", expected Week 2`);
+  if (!/Week 3/.test(back ?? '')) problems.push(`[your leagues] reopening the first league shows "${back}", expected Week 3`);
 } catch (e) {
   problems.push(`[${where}] ${e.message}`);
 } finally {
