@@ -2,7 +2,6 @@
 import type {Catalog, LeagueState, Role, MonId, Series} from '../types.ts';
 import {ROLE_LABEL} from '../catalog/roles.ts';
 import {canBattle, fieldedLineup} from './lineup.ts';
-import {knowsExactly} from './scouting.ts';
 import {roleRating} from './ratings.ts';
 import {capPayroll} from './cap.ts';
 import {dupNumbers, monLabel, rosterCount, teamMons} from './util.ts';
@@ -45,21 +44,14 @@ export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
   });
   if (state.phase === 'preseason' || state.phase === 'regular' || state.phase === 'free-agency') {
     const n = rosterCount(teamMons(state, me.id));
-    if (n > 18) out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: `You carry ${n} outside injured reserve; release ${n - 18} before the season starts (Play lists who would go).`, action: {label: 'Roster', route: '#roster'}});
+    if (n > 18) out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: `You carry ${n} outside injured reserve; release ${n - 18} before the season starts (Start season lists who would go).`, action: {label: 'Roster', route: '#roster'}});
     else if (n < 18 && state.phase !== 'free-agency') out.push({id: 'roster', kind: 'lineup', label: 'Roster', text: `You carry ${n}; free agents will be signed up to 18.`, action: {label: 'Sign', route: '#freeagents'}});
   }
   for (const o of state.offers) {
     if (o.status !== 'open' || o.toTeamId !== me.id) continue;
     if (o.expiresWeek <= state.week) out.push({id: `offer-${o.id}`, kind: 'offer', label: 'Offer', text: `${state.teams[o.fromTeamId].name}' offer ends this week.`, action: {label: 'Review', route: '#offers'}});
   }
-  const s = userSeries(state);
-  if (s) {
-    const opp = s.homeId === me.id ? s.awayId : s.homeId;
-    const unknown = likelyLineup(catalog, state, opp).filter(x => !knowsExactly(state, me.id, state.mons[x.monId])).length;
-    out.push({id: `scout-${opp}`, kind: 'scout', label: 'Scouting',
-      text: unknown ? `${unknown} of ${state.teams[opp].name}' likely six ${unknown === 1 ? 'is' : 'are'} not fully known yet.` : `Report on ${state.teams[opp].city} ${state.teams[opp].name} is ready.`,
-      action: {label: 'Read report', route: '#opponent'}});
-  }
+  // scouting the opponent is not a to-do: the opponent card on This week says what is known (week.ts scoutLine)
   if (capPayroll(state, me.id) > state.settings.cap) out.push({id: 'cap', kind: 'contract', label: 'Cap', text: 'You are over the cap: only minimum deals can be signed.', action: {label: 'Contracts', route: '#roster?lens=contracts'}});
   if (state.phase === 'regular' && state.week >= state.settings.weeks - 3) {
     const exp = teamMons(state, me.id).filter(m => m.contract && m.contract.yearsLeft <= 1);

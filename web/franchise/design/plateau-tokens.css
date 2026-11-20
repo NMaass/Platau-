@@ -395,3 +395,20 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* side panel that stays in view beside a long list (desktop); a normal block when the columns stack */
 .l-sticky{position:sticky;top:var(--s4)}
 @media (max-width:1060px){ .l-sticky{position:static} }
+/* ===== Hero call to action (This week, 2026-11-20) ===== */
+/* .btn.xl: the page's main action, one size for every hero button: icon left, label + one-line hint.
+   .l-hero: numbered steps; each .step is a cap label over its buttons; .l-hero-acts holds N equal xl buttons. */
+:root{--ctl-h-xl:84px}
+.btn.xl{min-height:var(--ctl-h-xl);padding:var(--s3) var(--s5);display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;column-gap:var(--s3);row-gap:2px;align-content:center;justify-content:stretch;justify-items:start;text-align:left;white-space:normal;font-family:var(--font-display);font-size:var(--t-h2);font-weight:800;line-height:var(--lh-tight)}
+.btn.xl>svg.i{grid-row:1/3;align-self:center;width:28px;height:28px}
+.btn.xl>small{grid-column:2;font-family:var(--font-ui);font-size:var(--t-small);font-weight:600;line-height:var(--lh-tight);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.btn.xl[aria-disabled="true"]>small{opacity:1}
+.l-hero{display:grid;gap:var(--s4)}
+.l-hero>.step{display:grid;gap:var(--s2)}
+.l-hero .step>.cap{display:flex;align-items:center;gap:var(--s2)}
+.l-hero .step>.cap>b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid currentColor;font-size:var(--t-label)}
+.l-hero .step.is-done>.cap>b{background:var(--ev-growth-bg);color:var(--ev-growth)}
+.l-hero .step.is-todo>.cap>b{background:var(--ev-decline-bg);color:var(--ev-decline)}
+.l-hero-acts{display:grid;grid-template-columns:repeat(var(--n,1),minmax(0,1fr));gap:var(--s3)}
+@media (max-width:480px){ .l-hero-acts{grid-template-columns:minmax(0,1fr)} }
+.l-hero .step>.cap>b>svg.i{width:13px;height:13px}

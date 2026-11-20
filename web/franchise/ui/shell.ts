@@ -12,7 +12,12 @@ export const divisionName = (conf: number, div: number): string => DIVISION_NAME
 
 export function userRecord(): {w: number; l: number} {
   const r = M.standings(S()).find((x) => x.teamId === S().userTeamId);
-  return {w: r?.wins ?? 0, l: r?.losses ?? 0};
+  const rec = {w: r?.wins ?? 0, l: r?.losses ?? 0};
+  // watching a series (Watch week, battle.ts): the record before it, so the shell doesn't spoil the result
+  const m = /^#battle-(.+)-\d+\?watch=1/.exec(location.hash);
+  const se = m ? S().schedule.find((x) => x.id === m[1] && x.winnerId && !x.playoff) : undefined;
+  if (se) { if (se.winnerId === S().userTeamId) rec.w--; else if (se.homeId === S().userTeamId || se.awayId === S().userTeamId) rec.l--; }
+  return rec;
 }
 
 export function shellHtml(): string {

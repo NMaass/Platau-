@@ -72,7 +72,7 @@ export function viewLineup(): string {
       <div class="slot-foot">${foot}</div></article>`;
   }).join('');
   const sub = se ? `Week ${se.week} ${se.homeId === me ? 'vs' : 'at'} ${esc(teamName(oppOf(se, me)))} (${esc(strategyName(s.teams[oppOf(se, me)].lineup.strategyId))}) · best of ${se.bestOf}` : 'No series this week';
-  return head('Lineup', sub) + `<section class="l-panel flush" aria-label="Lineup">
+  return head('Lineup', sub, `<a class="btn go" href="#week">${ic('check')}Done</a>`) + `<section class="l-panel flush" aria-label="Lineup">
     <div class="lbar"><label for="strat">Strategy</label><select id="strat" data-act="strategy">${strategies().map((x) => `<option value="${esc(x.id)}"${x.id === L.strategyId ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
       <span class="avg">Starters average <b>${avg ?? '—'}</b></span><button class="btn" type="button" data-act="auto">${ic('wand')}Auto-assign</button></div>
     <div class="l-grid slots">${cards}</div></section>`;
