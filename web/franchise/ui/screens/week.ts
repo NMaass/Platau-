@@ -2,6 +2,7 @@
 // Before you play, last week's results (series MVP + summary + replay links), since last week feed.
 // Also the scouting report (#opponent), where weekly scouting points narrow the opponent's ratings.
 import {strategyLook} from '../../model/strategies.ts';
+import {stratChip, stratName, stat, stats, vs, avg} from '../components/stats.ts';
 import type {Series, TeamId, InboxItem, LeagueState} from '../../types.ts';
 import type {Advisory} from '../../model/advisories.ts';
 import {FA_ROUNDS} from '../../model/freeagency.ts';
@@ -11,11 +12,11 @@ import {esc, ic, record} from '../dom.ts';
 import {C, S, act, fastSim} from '../store.ts';
 import {M, api} from '../model.ts';
 import {head, itemList, panel, empty} from '../components/page.ts';
+import {info} from '../components/layer.ts';
 import {eventChip, roleBadge, rangeBadge} from '../components/badges.ts';
 import {monRef, monName, speciesOf, team, teamName, teamAbbr} from '../components/mon.ts';
 import {once} from '../components/front.ts';
-import {spr, teamLogo} from '../sprites.ts';
-import {strategies} from '../model.ts';
+import {ico, spr, teamLogo} from '../sprites.ts';
 import {phaseLabel} from '../shell.ts';
 
 const ADV: Record<string, [string, string]> = {
@@ -29,7 +30,7 @@ export function seriesScore(se: Series, id: TeamId): [number, number] {
   const w = se.games.filter((g) => g.winnerTeamId === id).length;
   return [w, se.games.length - w];
 }
-export const strategyName = (id: string): string => strategies().find((x) => x.id === id)?.name ?? id;
+export const strategyName = (id: string): string => stratName(id);
 
 /** Six slots of the opponent's likely team; empty slots keep their space. */
 export function likelyTeam(teamId: TeamId, cls = 'l-wrap'): string {
@@ -54,12 +55,13 @@ function pips(se: Series | null): string {
   }).join('')}</span>`;
 }
 
-function lastMet(opp: TeamId): string {
+/** Last finished series against this club: "W 2–1" + its week, or null (first meeting). */
+function lastMet(opp: TeamId): {text: string; week: number; won: boolean} | null {
   const s = S(), me = s.userTeamId;
   const se = [...s.schedule].reverse().find((x) => x.winnerId && ((x.homeId === me && x.awayId === opp) || (x.awayId === me && x.homeId === opp)));
-  if (!se) return 'First meeting';
+  if (!se) return null;
   const [w, l] = seriesScore(se, me);
-  return `${w > l ? 'Won' : 'Lost'} ${record(w, l)}, week ${se.week}`;
+  return {text: `${w > l ? 'W' : 'L'} ${record(w, l)}`, week: se.week, won: w > l};
 }
 
 /** The user's next series: this week's, or week 1's during the preseason. */
@@ -68,15 +70,33 @@ function nextSeries(): Series | null {
   return M.userSeries(s) ?? (s.phase === 'preseason' ? s.schedule.find((x) => x.season === s.season && x.week === 1 && (x.homeId === me || x.awayId === me)) ?? null : null);
 }
 
-/** Plain-English scouting status of the opponent's likely starters (digits throughout). */
-export function scoutLine(opp: TeamId): string {
+/** How many of the opponent's likely starters have exact ratings, and their average as you know it (lo..hi). */
+export function scoutState(opp: TeamId): {known: number; n: number; lo: number | null; hi: number | null} {
   const s = S(), c = C(), me = s.userTeamId;
   const lu = M.likelyLineup(c, s, opp);
-  const known = lu.filter((x) => M.knownRating(c, s, me, s.mons[x.monId]).exact).length, n = lu.length;
-  if (!n) return 'No likely starters to scout.';
-  if (known === n) return `You know all ${n} of their likely starters' ratings.`;
-  if (!known) return `You haven't scouted their ${n} likely starters. Their ratings show as ranges until you do.`;
-  return `You know ${known} of their ${n} likely starters' ratings. Scout the other ${n - known} to see them exactly.`;
+  const kr = lu.map((x) => { const m = s.mons[x.monId], k = M.knownRating(c, s, me, m); return k.exact ? {lo: M.roleRating(c, s, m, x.role) ?? k.hi, hi: M.roleRating(c, s, m, x.role) ?? k.hi, exact: true} : {...k}; });
+  return {known: kr.filter((k) => k.exact).length, n: lu.length, lo: avg(kr.map((k) => k.lo)), hi: avg(kr.map((k) => k.hi))};
+}
+/** Your starters' average rating in their slots. */
+export function myAvg(): number | null {
+  const s = S(), c = C(), L = s.teams[s.userTeamId].lineup;
+  return avg(L.slots.map((sl) => sl.monId ? M.roleRating(c, s, s.mons[sl.monId], sl.role) : null));
+}
+const span = (lo: number | null, hi: number | null): string => lo == null || hi == null ? '—' : lo === hi ? String(lo) : `${lo}–${hi}`;
+/** The opponent's line of chips: record, strategy, home/away. */
+export function oppChips(opp: TeamId, home?: boolean): string {
+  const s = S(), st = M.standings(s).find((x) => x.teamId === opp);
+  return `<span class="l-row"><span class="chip c-plain" title="Record (wins–losses)">${ic('trophy')}${record(st?.wins ?? 0, st?.losses ?? 0)}</span>${stratChip(s.teams[opp].lineup.strategyId)}${home === undefined ? '' : `<span class="chip c-plain" title="${home ? 'Home' : 'Away'}">${ic(home ? 'home' : 'arrow')}${home ? 'Home' : 'Away'}</span>`}</span>`;
+}
+/** Three tiles: scouted k/n, last meeting, average rating you vs them (wide, last so phones keep two rows). */
+function matchupTiles(opp: TeamId): string {
+  const sc = scoutState(opp), mine = myAvg(), lm = lastMet(opp);
+  const theirs = span(sc.lo, sc.hi);
+  return stats([
+    stat('Scouted', `${sc.known}<small>/ ${sc.n}</small>`, {icon: 'scout', title: `${sc.known} of ${sc.n} likely starters' ratings known exactly`}),
+    stat('Last met', lm ? `<span class="${lm.won ? '' : 'muted'}">${esc(lm.text)}</span><small>wk ${lm.week}</small>` : '<span class="dash">—</span>', {icon: 'clock', title: lm ? `Week ${lm.week}` : 'First meeting'}),
+    stat('Avg rating', vs(mine == null ? '—' : String(mine), theirs, mine, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null), {icon: 'target', wide: true}),
+  ], 4, 2);
 }
 
 /** The "this week" opponent card (Home right column). */
@@ -85,24 +105,31 @@ function opponentCard(): string {
   const se = nextSeries();
   if (!se) return panel('opp', 'No series this week', `<p class="muted">${esc(phaseLabel(s.phase))}: no games until next season.</p>`);
   const opp = oppOf(se, s.userTeamId), t = team(opp);
-  const st = M.standings(s).find((x) => x.teamId === opp);
   const lu = M.likelyLineup(C(), s, opp);
   const ace = lu.map((x) => s.mons[x.monId]).sort((a, b) => M.bestRole(C(), s, b).ovr - M.bestRole(C(), s, a).ovr)[0];
   const home = se.homeId === s.userTeamId;
   const when = s.phase === 'preseason' ? 'Week 1 opponent' : "This week's opponent";
   return `<section class="l-panel l-section" aria-labelledby="h-opp">
-    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, 'md')}<div><span class="cap">${when}</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2><p class="muted">${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(t.lineup.strategyId).says)} · ${home ? 'home' : 'away'}</p></div></div>
+    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, 'md')}<div><span class="cap">${when}</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2></div></div>
+    ${oppChips(opp, home)}
     <div class="l-facts">
       <div><span class="cap">Series · best of ${se.bestOf}</span>${pips(se)}</div>
       <div><span class="cap">Likely team</span>${likelyTeam(opp)}</div>
-      <div><span class="cap">Scouting</span><p>${esc(scoutLine(opp))}</p></div>
-      <div><span class="cap">Last met</span><p>${esc(lastMet(opp))}</p></div>
+      ${matchupTiles(opp)}
       <div class="l-actions"><a class="btn" href="#opponent">${ic('scout')}Scouting report</a></div>
     </div>
   </section>`;
 }
 
-/** Result block for a finished series: score, game list with replay links, MVP, summary. Used on Home and in the play dialog. */
+/** One game in numbers: turns, and side's top Pokémon (icon + KOs). */
+export function gameNums(g: Series['games'][number], side: TeamId): string {
+  const s = S();
+  const top = Object.entries(g.box).filter(([, b]) => b.teamId === side && b.played).sort((x, y) => (y[1].kos - x[1].kos) || (y[1].damageDealt - x[1].damageDealt))[0];
+  const m = top ? s.mons[top[0]] : undefined;
+  return `<span class="l-row g-nums"><span class="l-row" title="Turns">${ic('clock')}<b>${g.turns}</b><span class="muted">turns</span></span>${m ? `<span class="l-row" title="${esc(`Top Pokémon: ${monName(m)}, ${top![1].kos} KOs`)}">${ico(speciesOf(m))}<b>${top![1].kos}</b><span class="muted">KO</span></span>` : ''}</span>`;
+}
+
+/** Result block for a finished series: score, game list (left standing, turns, top Pokémon) with replay links, MVP. Used on Home and in the play dialog. */
 export function seriesResult(se: Series, o: {headless?: boolean} = {}): string {
   const s = S(), me = s.userTeamId;
   const mine = se.homeId === me || se.awayId === me;
@@ -114,12 +141,12 @@ export function seriesResult(se: Series, o: {headless?: boolean} = {}): string {
     const won = g.winnerTeamId === a;
     const left = (t: TeamId) => Object.values(g.box).filter((x) => x.teamId === t && x.played && !x.fainted).length;
     const la = left(a), lb = left(b);
-    return `<li><span class="cap">Game ${i + 1}</span><span class="chip ${won ? 'c-growth' : 'c-health'}" title="Pokémon left standing">${ic(won ? 'check' : 'x')}${won ? 'Won' : 'Lost'} ${la}–${lb}</span><span class="l-clamp" style="--lines:2">${esc(g.summary || '')}</span><a class="btn sm" href="#battle-${esc(se.id)}-${i + 1}" aria-label="Watch game ${i + 1}">${ic('film')}Watch</a></li>`;
+    return `<li><span class="cap">Game ${i + 1}</span><span class="chip ${won ? 'c-growth' : 'c-health'}" title="Pokémon left standing">${ic(won ? 'check' : 'x')}${won ? 'Won' : 'Lost'} ${la}–${lb}</span>${gameNums(g, a)}<a class="btn sm" href="#battle-${esc(se.id)}-${i + 1}" aria-label="Watch game ${i + 1}">${ic('film')}Watch</a></li>`;
   }).join('');
   return `${o.headless ? '' : ''}<div class="score"><span>${esc(teamName(a))}</span><b>${record(w, l)}</b><span>${esc(teamName(b))}</span></div>
     <ol class="l-list top games" aria-label="Game by game">${games}</ol>
     ${mvp ? `<div class="mvp">${spr(speciesOf(mvp), 'md')}<div><span class="cap">Series MVP</span><b>${monRef(mvp, {icon: false})}</b><span class="muted">${mvpKos} KOs across ${se.games.length} games · ${esc(teamName(mvp.teamId!))}</span></div></div>` : ''}
-    ${se.summary ? `<p class="l-clamp" style="--lines:2">${esc(se.summary)}</p>` : ''}`;
+`;
 }
 
 function lastWeek(): string {
@@ -154,8 +181,8 @@ function feed(): string {
 export type PlayMode = 'watch' | 'sim' | 'step';
 const LINEUP_KINDS = new Set(['lineup', 'injury']);
 /** One xl hero button: icon, label, one-line hint. A disabled one keeps its place and says why in a peek. */
-function xl(o: {label: string; hint: string; icon: string; go?: boolean; act?: string; mode?: PlayMode; href?: string; why?: string}): string {
-  const inner = `${ic(o.icon)}<span>${esc(o.label)}</span><small>${esc(o.why ?? o.hint)}</small>`;
+function xl(o: {label: string; hint: string; hintHtml?: string; icon: string; go?: boolean; act?: string; mode?: PlayMode; href?: string; why?: string}): string {
+  const inner = `${ic(o.icon)}<span>${esc(o.label)}</span><small>${o.why ? esc(o.why) : o.hintHtml ?? esc(o.hint)}</small>`;
   if (o.why) return `<button class="btn xl peek" type="button" aria-disabled="true" aria-label="${esc(o.label)}: ${esc(o.why)}">${inner}<span class="pop"><strong>${esc(o.label)}</strong><span>${esc(o.why)}.</span></span></button>`;
   if (o.href) return `<a class="btn xl${o.go ? ' go' : ''}" href="${esc(o.href)}">${inner}</a>`;
   return `<button class="btn xl${o.go ? ' go' : ''}" type="button" data-act="${o.act ?? 'play'}"${o.mode ? ` data-mode="${o.mode}"` : ''}>${inner}</button>`;
@@ -180,20 +207,20 @@ function phaseStep(s: LeagueState): {label: string; hint: string} {
 }
 
 /** Lineup status for step 1: ready, or how many things need a look. */
-function lineupState(adv: Advisory[]): {ok: boolean; text: string} {
-  const s = S(), c = C(), L = s.teams[s.userTeamId].lineup;
+function lineupState(adv: Advisory[]): {ok: boolean; text: string; html?: string} {
+  const s = S(), L = s.teams[s.userTeamId].lineup;
   const issues = adv.filter((a) => LINEUP_KINDS.has(a.kind) && a.id !== 'roster');
-  if (issues.length) return {ok: false, text: issues.length === 1 ? issues[0].text : `${issues.length} things to fix, listed below`};
-  const ovrs = L.slots.map((sl) => sl.monId ? M.roleRating(c, s, s.mons[sl.monId], sl.role) : null).filter((x): x is number => x != null);
-  const avg = ovrs.length ? Math.round(ovrs.reduce((a, b) => a + b, 0) / ovrs.length) : 0;
-  return {ok: true, text: `${L.auto ? 'Auto lineup' : 'Your lineup'} · ${strategyName(L.strategyId)} · starters average ${avg}`};
+  if (issues.length) return {ok: false, text: issues.length === 1 ? issues[0].text : `${issues.length} to fix, listed below`};
+  const a = myAvg(), look = stratName(L.strategyId);
+  const text = `${L.auto ? 'Auto' : 'Set by you'} · ${look} · average ${a ?? '—'}`;
+  return {ok: true, text, html: `<span class="l-row hint-nums" aria-label="${esc(text)}">${ic(strategyLook(L.strategyId).icon)}<span>${esc(look)}</span><span class="muted">avg</span><b>${a ?? '—'}</b><span class="muted">· ${L.auto ? 'auto' : 'set by you'}</span></span>`};
 }
 
 function hero(se: Series | null, adv: Advisory[]): string {
   const s = S();
   const games = s.phase === 'regular' || s.phase === 'playoffs';
   const lu = lineupState(adv);
-  const lineupStep = step(1, lu.ok ? 'Lineup ready' : 'Lineup needs a look', `<div class="l-hero-acts">${xl({label: 'Set lineup', hint: lu.text, icon: 'lineup', href: '#lineup', go: !lu.ok})}</div>`, lu.ok ? 'done' : 'todo');
+  const lineupStep = step(1, lu.ok ? 'Lineup ready' : 'Lineup needs a look', `<div class="l-hero-acts">${xl({label: 'Set lineup', hint: lu.text, hintHtml: lu.html, icon: 'lineup', href: '#lineup', go: !lu.ok})}</div>`, lu.ok ? 'done' : 'todo');
   let play: string;
   if (s.draft?.startup && s.phase === 'draft') {
     return `<section class="l-panel l-hero" aria-label="Next step">${step(1, 'Startup draft', `<div class="l-hero-acts">${xl({label: 'Go to the draft board', hint: 'Every club drafts 18 Pokémon from one board', icon: 'scout', href: '#draft', go: true})}</div>`)}</section>`;
@@ -263,7 +290,6 @@ export function viewOpponent(): string {
   const se = nextSeries();
   if (!se) return head('Scouting report', 'No series this week') + empty('No opponent', 'There is no series to scout right now.', `<a class="btn" href="#week">Back to This week</a>`);
   const opp = oppOf(se, me), t = team(opp);
-  const st = M.standings(s).find((x) => x.teamId === opp);
   const lu = M.likelyLineup(c, s, opp);
   const cards = Array.from({length: 6}, (_, i) => {
     const x = lu[i];
@@ -282,8 +308,15 @@ export function viewOpponent(): string {
     return `<li><span class="chip ${w > l ? 'c-growth' : 'c-health'}">${w > l ? 'Won' : 'Lost'} ${record(w, l)}</span><span>Week ${x.week} ${x.homeId === opp ? 'vs' : 'at'} ${esc(teamName(oppOf(x, opp)))}</span><span></span></li>`;
   }).join('');
   const pts = s.teams[me].scoutingPoints;
-  const intro = `<p>${esc(scoutLine(opp))}</p><p class="muted">You have <b>${pts}</b> scouting ${pts === 1 ? 'point' : 'points'} left this week (shared with the draft class). ${s.settings.scoutCost} point narrows a rating; ${s.settings.fullScoutCost} in total show it exactly. A Pokémon's rating is known to everyone after ${REVEAL_BATTLES} battles.</p>`;
-  return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, `Scouting report · ${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(t.lineup.strategyId).says)}`, `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
-    panel('likely', 'Likely team', `${intro}<div class="l-grid scout-grid">${cards}</div>`) +
+  const sc = scoutState(opp), mine = myAvg();
+  const how = info('How scouting works', `<strong>Scouting points</strong><span>${s.settings.scoutCost} point narrows a rating; ${s.settings.fullScoutCost} in total show it exactly. Points are shared with the draft class and refill every week. Every club knows a Pokémon's rating after ${REVEAL_BATTLES} battles.</span>`);
+  const intro = `${stats([
+    stat('Scouted', `${sc.known}<small>/ ${sc.n}</small>`, {icon: 'scout'}),
+    stat('Points left', `${pts}`, {icon: 'target'}),
+    stat('Cost', `${s.settings.scoutCost}<small>scout</small> ${s.settings.fullScoutCost}<small>exact</small>`, {icon: 'deal'}),
+    stat('Avg rating', vs(mine == null ? '—' : String(mine), span(sc.lo, sc.hi), mine, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null), {icon: 'lineup', wide: true}),
+  ], 5, 3)}`;
+  return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, oppChips(opp, se.homeId === me), `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
+    panel('likely', `<span class="l-row">Likely team${how}</span>`, `${intro}<div class="l-grid scout-grid">${cards}</div>`) +
     panel('recent', 'Recent results', recent ? `<ul class="l-list top recent">${recent}</ul>` : `<p class="muted">No results yet.</p>`);
 }

@@ -39,19 +39,20 @@ export function strategyById(id: string): StrategyDef {
   return STRATEGIES.find(s => s.id === id) ?? STRATEGIES[2];
 }
 
-/** How a strategy reads in plain English, with its icon (ui/icons.ts id): "Plays in the rain", never jargon. */
-export const STRATEGY_LOOK: Record<string, {icon: string; says: string}> = {
-  'hyper-offense': {icon: 'bolt', says: 'All-out attack'},
-  'bulky-offense': {icon: 'fist', says: 'Hits hard, takes hits'},
-  balance: {icon: 'scales', says: 'A bit of everything'},
-  stall: {icon: 'shield', says: 'Walls up, wears you down'},
-  rain: {icon: 'rain', says: 'Plays in the rain'},
-  sun: {icon: 'sun', says: 'Plays in the sun'},
-  sand: {icon: 'sand', says: 'Plays in the sand'},
-  snow: {icon: 'snow', says: 'Plays in the snow'},
-  'hazard-stack': {icon: 'spikes', says: 'Lays traps on the field'},
+/** How a strategy shows in the UI: its icon (ui/icons.ts id) and a short name ("Rain", "Hyper offense"). One chip
+ *  everywhere (ui/components/stats.ts stratChip); no descriptive sentences. */
+export const STRATEGY_LOOK: Record<string, {icon: string; short: string}> = {
+  'hyper-offense': {icon: 'bolt', short: 'Hyper offense'},
+  'bulky-offense': {icon: 'fist', short: 'Bulky offense'},
+  balance: {icon: 'scales', short: 'Balance'},
+  stall: {icon: 'shield', short: 'Stall'},
+  rain: {icon: 'rain', short: 'Rain'},
+  sun: {icon: 'sun', short: 'Sun'},
+  sand: {icon: 'sand', short: 'Sand'},
+  snow: {icon: 'snow', short: 'Snow'},
+  'hazard-stack': {icon: 'spikes', short: 'Hazards'},
 };
-export const strategyLook = (id: string): {icon: string; says: string} => STRATEGY_LOOK[id] ?? STRATEGY_LOOK.balance;
+export const strategyLook = (id: string): {icon: string; short: string} => STRATEGY_LOOK[id] ?? STRATEGY_LOOK.balance;
 
 /** Can this lineup plan run the strategy as meant? Every slot on-role (so a weather club has its setter leading). */
 export const runsStrategy = (plan: {onRole: number; slots: {monId: string | null}[]}): boolean =>

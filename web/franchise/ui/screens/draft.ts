@@ -70,7 +70,7 @@ export function viewScouting(): string {
     }},
   ];
   const how = info('How ranges work', '<strong>Scouting ranges</strong><span>Each point narrows the projected range. About one range in ten misses the true rating. Two points reveal maxed stats; three reveal the role it suits best. Everyone knows a Pokémon exactly after about six battles.</span>');
-  const pointsCard = `<div class="l-card"><span class="l-row"><span class="cap">Points this week</span>${how}</span><div class="x-points"><span class="fitbar" role="img" aria-label="${left} of ${per} points left"><i style="width:${Math.min(100, left / per * 100)}%"></i></span><b class="x-num">${left} / ${per}</b></div><span class="x-small">Scouting a prospect costs ${s.settings.scoutCost} point; full knowledge costs ${full()}. Points refill every week of the season.</span></div>`;
+  const pointsCard = `<div class="l-card"><span class="l-row"><span class="cap">Points this week</span>${how}</span><div class="x-points"><span class="fitbar" role="img" aria-label="${left} of ${per} points left"><i style="width:${Math.min(100, left / per * 100)}%"></i></span><b class="x-num">${left} / ${per}</b></div><span class="l-row x-small" title="Points refill every week of the season"><span class="cap">Cost</span><b class="x-num">${s.settings.scoutCost}</b><span class="muted">scout</span><b class="x-num">${full()}</b><span class="muted">full</span>${ic('refresh')}<span class="muted">weekly</span></span></div>`;
   const rows = store.ui.hideTaken ? ms.filter((m) => !taken.has(m.id)) : ms;
   return head('Scouting', `${s.draft!.season} draft class · ${plural(ms.length, 'prospect')}`) +
     `<div class="l-grid" style="--card-min:320px">${pointsCard}</div>` +
@@ -87,8 +87,9 @@ function scoutDialog(monId: string, fullK: boolean): void {
   const rng = (k: typeof before) => k.exact ? String(k.hi) : `${k.lo}–${k.hi}`;
   const body = res.ok ? `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${after.exact ? roleBadge(after.role, after.hi) : rangeBadge(after.role, after.lo, after.hi)}<span class="x-small">age ${m.age}</span></div>
     <div class="x-before-after"><span>Projected ${esc(ROLE_LABEL[after.role])}</span><b>${rng(before)}</b><span class="x-arrow" aria-label="to">→</span><b>${rng(after)}</b>
-    <span>Points spent</span><b>${res.spent}</b><span></span><b>${s2.teams[me].scoutingPoints} left</b></div>
-    <p class="muted">${fresh.length ? `New: ${esc(fresh.join(' · '))}.` : traits.length ? `Known: ${esc(traits.join(' · '))}.` : 'No traits stand out yet. Two points reveal maxed stats.'} Potential ${pot.exact ? pot.lo : `${pot.lo}–${pot.hi}`}.</p>`
+    <span>Points spent</span><b>${res.spent}</b><span></span><b>${s2.teams[me].scoutingPoints} left</b>
+    <span>Potential</span><b>${pot.exact ? pot.lo : `${pot.lo}–${pot.hi}`}</b><span></span><span></span></div>
+    <div class="l-row"><span class="cap">Traits</span>${traits.length ? traits.map((t) => `<span class="chip ${fresh.includes(t) ? 'c-growth' : 'c-plain'}">${fresh.includes(t) ? ic('plus') : ''}${esc(t)}</span>`).join('') : '<span class="dash">—</span>'}</div>`
     : `<p>${esc(res.reason)}.</p>`;
   openDialog({title: res.ok ? `Report: ${esc(monName(m))}` : 'Not scouted', cap: res.ok ? (fullK ? 'Full knowledge' : 'Scouted') : undefined, body});
 }

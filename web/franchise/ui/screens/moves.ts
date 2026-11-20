@@ -2,20 +2,21 @@
 // reason in a peek, Propose and "What would make this work?" in dialogs, trade block of
 // your own Pokémon), Offers (incoming AI offers: Accept / Decline / Counter), Free agents
 // (ZenGM columns, negotiate in a dialog, re-sign window + franchise tag in the offseason).
-import {strategyLook} from '../../model/strategies.ts';
 import type {DraftPick, Mon, MonId, TeamId, TradeOffer} from '../../types.ts';
-import {esc, ic, money, plural, record} from '../dom.ts';
+import {esc, ic, money, plural, signed} from '../dom.ts';
 import {C, S, store, act, notify} from '../store.ts';
 import {M, api} from '../model.ts';
 import {head, panel, empty} from '../components/page.ts';
 import {table, type Col} from '../components/table.ts';
-import {openDialog, updateDialog, dialogEl, info, peekLabel, type DialogOpts, type DialogAction} from '../components/layer.ts';
+import {openDialog, updateDialog, dialogEl, info, peekLabel, prow, type DialogOpts, type DialogAction} from '../components/layer.ts';
 import {ROLE_LABEL} from '../../catalog/roles.ts';
 import {monRef, monName, teamName, teamCell, speciesOf} from '../components/mon.ts';
 import {expiringTag, injuryTag} from '../components/badges.ts';
 import {ico, teamLogo} from '../sprites.ts';
 import {closed, fixChip, capStrip, knownBadge, knownMid, pickLabel, pickKey, rosterUsed, tradeMeter, beforeAfter, once} from '../components/front.ts';
-import {strategyName} from './week.ts';
+import {oppChips} from './week.ts';
+import {INTEREST_MULT} from '../../model/freeagency.ts';
+import {stat, stats} from '../components/stats.ts';
 
 type Proposal = Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>;
 interface TradeUi { team: TeamId; give: string[]; get: string[] }
@@ -47,6 +48,18 @@ const assetName = (k: string, owner: TeamId): string => {
   const p = findPick(owner, k);
   return p ? `season ${p.season} round ${p.round} pick` : 'pick';
 };
+type Verdict = ReturnType<typeof api.evaluateTrade>;
+/** A verdict in numbers: their value score against the score they need, and the Pokémon that decides it. A broken
+ *  rule (roster, cap, species) shows as its message. */
+function verdictNums(ev: Verdict | null): string {
+  if (!ev) return '&nbsp;';
+  if (ev.problem) return `<span class="l-row x-vnums">${ic('alert')}<span>${esc(ev.problem)}</span></span>`;
+  const m = ev.keyMonId ? S().mons[ev.keyMonId] : undefined;
+  return `<span class="l-row x-vnums"><span class="cap">Value</span><b class="x-num${ev.score >= ev.need ? '' : ' x-over'}">${signed(ev.score)}</b><span class="muted">of ${signed(ev.need)} needed</span>${m ? `<span class="l-row" title="${esc(`Key Pokémon: ${monName(m)}`)}">${ico(speciesOf(m))}<span class="muted">key</span></span>` : ''}</span>`;
+}
+const verdictPop = (ev: Verdict | null, word: string): string => `<strong>Will they accept: ${esc(word)}</strong>${ev
+  ? (ev.problem ? `<span>${esc(ev.problem)}.</span>` : prow('Their value', signed(ev.score)) + prow('Needed', signed(ev.need)) + (ev.keyMonId ? prow('Key Pokémon', esc(monName(S().mons[ev.keyMonId]))) : ''))
+  : prow('Score', '—')}`;
 const tradeClosed = (): string | null => { const w = api.tradeWindow(S()); return w.open ? null : w.reason; };
 
 // ---------------------------------------------------------------- trades
@@ -86,9 +99,8 @@ function builder(): string {
   const payMe = api.payroll(s, me), cap = s.settings.cap;
   const afterMe = payMe - salary(p.give.mons) + salary(p.get.mons);
   const payThem = api.payroll(s, t.team), afterThem = payThem - salary(p.get.mons) + salary(p.give.mons);
-  const why = `<strong>Why: ${esc(meter.word)}</strong><span>${ev ? esc(ev.reason) : 'Add Pokémon or picks to either side.'}</span>${ev ? `<span>Their score: ${ev.score > 0 ? '+' : ''}${ev.score} (they need +5).</span>` : ''}`;
-  const st = M.standings(s).find((r) => r.teamId === t.team);
-  return `<div class="l-card"><div class="l-split"><span class="l-row">${teamLogo(them)}${sel}</span><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(them.lineup.strategyId).says)}</span></div></div>
+  const why = verdictPop(ev, meter.word);
+  return `<div class="l-card"><div class="l-split"><span class="l-row">${teamLogo(them)}${sel}</span>${oppChips(t.team)}</div></div>
   <div class="x-sides">
     <section class="l-card" aria-labelledby="h-give"><div class="l-split"><h2 class="l-card-title" id="h-give">You give</h2><span class="x-small">${t.give.length}/${MAX_SIDE}</span></div>${list('give', t.give, me)}${addSelect('give', me, t.give)}</section>
     <section class="l-card" aria-labelledby="h-get"><div class="l-split"><h2 class="l-card-title" id="h-get">You get</h2><span class="x-small">${t.get.length}/${MAX_SIDE}</span></div>${list('get', t.get, t.team)}${addSelect('get', t.team, t.get)}</section>
@@ -96,7 +108,7 @@ function builder(): string {
   <section class="l-card" aria-label="Trade summary">
     <div class="l-grid" style="--card-min:320px;grid-auto-rows:auto">
       <div class="l-stack tight"><span class="cap">Cap room after the trade</span>${beforeAfter([['You', cap - payMe, cap - afterMe], [them.name, cap - payThem, cap - afterThem]])}</div>
-      <div class="l-stack tight"><span class="l-row"><span class="cap">Will they accept?</span>${info('Why: ' + meter.word, why)}</span>${meter.html}<span class="x-small l-clamp" style="--lines:1">${ev ? esc(ev.reason) : '&nbsp;'}</span></div>
+      <div class="l-stack tight"><span class="l-row"><span class="cap">Will they accept?</span>${info('Will they accept: ' + meter.word, why)}</span>${meter.html}<span class="x-small l-clamp" style="--lines:1">${verdictNums(ev)}</span></div>
     </div>
     <div class="l-split"><div class="l-actions"><button type="button" class="btn go" data-fo="propose"${!ev ? ' aria-disabled="true"' : ''}>Propose</button><button type="button" class="btn" data-fo="balance"${!ev ? ' aria-disabled="true"' : ''} aria-label="What would make this work?">Make it work</button></div><button type="button" class="btn sm" data-fo="clear"${!ev ? ' aria-disabled="true"' : ''}>${ic('x')}Clear</button></div>
   </section>`;
@@ -124,11 +136,12 @@ export function viewTrades(): string {
 
 function proposeDialog(): void {
   const s = S(), t = tradeUi(), p = proposal(t), them = s.teams[t.team];
+  const ev = api.evaluateTrade(C(), s, p);
   const res = act((st, c) => api.proposeTrade(c, st, p));
   if (res.accepted) { store.ui.trade = {team: t.team, give: [], get: []}; notify(); }
   const names = (side: Proposal['give'], owner: TeamId) => [...side.mons.map((id) => monName(S().mons[id])), ...side.picks.map((pk) => `season ${pk.season} round ${pk.round} pick`)].join(' and ') || 'nothing';
   void names;
-  const body = `<div class="x-reply">${ic(res.accepted ? 'check' : 'x')}<span><b>${esc(them.name)} ${res.accepted ? 'accept' : 'decline'}.</b> ${esc(res.reason)}.</span></div>
+  const body = `<div class="x-reply">${ic(res.accepted ? 'check' : 'x')}<span><b>${esc(them.name)} ${res.accepted ? 'accept' : 'decline'}</b></span></div><div class="l-row">${verdictNums(ev)}</div>
     ${res.accepted ? `<p class="muted">You get ${esc([...p.get.mons.map((id) => monName(S().mons[id])), ...p.get.picks.map((pk) => `season ${pk.season} round ${pk.round} pick`)].join(' and ') || 'nothing')}. New arrivals join your backups.</p>` : ''}`;
   const fill = res.accepted ? fillChoice() : null;
   openDialog({title: res.accepted ? 'Trade accepted' : 'Trade declined', cap: teamName(them.id), body: body + (fill?.html ?? ''),
@@ -145,7 +158,7 @@ function balanceDialog(inPlace = false): void {
     return;
   }
   const base = api.evaluateTrade(c, s, p);
-  if (base.accept) { show({title: 'Already a deal', body: `<p class="muted">${esc(them.name)} would take this as it stands. Propose it.</p>`}); return; }
+  if (base.accept) { show({title: 'Already a deal', cap: teamName(them.id), body: `<div class="l-row">${verdictNums(base)}</div>`}); return; }
   if (t.give.length >= MAX_SIDE) { show({title: 'No room to add', body: `<p class="muted">You already give ${MAX_SIDE}. Take something out first.</p>`}); return; }
   const cands: {key: string; score: number}[] = [];
   for (const m of api.teamRoster(s, me)) if (!t.give.includes('m:' + m.id)) {
@@ -159,13 +172,13 @@ function balanceDialog(inPlace = false): void {
   // the smallest overpay: lowest score that still says yes
   const pick = cands.sort((a, b) => a.score - b.score)[0];
   if (!pick) {
-    show({title: 'No single add gets it done', body: `<div class="x-reply">${ic('x')}<span><b>${esc(them.name)}:</b> “${esc(base.reason)}.” Nothing one piece on your side bridges it. Ask for less.</span></div>`});
+    show({title: 'No single add gets it done', cap: teamName(them.id), body: `<div class="x-reply">${ic('x')}<span><b>0</b> of your Pokémon or picks bridge it alone</span></div><div class="l-row">${verdictNums(base)}</div>`});
     return;
   }
   const nm = assetName(pick.key, me);
   const m = pick.key.startsWith('m:') ? s.mons[pick.key.slice(2)] : null;
   show({title: 'What would make this work', cap: teamName(them.id),
-    body: `<div class="x-reply">${ic('deal')}<span><b>${esc(them.name)}:</b> “Add ${esc(nm)} and we have a deal.”</span></div>${m ? `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">${m.contract ? `${money(m.contract.salary)} · ${m.contract.yearsLeft}y · ` : ''}age ${m.age}</span></div>` : ''}`,
+    body: `<div class="x-reply">${ic('deal')}<span><b>Add ${esc(nm)}</b></span></div>${m ? `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">${m.contract ? `${money(m.contract.salary)} · ${m.contract.yearsLeft}y · ` : ''}age ${m.age}</span></div>` : ''}<div class="l-row"><span class="cap">Value</span><b class="x-num x-over">${signed(base.score)}</b><span class="x-arrow" aria-label="to">→</span><b class="x-num">${signed(pick.score)}</b><span class="muted">of ${signed(base.need)} needed</span></div>`,
     actions: [{key: 'close', label: 'Cancel'}, {key: 'add', label: 'Add it', go: true}],
     onAction: (k) => { if (k === 'add') { tradeUi().give.push(pick.key); notify(); } return k === 'close' || k === 'add' ? undefined : false; }});
 }
@@ -178,13 +191,12 @@ function offerCard(o: TradeOffer): string {
   const room = s.settings.cap - api.payroll(s, me);
   const dSal = salary(o.give.mons.filter((id) => s.mons[id])) - salary(o.get.mons.filter((id) => s.mons[id]));
   const today = o.expiresWeek <= s.week;
-  const st = M.standings(s).find((r) => r.teamId === o.fromTeamId);
   const acts = o.status === 'open'
     ? `<div class="l-actions"><button type="button" class="btn go" data-fo="accept" data-offer="${esc(o.id)}">Accept</button><button type="button" class="btn" data-fo="counter" data-offer="${esc(o.id)}">Counter</button><button type="button" class="btn" data-fo="decline" data-offer="${esc(o.id)}">Decline</button></div>`
     : o.status === 'accepted' ? fixChip('growth', 'check', 'Accepted') : o.status === 'declined' ? fixChip('league', 'x', 'Declined') : fixChip('league', 'clock', 'Expired');
   return `<article class="l-card" aria-labelledby="h-${esc(o.id)}">
     <div class="l-split">${fixChip('deal', 'deal', 'Offer')}${o.status === 'open' ? `<span class="tag ${today ? 't-dtd' : ''}">${ic('clock')}${today ? 'Ends this week' : `Ends week ${o.expiresWeek}`}</span>` : ''}</div>
-    <div class="l-stack tight"><h2 class="l-card-title x-team" id="h-${esc(o.id)}">${teamLogo(them)}<span>${esc(teamName(them.id))}</span></h2><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(them.lineup.strategyId).says)}</span></div>
+    <div class="l-stack tight"><h2 class="l-card-title x-team" id="h-${esc(o.id)}">${teamLogo(them)}<span>${esc(teamName(them.id))}</span></h2>${oppChips(o.fromTeamId)}</div>
     <div class="x-offer-cols"><div class="l-stack tight"><span class="cap">You give</span>${mini(o.get)}</div><div class="l-stack tight"><span class="cap">You get</span>${mini(o.give)}</div></div>
     ${o.status === 'open' ? beforeAfter([['Cap room', room, room - dSal]]) : ''}
     <div class="x-actslot">${acts}</div></article>`;
@@ -245,9 +257,8 @@ export function viewFreeAgents(): string {
       ? `<span class="l-cellacts"><button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Re-sign ${esc(monName(m))}">Re-sign</button>${tagButton(m)}</span>`
       : `<button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Negotiate with ${esc(monName(m))}">Negotiate</button>`},
   ];
-  const phaseNote = resignPhase ? 'Re-sign window: keep your expiring contracts or tag one before free agency opens.'
-    : s.phase === 'free-agency' ? `Free agency, round ${(s.faRound ?? 0) + 1} of 3. Unsigned Pokémon lower their ask each round.`
-      : s.phase === 'regular' ? 'Sign anyone, any week. A full roster releases someone first (Roster → Release).' : '';
+  const phaseNote = resignPhase ? 'Re-sign window'
+    : s.phase === 'free-agency' ? `Round ${(s.faRound ?? 0) + 1} of 3 · asks drop each round` : '';
   const reSign = resignPhase ? `<section class="l-panel flush l-section" aria-labelledby="h-rs"><h2 id="h-rs">Your expiring contracts</h2><div class="l-toolbar l-pad"><span class="x-small">${s.teams[me].tagSeason === s.season ? 'You used your franchise tag this offseason.' : 'One franchise tag per offseason: one year at a high fixed price.'}</span></div>${expiring.length ? table<Mon>({id: 'resign', cols: cols(true), rows: expiring, minWidth: 820, label: 'Expiring contracts'}) : `<div class="l-pad">${empty('Nothing expiring', 'Every contract runs past this season.')}</div>`}</section>` : '';
   return head('Free agents', `${plural(fa.length, 'free agent')}${phaseNote ? ' · ' + esc(phaseNote) : ''}`) +
     `<div class="l-card"><div class="l-split x-capwrap">${capStrip(me)}<span class="x-small"><b class="x-num">${used} / 18</b> roster spots</span></div></div>` +
@@ -260,7 +271,8 @@ function negotiateDialog(monId: string): void {
   const a = api.askingPrice(c, s, monId);
   const resign = m.teamId === me;
   let sal = a.salary, yrs = a.years;
-  let reply = `${ic('deal')}<span>Set an offer and send it. ${api.interest(s, m, me) === 'Keen' ? `${esc(monName(m))} likes your club and may take a little less.` : api.interest(s, m, me) === 'Cool' ? 'Cool on your club: expect to pay over the ask.' : 'Will take about the ask.'}</span>`;
+  const lean = api.interest(s, m, me), pct = Math.round((INTEREST_MULT[lean] - 1) * 100);
+  let reply = `${ic('deal')}<span class="muted" aria-label="No offer sent yet">—</span>`;
   let signed = false;
   const step = 250_000;
   // checked before any offer is built: a full roster (or the cap at this salary) blocks Send, with the reason
@@ -271,8 +283,9 @@ function negotiateDialog(monId: string): void {
     const cur = resign ? (m.contract?.salary ?? 0) : 0;
     const b = block(), cw = capWhy();
     const note = b.reason ? `${ic('alert')}<span><b>${esc(b.reason)}.</b>${b.rosterFull ? ' Release someone to make room, then come back.' : ''}</span>` : cw ? `${ic('alert')}<span><b>${esc(cw)}.</b> Lower the salary to the minimum or free cap room.</span>` : '';
-    return `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span>${fixChip(INTEREST[api.interest(s, m, me)][0], INTEREST[api.interest(s, m, me)][1], api.interest(s, m, me))}</div>
-     <p class="muted">Asking ${money(a.salary)} a year for ${plural(a.years, 'year')}.</p>
+    return `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span></div>
+     ${stats([stat('Asking', money(a.salary), {icon: 'deal', sub: 'a year'}), stat('Years', String(a.years), {icon: 'clock', sub: 'asked'}),
+       stat('Interest', `${pct > 0 ? '+' : pct < 0 ? '−' : '±'}${Math.abs(pct)}%`, {icon: INTEREST[lean][1], sub: `${lean} · on the ask`})], 3, 3)}
      <div class="x-note l-reserve" style="--lines:2" aria-live="polite">${note}</div>
      <div class="x-form">
        <div class="x-field-lbl">Salary per year<div class="x-steps"><button type="button" class="btn" data-dlg="dn" aria-label="Lower by $0.25M"${signed || b.reason ? ' aria-disabled="true"' : ''}>−</button><output aria-live="polite">${money(sal)}</output><button type="button" class="btn" data-dlg="up" aria-label="Raise by $0.25M"${signed || b.reason ? ' aria-disabled="true"' : ''}>+</button></div></div>

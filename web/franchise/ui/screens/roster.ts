@@ -7,11 +7,12 @@ import {C, S, store} from '../store.ts';
 import {M} from '../model.ts';
 import {head, lensTabs} from '../components/page.ts';
 import {table, type Col} from '../components/table.ts';
-import {monRef, monBadge, setOf, stage, monName} from '../components/mon.ts';
+import {monRef, monBadge, setOf, stage, monName, speciesOf} from '../components/mon.ts';
 import {gradeChip, injuryTag, expiringTag} from '../components/badges.ts';
 import {prow} from '../components/layer.ts';
 import {GRADE_AT, GRADE_PCT, GRADES} from '../fallback.ts';
-import {strategyName} from './week.ts';
+import {stratChip} from '../components/stats.ts';
+import {ico} from '../sprites.ts';
 
 const GROUPS = [
   {key: 'active', label: 'Active', of: (m: Mon) => m.tier === 'active'},
@@ -70,9 +71,9 @@ export function viewRoster(): string {
   const closest = mons.filter((m) => m.tier !== 'ir').map((m) => ({m, n: nextOf(M.evGrade(s, m))})).filter((x) => x.n)
     .map((x) => ({...x, d: GRADE_AT[x.n!] - x.m.growth})).sort((a, b) => a.d - b.d)[0];
   const bar: Record<string, string> = {
-    list: `<span>Roles for the <b>${esc(strategyName(s.teams[me].lineup.strategyId))}</b> lineup. Others show their best role.</span>`,
+    list: `<span class="l-row"><span class="cap">Roles for</span>${stratChip(s.teams[me].lineup.strategyId)}<span class="cap">bench: best role</span></span>`,
     contracts: `<span class="capm"><span>Cap room</span><b>${money(cap - pay)}</b><span class="fitbar" role="img" aria-label="${money(pay)} of ${money(cap)} used"><i style="width:${Math.min(100, pay / cap * 100).toFixed(1)}%"></i></span><span>${money(pay)} of ${money(cap)} · ${money(expSum)} expires</span></span>`,
-    growth: `<span>${closest ? `${esc(monName(closest.m))} is closest to a new grade: ${closest.d} Growth from ${closest.n}.` : 'Nobody is close to a new grade.'}</span>`,
+    growth: closest ? `<span class="l-row" title="${esc(`Closest to a new grade: ${monName(closest.m)}, ${closest.d} Growth from ${closest.n}`)}"><span class="cap">Next grade</span>${ico(speciesOf(closest.m))}<b>${esc(monName(closest.m))}</b>${gradeChip(closest.n!)}<span><b class="x-num">${closest.d}</b> Growth to go</span></span>` : `<span class="l-row"><span class="cap">Next grade</span><span class="dash">—</span></span>`,
   };
   return head('Roster', `${plural(mons.filter((m) => m.tier !== 'ir').length, 'Pokémon', 'Pokémon')} · ${money(expSum)} ${ticked ? "expiring now" : "expires after this season"}`) +
     `<section class="l-panel flush" aria-label="Roster">${lensTabs('rosterLens', lens, [['list', 'List'], ['contracts', 'Contracts'], ['growth', 'Growth']])}

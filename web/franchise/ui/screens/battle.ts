@@ -12,7 +12,7 @@ import {head, empty} from '../components/page.ts';
 import {table} from '../components/table.ts';
 import {monRef, team, teamName, teamAbbr} from '../components/mon.ts';
 import {mountReplay, type MountedReplay} from '../../sim/replay.ts';
-import {seriesScore, seriesResult} from './week.ts';
+import {seriesScore, seriesResult, gameNums} from './week.ts';
 import {pauseNote, seriesTitle, watchHash} from './play.ts';
 import {api} from '../model.ts';
 
@@ -53,7 +53,6 @@ export function viewBattle(arg: string): string {
       <div class="x-gtabs" role="tablist" aria-label="Games" style="grid-template-columns:repeat(${se.bestOf},minmax(88px,1fr))">${tabs}</div></div>
     ${frame}
     ${walk}
-    ${g?.summary && !watch ? `<p class="muted l-clamp" style="--lines:2">${esc(g.summary)}</p>` : ''}
     ${box ? `<section class="l-panel flush l-section" aria-labelledby="h-box"><h2 id="h-box">Box score</h2>${box}</section>` : ''}`;
 }
 
@@ -71,7 +70,7 @@ function watchDialog(kind: string, arg: string): void {
   const last = game >= se.games.length;
   const won = g.winnerTeamId === me;
   openDialog({title: `${esc(team(me).name)} ${won ? 'win' : 'lose'} game ${game}`, cap: `Week ${se.week} · ${g.turns} turns`, wide: true,
-    body: `${g.summary ? `<p>${esc(g.summary)}</p>` : ''}${boxTable(g.box)}`,
+    body: `${gameNums(g, me)}${boxTable(g.box)}`,
     actions: last ? [{key: 'close', label: 'Close'}, {key: 'series', label: `${ic('trophy')}Series result`, go: true}]
       : [{key: 'close', label: 'Close'}, {key: 'next', label: `Next: game ${game + 1} ${ic('arrow')}`, href: watchHash(se.id, game + 1), go: true}],
     onAction: (k) => { if (k === 'series') { watchDialog('series', arg); return false; } }});

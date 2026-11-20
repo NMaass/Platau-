@@ -11,7 +11,8 @@ import {monRef, monBadge, speciesOf, monName, teamName} from '../components/mon.
 import {roleBadge, injuryTag} from '../components/badges.ts';
 import {ico, spr} from '../sprites.ts';
 import {openDialog} from '../components/layer.ts';
-import {oppOf, strategyName} from './week.ts';
+import {oppOf, myAvg, scoutState} from './week.ts';
+import {stratChip, stratName, vs} from '../components/stats.ts';
 
 const out = (m: Mon) => !!m.injury && m.injury.kind !== 'day-to-day';
 const slotRoles = (i: number): Role[] => {
@@ -38,8 +39,9 @@ function backupsFor(i: number): Mon[] {
 export function viewLineup(): string {
   const s = S(), me = s.userTeamId, L = s.teams[me].lineup;
   const se = M.userSeries(s);
-  const ovrs = L.slots.map((sl) => sl.monId ? M.roleRating(C(), s, s.mons[sl.monId], sl.role) : null).filter((x): x is number => x != null);
-  const avg = ovrs.length ? Math.round(ovrs.reduce((a, b) => a + b, 0) / ovrs.length) : null;
+  const avg = myAvg();
+  const opp = se ? oppOf(se, me) : null, sc = opp ? scoutState(opp) : null;
+  const theirs = sc && sc.lo != null && sc.hi != null ? (sc.lo === sc.hi ? String(sc.lo) : `${sc.lo}–${sc.hi}`) : '—';
   const cards = L.slots.map((sl, i) => {
     const roles = slotRoles(i);
     const top = `<div class="slot-h"><div><h3 id="sh-${i}">${esc(ROLE_LABEL[sl.role])}</h3><p>${roles.length > 1 ? 'or ' + roles.filter((r) => r !== sl.role).map((r) => ROLE_LABEL[r]).join(' or ') : '&nbsp;'}</p></div><button class="btn sm" type="button" data-act="chooser" data-slot="${i}" aria-label="Change ${esc(ROLE_LABEL[sl.role])}">Change</button></div>`;
@@ -71,10 +73,10 @@ export function viewLineup(): string {
       <div class="l-stack tight"><span class="cap">Backups</span>${bkHtml}</div>
       <div class="slot-foot">${foot}</div></article>`;
   }).join('');
-  const sub = se ? `Week ${se.week} ${se.homeId === me ? 'vs' : 'at'} ${esc(teamName(oppOf(se, me)))} (${esc(strategyName(s.teams[oppOf(se, me)].lineup.strategyId))}) · best of ${se.bestOf}` : 'No series this week';
+  const sub = se && opp ? `<span class="l-row">Week ${se.week} ${se.homeId === me ? 'vs' : 'at'} ${esc(teamName(opp))}${stratChip(s.teams[opp].lineup.strategyId)}<span>best of ${se.bestOf}</span></span>` : 'No series this week';
   return head('Lineup', sub, `<a class="btn go" href="#week">${ic('check')}Done</a>`) + `<section class="l-panel flush" aria-label="Lineup">
-    <div class="lbar"><label for="strat">Strategy</label><select id="strat" data-act="strategy">${strategies().map((x) => `<option value="${esc(x.id)}"${x.id === L.strategyId ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-      <span class="avg">Starters average <b>${avg ?? '—'}</b></span><button class="btn" type="button" data-act="auto">${ic('wand')}Auto-assign</button></div>
+    <div class="lbar"><label for="strat">Strategy</label><select id="strat" data-act="strategy">${strategies().map((x) => `<option value="${esc(x.id)}"${x.id === L.strategyId ? ' selected' : ''}>${esc(stratName(x.id))}</option>`).join('')}</select>
+      <span class="avg" title="Starters' average rating${opp ? ', you vs them' : ''}"><span class="cap">Avg</span>${opp ? vs(avg == null ? '—' : String(avg), theirs, avg, sc!.lo != null && sc!.hi != null ? (sc!.lo + sc!.hi) / 2 : null) : `<b>${avg ?? '—'}</b>`}</span><button class="btn" type="button" data-act="auto">${ic('wand')}Auto-assign</button></div>
     <div class="l-grid slots">${cards}</div></section>`;
 }
 

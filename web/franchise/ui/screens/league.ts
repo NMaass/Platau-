@@ -13,7 +13,8 @@ import {teamLogo} from '../sprites.ts';
 import {divisionName, phaseLabel} from '../shell.ts';
 import {spr} from '../sprites.ts';
 import {fixChip, once} from '../components/front.ts';
-import {seriesResult, seriesScore, oppOf, strategyName} from './week.ts';
+import {seriesResult, seriesScore, oppOf} from './week.ts';
+import {stratChip} from '../components/stats.ts';
 
 type Row = ReturnType<typeof M.standings>[number];
 const PLAYOFF_LABEL: Record<NonNullable<Series['playoff']>, string> = {round1: 'Round 1', conference: 'Conference final', final: 'Plateau final'};
@@ -209,7 +210,7 @@ export function viewSchedule(): string {
       {key: 'wk', label: 'Wk', width: '56px', num: true, cell: (x) => x.playoff ? 'PO' : String(x.week)},
       {key: 'opp', label: 'Opponent', width: '34%', cell: (x) => teamCell(oppOf(x, me))},
       {key: 'where', label: 'Where', width: '72px', cell: (x) => x.homeId === me ? 'Home' : 'Away'},
-      {key: 'strat', label: 'Strategy', width: '136px', cell: (x) => esc(strategyName(s.teams[oppOf(x, me)].lineup.strategyId))},
+      {key: 'strat', label: 'Strategy', width: '160px', cell: (x) => stratChip(s.teams[oppOf(x, me)].lineup.strategyId)},
       {key: 'res', label: 'Result', width: '152px', cell: (x) => resultChip(x, me) || (x.week === s.week && (s.phase === 'regular' || s.phase === 'playoffs') ? fixChip('scout', 'clock', 'This week') : '<span class="dash">—</span>')},
       {key: 'act', label: '', width: '240px', cell: (x) => seriesActs(x, `week ${x.week}`)},
     ];
