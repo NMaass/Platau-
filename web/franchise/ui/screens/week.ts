@@ -312,10 +312,9 @@ export function viewOpponent(): string {
   const how = info('How scouting works', `<strong>Scouting points</strong><span>${s.settings.scoutCost} point narrows a rating; ${s.settings.fullScoutCost} in total show it exactly. Points are shared with the draft class and refill every week. Every club knows a Pokémon's rating after ${REVEAL_BATTLES} battles.</span>`);
   const intro = `${stats([
     stat('Scouted', `${sc.known}<small>/ ${sc.n}</small>`, {icon: 'scout'}),
-    stat('Points left', `${pts}`, {icon: 'target'}),
-    stat('Cost', `${s.settings.scoutCost}<small>scout</small> ${s.settings.fullScoutCost}<small>exact</small>`, {icon: 'deal'}),
+    stat('Points', `${pts}`, {icon: 'target', title: 'Scouting points left this week'}),
     stat('Avg rating', vs(mine == null ? '—' : String(mine), span(sc.lo, sc.hi), mine, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null), {icon: 'lineup', wide: true}),
-  ], 5, 3)}`;
+  ], 4, 2)}`;
   return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, oppChips(opp, se.homeId === me), `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
     panel('likely', `<span class="l-row">Likely team${how}</span>`, `${intro}<div class="l-grid scout-grid">${cards}</div>`) +
     panel('recent', 'Recent results', recent ? `<ul class="l-list top recent">${recent}</ul>` : `<p class="muted">No results yet.</p>`);
