@@ -76,6 +76,7 @@ export function viewMon(id: string): string {
     </dl>`;
   // contract + injury
   const ct = m.contract;
+  const releaseBtn = mine && ct ? `<div class="l-actions"><button type="button" class="btn" data-act="release" data-mon="${esc(m.id)}">Release</button></div>` : '';
   const contract = ct ? `<dl class="l-kv"><dt>Salary</dt><dd>${money(ct.salary)}</dd><dt>Years left</dt><dd>${plural(ct.yearsLeft, 'year')} (through season ${s.season + ct.yearsLeft - 1})</dd><dt>Guaranteed</dt><dd>${plural(ct.guaranteedYears, 'year')}</dd>${ct.rookie ? `<dt>Rookie deal</dt><dd>Round ${ct.rookie.round}, pick ${ct.rookie.pick}</dd>` : ''}${ct.tagged ? '<dt>Tag</dt><dd>Franchise tag</dd>' : ''}<dt>Cap share</dt><dd>${(ct.salary / s.settings.cap * 100).toFixed(1)}%</dd></dl>` : `<p class="muted">No contract.</p>`;
   const injury = m.injury ? `<div class="l-row">${injuryTag(m)}<span>${esc(m.injury.description)} · since week ${m.injury.sinceWeek}</span></div>${m.injury.severe ? `<p class="muted">Severe: ${m.injury.severe.ivLost ? `lost an IV grade in ${STAT_LBL[m.injury.severe.ivLost]}` : ''}${m.injury.severe.gradeCap ? ` EV grade capped at ${m.injury.severe.gradeCap}` : ''}</p>` : ''}` : '';
   // season lines
@@ -111,7 +112,7 @@ export function viewMon(id: string): string {
     </div>
     <div class="l-stack loose">
       ${mine ? panel('dev', 'Development', dev) : panel('dev', 'Scouting', scoutPanel)}
-      ${panel('ct', 'Contract', contract + injury)}
+      ${panel('ct', 'Contract', contract + injury + releaseBtn)}
     </div>
   </div>
   <section class="l-panel flush l-section" aria-labelledby="h-seasons"><h2 id="h-seasons">Seasons</h2>${seasons}</section>

@@ -39,27 +39,84 @@ async function idb<T>(mode: IDBTransactionMode, fn: (os: IDBObjectStore) => IDBR
     req.onerror = () => rej(req.error);
   });
 }
+/** One line per saved league ("Your leagues"), kept in IndexedDB next to the save so the list never loads whole leagues. */
+export interface SaveMeta { id: string; name: string; teamId: string; team: string; season: number; week: number; phase: string; updated: number }
+const metaOf = (s: LeagueState): SaveMeta => {
+  const t = s.teams[s.userTeamId];
+  return {id: s.id, name: s.name, teamId: s.userTeamId, team: t ? `${t.city} ${t.name}` : '', season: s.season, week: s.week, phase: s.phase, updated: Date.now()};
+};
+/** Cached list for the screens (filled at boot, kept current by save/delete). Newest first. */
+let saveList: SaveMeta[] = [];
+export const savedLeagues = (): SaveMeta[] => saveList;
+const upsertMeta = (m: SaveMeta) => { saveList = [m, ...saveList.filter((x) => x.id !== m.id)]; };
+
 export async function save(): Promise<void> {
   if (!store.state || isFixtureMode()) return;
+  const meta = metaOf(store.state);
+  upsertMeta(meta);
   try {
     await idb('readwrite', (os) => os.put(store.state, 'league:' + store.state!.id));
+    await idb('readwrite', (os) => os.put(meta, 'meta:' + meta.id));
     await idb('readwrite', (os) => os.put(store.state!.id, 'last'));
   } catch (e) { console.warn('[plateau] save failed', e); }
+}
+async function loadSave(id: string): Promise<LeagueState | null> {
+  const s = await idb<LeagueState | undefined>('readonly', (os) => os.get('league:' + id));
+  return s ? api.migrate(s) : null;
 }
 export async function loadLast(): Promise<LeagueState | null> {
   try {
     const id = await idb<string | undefined>('readonly', (os) => os.get('last'));
     if (!id) return null;
-    const s = await idb<LeagueState | undefined>('readonly', (os) => os.get('league:' + id));
-    return s ? api.migrate(s) : null;
+    return await loadSave(id);
   } catch { return null; }
 }
+/** Read every saved league's line (older saves without one get it built once from the save). */
+export async function refreshSaveList(): Promise<SaveMeta[]> {
+  try {
+    const keys = (await idb<IDBValidKey[]>('readonly', (os) => os.getAllKeys())).map(String);
+    const out: SaveMeta[] = [];
+    for (const k of keys.filter((x) => x.startsWith('league:'))) {
+      const id = k.slice(7);
+      let m = await idb<SaveMeta | undefined>('readonly', (os) => os.get('meta:' + id));
+      if (!m) {
+        const s = await loadSave(id);
+        if (!s) continue;
+        m = {...metaOf(s), updated: s.createdAt ?? 0};
+        await idb('readwrite', (os) => os.put(m, 'meta:' + id));
+      }
+      out.push(m);
+    }
+    saveList = out.sort((a, b) => b.updated - a.updated);
+  } catch { /* no IndexedDB: the list stays empty */ }
+  return saveList;
+}
+/** Open another saved league (it becomes the last opened one). */
+export async function openSave(id: string): Promise<boolean> {
+  const s = await loadSave(id).catch(() => null);
+  if (!s) return false;
+  store.state = s;
+  await save();
+  notify();
+  return true;
+}
+export async function exportSaveById(id: string): Promise<void> {
+  const s = store.state?.id === id ? store.state : await loadSave(id);
+  if (s) download(s);
+}
 export async function deleteSave(id: string): Promise<void> {
-  try { await idb('readwrite', (os) => os.delete('league:' + id)); await idb('readwrite', (os) => os.delete('last')); } catch { /* ignore */ }
+  saveList = saveList.filter((x) => x.id !== id);
+  try {
+    await idb('readwrite', (os) => os.delete('league:' + id));
+    await idb('readwrite', (os) => os.delete('meta:' + id));
+    const last = await idb<string | undefined>('readonly', (os) => os.get('last'));
+    if (last === id) await idb('readwrite', (os) => os.delete('last'));
+  } catch { /* ignore */ }
+  if (store.state?.id === id) store.state = null;
 }
 
-export function exportSave(): void {
-  const s = S();
+export function exportSave(): void { download(S()); }
+function download(s: LeagueState): void {
   const blob = new Blob([JSON.stringify(s)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

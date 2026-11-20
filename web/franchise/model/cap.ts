@@ -23,14 +23,9 @@ export function payroll(state: LeagueState, teamId: TeamId): number {
   return sum;
 }
 
-/** Payroll without cap-exception deals (minimum and rookie scale): this part must stay under the cap. */
-export function capPayroll(state: LeagueState, teamId: TeamId): number {
-  let sum = 0;
-  for (const m of teamMons(state, teamId)) if (!m.contract?.exception) sum += contractHit(m.contract);
-  const y = capYear(state);
-  for (const d of state.teams[teamId].deadMoney) if (d.season === y) sum += d.amount;
-  return sum;
-}
+/** Payroll that counts toward the hard cap: every contract and dead money (what the UI shows as payroll).
+ *  The one exception is signing: a minimum deal can always be signed, even over the cap. */
+export const capPayroll = (state: LeagueState, teamId: TeamId): number => payroll(state, teamId);
 
 export const capSpace = (state: LeagueState, teamId: TeamId): number => state.settings.cap - capPayroll(state, teamId);
 

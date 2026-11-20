@@ -5,7 +5,7 @@ import {canBattle, fieldedLineup} from './lineup.ts';
 import {knowsExactly} from './scouting.ts';
 import {roleRating} from './ratings.ts';
 import {capPayroll} from './cap.ts';
-import {rosterCount, teamMons} from './util.ts';
+import {dupNumbers, monLabel, rosterCount, teamMons} from './util.ts';
 import {seriesOfWeek} from './schedule.ts';
 
 export interface Advisory { id: string; kind: 'injury' | 'lineup' | 'offer' | 'scout' | 'contract'; label: string; text: string; action: {label: string; route: string} }
@@ -22,7 +22,8 @@ export function likelyLineup(catalog: Catalog, state: LeagueState, teamId: strin
 export function advisories(catalog: Catalog, state: LeagueState): Advisory[] {
   const out: Advisory[] = [];
   const me = state.teams[state.userTeamId];
-  const name = (id: MonId) => catalog.species[state.mons[id]?.speciesId]?.name ?? 'Unknown';
+  const nums = dupNumbers(state);
+  const name = (id: MonId) => state.mons[id] ? monLabel(catalog, state, state.mons[id], nums) : 'Unknown';
   // lineup problems only matter while games are coming (not in the offseason)
   const games = state.phase === 'preseason' || state.phase === 'regular' || state.phase === 'playoffs';
   if (games) me.lineup.slots.forEach((sl, i) => {

@@ -8,7 +8,8 @@ let dlg: HTMLDialogElement;
 let onClose: (() => void) | null = null;
 let returnTo: Element | null = null;
 
-export interface DialogAction { key: string; label: string; go?: boolean; disabled?: boolean; href?: string }
+/** `why` (with disabled): the reason, in a peek on the disabled button (it stays in place, same size). */
+export interface DialogAction { key: string; label: string; go?: boolean; disabled?: boolean; href?: string; why?: string }
 export interface DialogOpts {
   title: string;
   /** small caps line above the title */
@@ -62,7 +63,7 @@ export function dialogHtml(o: DialogOpts): string {
   <div class="l-dialog-body" data-body>${o.body}</div>
   ${acts.length ? `<div class="l-dialog-foot"><div class="l-actions" data-acts>${acts.map((a) => a.href
     ? `<a class="btn${a.go ? ' go' : ''}" href="${esc(a.href)}" data-dlg="${esc(a.key)}">${a.label}</a>`
-    : `<button type="button" class="btn${a.go && !a.disabled ? ' go' : ''}" data-dlg="${esc(a.key)}"${a.disabled ? ' aria-disabled="true"' : ''}>${a.label}</button>`).join('')}</div></div>` : ''}`;
+    : `<button type="button" class="btn${a.go && !a.disabled ? ' go' : ''}${a.disabled && a.why ? ' peek' : ''}" data-dlg="${esc(a.key)}"${a.disabled ? ' aria-disabled="true"' : ''}${a.disabled && a.why ? ` aria-label="${esc(a.label.replace(/<[^>]*>/g, ''))}: ${esc(a.why)}"` : ''}>${a.label}${a.disabled && a.why ? `<span class="pop"><strong>${esc(a.label.replace(/<[^>]*>/g, ''))}</strong><span>${esc(a.why)}.</span></span>` : ''}</button>`).join('')}</div></div>` : ''}`;
 }
 export function openDialog(o: DialogOpts): HTMLDialogElement {
   hideFloat();

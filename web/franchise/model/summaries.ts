@@ -2,6 +2,7 @@
 // is chosen by a hash of the series id.
 import type {BattleResult, Catalog, LeagueState, MonBox, MonId, Series, TeamId} from '../types.ts';
 import {hash01} from './rng.ts';
+import {monLabel} from './util.ts';
 
 export interface MonTotals { monId: MonId; teamId: TeamId; battles: number; kos: number; faints: number; damageDealt: number; damageTaken: number; statusInflicted: number; hazardsSet: number; hazardsRemoved: number }
 
@@ -22,7 +23,7 @@ export function impact(t: {kos: number; damageDealt: number; statusInflicted: nu
   return t.kos * 30 + t.damageDealt * 0.3 + t.statusInflicted * 10 + (t.hazardsSet + t.hazardsRemoved) * 8 - (t.faints ?? 0) * 5;
 }
 
-const name = (catalog: Catalog, state: LeagueState, id: MonId) => catalog.species[state.mons[id]?.speciesId]?.name ?? 'Unknown';
+const name = (catalog: Catalog, state: LeagueState, id: MonId) => state.mons[id] ? monLabel(catalog, state, state.mons[id]) : 'Unknown';
 const team = (state: LeagueState, id: TeamId) => state.teams[id].name;
 
 function standout(t: MonTotals): string {

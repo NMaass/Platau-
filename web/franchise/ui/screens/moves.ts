@@ -8,7 +8,8 @@ import {C, S, store, act, notify} from '../store.ts';
 import {M, api} from '../model.ts';
 import {head, panel, empty} from '../components/page.ts';
 import {table, type Col} from '../components/table.ts';
-import {openDialog, updateDialog, dialogEl, info, peekLabel, type DialogOpts} from '../components/layer.ts';
+import {openDialog, updateDialog, dialogEl, info, peekLabel, type DialogOpts, type DialogAction} from '../components/layer.ts';
+import {ROLE_LABEL} from '../../catalog/roles.ts';
 import {monRef, monName, teamName, teamCell, speciesOf} from '../components/mon.ts';
 import {expiringTag, injuryTag} from '../components/badges.ts';
 import {ico, teamLogo} from '../sprites.ts';
@@ -128,9 +129,10 @@ function proposeDialog(): void {
   void names;
   const body = `<div class="x-reply">${ic(res.accepted ? 'check' : 'x')}<span><b>${esc(them.name)} ${res.accepted ? 'accept' : 'decline'}.</b> ${esc(res.reason)}.</span></div>
     ${res.accepted ? `<p class="muted">You get ${esc([...p.get.mons.map((id) => monName(S().mons[id])), ...p.get.picks.map((pk) => `season ${pk.season} round ${pk.round} pick`)].join(' and ') || 'nothing')}. New arrivals join your backups.</p>` : ''}`;
-  openDialog({title: res.accepted ? 'Trade accepted' : 'Trade declined', cap: teamName(them.id), body,
-    actions: res.accepted ? [{key: 'close', label: 'Done', go: true}] : [{key: 'close', label: 'Back'}, {key: 'balance', label: 'Make it work', go: true}],
-    onAction: (k) => { if (k === 'balance') { balanceDialog(true); return false; } }});
+  const fill = res.accepted ? fillChoice() : null;
+  openDialog({title: res.accepted ? 'Trade accepted' : 'Trade declined', cap: teamName(them.id), body: body + (fill?.html ?? ''),
+    actions: fill ? fill.actions : res.accepted ? [{key: 'close', label: 'Done', go: true}] : [{key: 'close', label: 'Back'}, {key: 'balance', label: 'Make it work', go: true}],
+    onAction: (k) => { if (fill) return fill.onAction(k); if (k === 'balance') { balanceDialog(true); return false; } }});
 }
 
 /** Cheapest single asset of yours that turns the AI's verdict to yes. In place = replace the open dialog. */
@@ -214,8 +216,9 @@ function offerDialog(id: string, accept: boolean): void {
       const after = S().offers.find((x) => x.id === id)?.status;
       void before;
       if (!accept) return;
-      updateDialog({title: after === 'accepted' ? 'Trade done' : 'The trade fell through', actions: [{key: 'close', label: 'Done', go: true}], onAction: undefined,
-        body: after === 'accepted' ? `<p>${esc(nm(o.give))} ${o.give.mons.length + o.give.picks.length === 1 ? 'joins' : 'join'} you.</p>` : `<p class="muted">The offer could no longer go through (rosters or cap changed since it was made).</p>`});
+      const fill = after === 'accepted' ? fillChoice() : null;
+      updateDialog({title: after === 'accepted' ? 'Trade done' : 'The trade fell through', actions: fill ? fill.actions : [{key: 'close', label: 'Done', go: true}], onAction: fill ? fill.onAction : undefined,
+        body: (after === 'accepted' ? `<p>${esc(nm(o.give))} ${o.give.mons.length + o.give.picks.length === 1 ? 'joins' : 'join'} you.</p>` : `<p class="muted">The offer could no longer go through (rosters or cap changed since it was made).</p>`) + (fill?.html ?? '')});
       return false;
     }});
 }
@@ -243,7 +246,7 @@ export function viewFreeAgents(): string {
   ];
   const phaseNote = resignPhase ? 'Re-sign window: keep your expiring contracts or tag one before free agency opens.'
     : s.phase === 'free-agency' ? `Free agency, round ${(s.faRound ?? 0) + 1} of 3. Unsigned Pokémon lower their ask each round.`
-      : s.phase === 'regular' ? 'Sign anyone, any week. A full roster has to release someone first.' : '';
+      : s.phase === 'regular' ? 'Sign anyone, any week. A full roster releases someone first (Roster → Release).' : '';
   const reSign = resignPhase ? `<section class="l-panel flush l-section" aria-labelledby="h-rs"><h2 id="h-rs">Your expiring contracts</h2><div class="l-toolbar l-pad"><span class="x-small">${s.teams[me].tagSeason === s.season ? 'You used your franchise tag this offseason.' : 'One franchise tag per offseason: one year at a high fixed price.'}</span></div>${expiring.length ? table<Mon>({id: 'resign', cols: cols(true), rows: expiring, minWidth: 820, label: 'Expiring contracts'}) : `<div class="l-pad">${empty('Nothing expiring', 'Every contract runs past this season.')}</div>`}</section>` : '';
   return head('Free agents', `${plural(fa.length, 'free agent')}${phaseNote ? ' · ' + esc(phaseNote) : ''}`) +
     `<div class="l-card"><div class="l-split x-capwrap">${capStrip(me)}<span class="x-small"><b class="x-num">${used} / 18</b> roster spots</span></div></div>` +
@@ -259,22 +262,33 @@ function negotiateDialog(monId: string): void {
   let reply = `${ic('deal')}<span>Set an offer and send it. ${api.interest(s, m, me) === 'Keen' ? `${esc(monName(m))} likes your club and may take a little less.` : api.interest(s, m, me) === 'Cool' ? 'Cool on your club: expect to pay over the ask.' : 'Will take about the ask.'}</span>`;
   let signed = false;
   const step = 250_000;
+  // checked before any offer is built: a full roster (or the cap at this salary) blocks Send, with the reason
+  const block = () => signed ? {reason: '', rosterFull: false} : api.signBlock(S(), monId);
+  const capWhy = () => signed ? '' : api.capBlock(S(), sal);
   const body = () => {
     const room = s.settings.cap - api.payroll(S(), me);
     const cur = resign ? (m.contract?.salary ?? 0) : 0;
+    const b = block(), cw = capWhy();
+    const note = b.reason ? `${ic('alert')}<span><b>${esc(b.reason)}.</b>${b.rosterFull ? ' Release someone to make room, then come back.' : ''}</span>` : cw ? `${ic('alert')}<span><b>${esc(cw)}.</b> Lower the salary to the minimum or free cap room.</span>` : '';
     return `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span>${fixChip(INTEREST[api.interest(s, m, me)][0], INTEREST[api.interest(s, m, me)][1], api.interest(s, m, me))}</div>
      <p class="muted">Asking ${money(a.salary)} a year for ${plural(a.years, 'year')}.</p>
+     <div class="x-note l-reserve" style="--lines:2" aria-live="polite">${note}</div>
      <div class="x-form">
-       <div class="x-field-lbl">Salary per year<div class="x-steps"><button type="button" class="btn" data-dlg="dn" aria-label="Lower by $0.25M"${signed ? ' aria-disabled="true"' : ''}>−</button><output aria-live="polite">${money(sal)}</output><button type="button" class="btn" data-dlg="up" aria-label="Raise by $0.25M"${signed ? ' aria-disabled="true"' : ''}>+</button></div></div>
-       <label class="x-field-lbl">Years<select data-yrs${signed ? ' disabled' : ''}>${[1, 2, 3, 4, 5, 6, 7].map((y) => `<option${y === yrs ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
+       <div class="x-field-lbl">Salary per year<div class="x-steps"><button type="button" class="btn" data-dlg="dn" aria-label="Lower by $0.25M"${signed || b.reason ? ' aria-disabled="true"' : ''}>−</button><output aria-live="polite">${money(sal)}</output><button type="button" class="btn" data-dlg="up" aria-label="Raise by $0.25M"${signed || b.reason ? ' aria-disabled="true"' : ''}>+</button></div></div>
+       <label class="x-field-lbl">Years<select data-yrs${signed || b.reason ? ' disabled' : ''}>${[1, 2, 3, 4, 5, 6, 7].map((y) => `<option${y === yrs ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
      </div>
-     ${signed ? '' : beforeAfter([['Cap room after signing', room, room - sal + cur]])}
+     ${beforeAfter([['Cap room after signing', room, signed ? room : room - sal + cur]])}
      <div class="x-reply" aria-live="polite">${reply}</div>`;
   };
-  const actions = () => signed ? [{key: 'close', label: 'Done', go: true}] : [{key: 'close', label: 'Cancel'}, {key: 'offer', label: 'Send offer', go: true}];
+  const actions = () => {
+    if (signed) return [{key: 'close', label: 'Done', go: true}];
+    const b = block(), why = b.reason || capWhy();
+    return [b.rosterFull ? {key: 'release', label: 'Release someone', href: '#roster?lens=contracts'} : {key: 'close', label: 'Cancel'},
+      {key: 'offer', label: 'Send offer', go: true, disabled: !!why, why}];
+  };
   openDialog({title: `${resign ? 'Re-sign' : 'Sign'} ${esc(monName(m))}`, cap: resign ? 'Re-sign window' : 'Free agent', body: body(), actions: actions(),
     onAction: (k) => {
-      if (k === 'close') return;
+      if (k === 'close' || k === 'release') return;
       if (k === 'up' || k === 'dn') { if (!signed) { sal = Math.max(s.settings.minSalary, sal + (k === 'up' ? step : -step)); } }
       if (k === 'offer' && !signed) {
         const r = act((st, cat) => api.offerContract(cat, st, monId, sal, yrs));
@@ -295,6 +309,50 @@ function negotiateDialog(monId: string): void {
   };
   d.addEventListener('change', onChange);
   d.addEventListener('close', () => d.removeEventListener('change', onChange), {once: true});
+}
+
+/** Release (cut) one of your Pokémon: confirm with the dead money and the cap room it frees. Roster row, Pokémon page. */
+export function releaseDialog(monId: string): void {
+  const s = S(), c = C(), m = s.mons[monId];
+  if (!m) return;
+  const info = api.releaseInfo(c, s, monId);
+  const slot = s.teams[s.userTeamId].lineup.slots.find((x) => x.monId === monId);
+  const who = `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}${m.contract ? ` · ${money(m.contract.salary)} × ${plural(m.contract.yearsLeft, 'year')}` : ''}</span></div>`;
+  if (!info.ok) { openDialog({title: `Can't release ${esc(monName(m))}`, body: `${who}<p class="muted">${esc(info.reason)}.</p>`}); return; }
+  openDialog({title: `Release ${esc(monName(m))}?`, cap: 'Roster',
+    body: `${who}
+      <dl class="l-kv"><dt>Dead money</dt><dd><b class="x-num">${money(info.deadMoney)}</b> <span class="muted">${info.deadMoney ? 'stays on your cap this season (the guaranteed part)' : 'nothing guaranteed is left'}</span></dd>
+      <dt>Roster</dt><dd>${info.rosterAfter} / 18 after${slot ? ` · starts as ${esc(ROLE_LABEL[slot.role])}: the lineup refills the slot` : ''}</dd></dl>
+      ${beforeAfter([['Cap room', info.capRoomBefore, info.capRoomAfter]])}
+      <p class="muted">${esc(monName(m))} becomes a free agent; any club can sign it.</p>`,
+    actions: [{key: 'close', label: 'Cancel'}, {key: 'release', label: 'Release', go: true}],
+    onAction: (k) => {
+      if (k !== 'release') return;
+      const r = act((st, cat) => api.release(cat, st, monId));
+      updateDialog({title: r.ok ? `${esc(monName(m))} released` : 'Not released', cap: undefined, onAction: undefined,
+        body: r.ok ? `<p>${info.rosterAfter} / 18 on the roster. Cap room now ${money(info.capRoomAfter)}${info.deadMoney ? ` (${money(info.deadMoney)} dead money)` : ''}.</p>` : `<p class="muted">${esc(r.reason)}.</p>`,
+        actions: r.ok ? [{key: 'fa', label: `Free agents ${ic('arrow')}`, href: '#freeagents'}, {key: 'close', label: 'Done', go: true}] : [{key: 'close', label: 'Done', go: true}]});
+      return false;
+    }});
+}
+
+/** After a trade leaves your roster short (in season): who Play would sign on a minimum deal; sign now or leave it open. */
+function fillChoice(): {html: string; actions: DialogAction[]; onAction: (k: string) => boolean | void} | null {
+  const s = S(), fill = api.rosterFill(C(), s);
+  if (!fill.open) return null;
+  const n = api.teamRoster(s, s.userTeamId).filter((m) => m.tier !== 'ir').length;
+  const first = fill.candidates[0];
+  const rows = fill.candidates.map((m) => `<li><span class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b></span>${knownBadge(m)}<span class="x-small">${money(s.settings.minSalary)}</span></li>`).join('');
+  const html = `<div class="l-stack tight"><span class="cap">Your roster: ${n} / 18</span><p class="muted">Nobody is signed for you. Before the next week Play fills open spots with the best free agents on minimum deals:</p>
+    ${rows ? `<ul class="l-list trio" aria-label="Would be signed">${rows}</ul>` : '<p class="muted">No free agents now: a replacement-level Pokémon would be signed.</p>'}</div>`;
+  const actions: DialogAction[] = [{key: 'open', label: 'Leave it open'}, ...(first ? [{key: 'fill', label: `Sign ${esc(monName(first))}`, go: true}] : [{key: 'fa', label: `Free agents ${ic('arrow')}`, href: '#freeagents', go: true}])];
+  return {html, actions, onAction: (k) => {
+    if (k !== 'fill' || !first) return;
+    const r = act((st, cat) => api.signToFill(cat, st, first.id));
+    updateDialog({title: r.ok ? `${esc(monName(first))} signs` : 'Not signed', cap: undefined, onAction: undefined, actions: [{key: 'close', label: 'Done', go: true}],
+      body: r.ok ? `<p>${esc(monName(first))} joins your backups on a ${money(S().settings.minSalary)} deal.</p>` : `<p class="muted">${esc(r.reason)}.</p>`});
+    return false;
+  }};
 }
 
 /** Tag button of fixed width; when the tag can't be used it stays in place, disabled, with the reason in a peek. */

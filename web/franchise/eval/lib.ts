@@ -4,7 +4,7 @@
 import {readFileSync, writeFileSync, mkdirSync, appendFileSync} from 'node:fs';
 import type {BattleJob, BattleJobResult, Catalog, LeagueState, MonId, TeamId} from '../types.ts';
 import * as api from '../model/api.ts';
-import {quickSim} from '../model/quicksim.ts';
+import {QUICKSIM_SCALE, quickSim} from '../model/quicksim.ts';
 import {teamExport} from '../model/export.ts';
 import {bestRole} from '../model/ratings.ts';
 import {createNodePoolOrFallback} from '../sim/node-pool.ts';
@@ -96,7 +96,7 @@ export async function play(matches: Match[], reps = 2, seed0 = 1): Promise<Match
     const aWon = (r.winner === 'p1') !== flip;
     out[i].games++; if (aWon) out[i].aWins++;
     out[i].problems += r.problems.length ? 1 : 0;
-    appendFileSync(`${OUT}battles.jsonl`, JSON.stringify({tag: matches[i].tag, aWon, qsP: out[i].qsP, ovrA: out[i].ovrA, ovrB: out[i].ovrB, turns: r.turns, problems: r.problems.slice(0, 2), meta: matches[i].meta}) + '\n');
+    appendFileSync(`${OUT}battles.jsonl`, JSON.stringify({tag: matches[i].tag, aWon, qsP: out[i].qsP, qsScale: QUICKSIM_SCALE, ovrA: out[i].ovrA, ovrB: out[i].ovrB, turns: r.turns, problems: r.problems.slice(0, 2), meta: matches[i].meta}) + '\n');
   }
   console.error(`  ${jobs.length} battles in ${((performance.now() - t0) / 1000).toFixed(0)} s`);
   return out;

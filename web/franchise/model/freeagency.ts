@@ -1,11 +1,11 @@
 // Re-signing window, franchise tag, 3 free-agency bidding rounds, in-season FA.
 import type {Catalog, LeagueState, Mon, TeamId} from '../types.ts';
 import type {Rng} from './rng.ts';
-import {canAfford, makeContract, marketSalary, marketYears, maxSalary} from './cap.ts';
+import {canAfford, capYear, makeContract, marketSalary, marketYears, maxSalary, payroll} from './cap.ts';
 import {round50k} from './util.ts';
 import {gi} from './grades.ts';
-import {monValue} from './value.ts';
-import {freeAgents, logTx, money, rosterCount, teamMons} from './util.ts';
+import {lineupGain, monValue} from './value.ts';
+import {freeAgents, logTx, money, monLabel, rosterCount, teamMons} from './util.ts';
 import {releaseMon, signMon} from './roster.ts';
 import {ROSTER, autoLineup, removeFromLineup} from './lineup.ts';
 import {bestRole} from './ratings.ts';
@@ -14,7 +14,7 @@ import {inbox} from './inbox.ts';
 export const FA_ROUNDS = 3;
 export const FA_ASK_DROP = 0.85;
 
-const spName = (catalog: Catalog, m: Mon) => catalog.species[m.speciesId].name;
+const spName = (catalog: Catalog, state: LeagueState, m: Mon) => monLabel(catalog, state, m);
 
 /** Expiring this offseason (contracts ticked at the draft lottery): yearsLeft 0 while still on the team. */
 export const isExpiring = (m: Mon): boolean => !!m.teamId && !!m.contract && m.contract.yearsLeft <= 0;
@@ -33,21 +33,38 @@ export function interest(state: LeagueState, mon: Mon, teamId: TeamId): 'Keen' |
 
 const interestMult = {Keen: 0.95, Neutral: 1, Cool: 1.08};
 
+/** Why this team can't sign this mon at any price right now ('' = it can negotiate). Checked before an offer is built. */
+export function signBlock(state: LeagueState, teamId: TeamId, mon: Mon): {reason: string; rosterFull: boolean} {
+  const no = (reason: string, rosterFull = false) => ({reason, rosterFull});
+  if (mon.retired) return no('Retired');
+  const resign = mon.teamId === teamId && isExpiring(mon);
+  if (!resign && mon.teamId) return no('Under contract with a club');
+  if (!resign && mon.prospect !== undefined) return no('In the draft class');
+  if (resign && state.phase !== 'resign') return no('Re-signing happens in the re-sign window');
+  if (resign) return no('');
+  if (state.phase === 'regular' && state.week > state.settings.weeks) return no('Season over');
+  const inSeason = state.phase === 'regular' || state.phase === 'playoffs';
+  const n = rosterCount(teamMons(state, teamId));
+  if (inSeason && n >= ROSTER) return no('Roster full: release someone first', true);
+  if (!inSeason && n >= ROSTER + 4) return no('Roster full for the offseason (22 at most): release someone first', true);
+  return no('');
+}
+
+/** Cap rule for one salary: over the cap, only minimum deals ('' = fits). */
+export function capBlock(state: LeagueState, teamId: TeamId, salary: number): string {
+  return canAfford(state, teamId, salary) ? '' : `Over the cap after this deal: only minimum deals (${money(state.settings.minSalary)}) fit`;
+}
+
 export function offerContract(catalog: Catalog, state: LeagueState, teamId: TeamId, mon: Mon, salary: number, years: number): {accepted: boolean; reason: string} {
   const s = state.settings;
-  if (mon.retired) return {accepted: false, reason: 'Retired'};
   if (years < 1 || years > 7) return {accepted: false, reason: 'Contracts run 1 to 7 years'};
   if (salary < s.minSalary) return {accepted: false, reason: `The minimum is ${money(s.minSalary)}`};
   if (salary > maxSalary(state)) return {accepted: false, reason: `The maximum is ${money(maxSalary(state))}`};
   const resign = mon.teamId === teamId && isExpiring(mon);
-  if (!resign && mon.teamId) return {accepted: false, reason: 'Under contract with a club'};
-  if (!resign && mon.prospect !== undefined) return {accepted: false, reason: 'In the draft class'};
-  if (resign && state.phase !== 'resign') return {accepted: false, reason: 'Re-signing happens in the re-sign window'};
-  if (!resign && state.phase === 'regular' && state.week > state.settings.weeks) return {accepted: false, reason: 'Season over'};
-  const inSeason = state.phase === 'regular' || state.phase === 'playoffs';
-  if (!resign && inSeason && rosterCount(teamMons(state, teamId)) >= ROSTER) return {accepted: false, reason: 'Roster full: release someone first'};
-  if (!resign && !inSeason && rosterCount(teamMons(state, teamId)) >= ROSTER + 4) return {accepted: false, reason: 'Roster full for the offseason'};
-  if (!canAfford(state, teamId, salary)) return {accepted: false, reason: 'Not enough cap space (minimum deals always fit)'};
+  const block = signBlock(state, teamId, mon).reason;
+  if (block) return {accepted: false, reason: block};
+  const cap = capBlock(state, teamId, salary);
+  if (cap) return {accepted: false, reason: cap};
   const ask = askingPrice(catalog, state, mon);
   const need = Math.min(maxSalary(state), ask.salary * interestMult[interest(state, mon, teamId)] * (resign ? 0.97 : 1));
   // more years for a young mon, fewer for a veteran, shift the price a little
@@ -57,7 +74,7 @@ export function offerContract(catalog: Catalog, state: LeagueState, teamId: Team
   const c = makeContract(salary, years, {exception: salary <= s.minSalary ? 'minimum' : undefined});
   if (resign) {
     mon.contract = c;
-    logTx(state, 're-sign', `${state.teams[teamId].name} re-signed ${spName(catalog, mon)} (${money(salary)} x ${years})`, [teamId], [mon.id]);
+    logTx(state, 're-sign', `${state.teams[teamId].name} re-signed ${spName(catalog, state, mon)} (${money(salary)} x ${years})`, [teamId], [mon.id]);
   } else {
     signMon(catalog, state, teamId, mon, c);
     const team = state.teams[teamId];
@@ -85,7 +102,7 @@ export function franchiseTag(catalog: Catalog, state: LeagueState, mon: Mon): {o
   if (!chk.ok) return chk;
   mon.contract = makeContract(chk.salary, 1, {guaranteedYears: 1, tagged: true});
   state.teams[mon.teamId!].tagSeason = state.season;
-  logTx(state, 'tag', `${state.teams[mon.teamId!].name} tagged ${spName(catalog, mon)} (${money(chk.salary)})`, [mon.teamId!], [mon.id]);
+  logTx(state, 'tag', `${state.teams[mon.teamId!].name} tagged ${spName(catalog, state, mon)} (${money(chk.salary)})`, [mon.teamId!], [mon.id]);
   return {ok: true, reason: chk.reason};
 }
 
@@ -104,7 +121,7 @@ export function aiResign(catalog: Catalog, state: LeagueState, rng: Rng): void {
       if (!keep || !rng.chance(0.85)) continue;
       if (canAfford(state, team.id, ask.salary)) {
         m.contract = makeContract(ask.salary, ask.years);
-        logTx(state, 're-sign', `${team.name} re-signed ${spName(catalog, m)} (${money(ask.salary)} x ${ask.years})`, [team.id], [m.id]);
+        logTx(state, 're-sign', `${team.name} re-signed ${spName(catalog, state, m)} (${money(ask.salary)} x ${ask.years})`, [team.id], [m.id]);
       } else if (team.tagSeason !== state.season && o >= (ovrs[2] ?? 99)) {
         franchiseTag(catalog, state, m);
       }
@@ -121,15 +138,19 @@ export function releaseExpiring(catalog: Catalog, state: LeagueState): void {
     const human = state.teams[teamId].human;
     removeFromLineup(state, teamId, m.id);
     m.teamId = null; m.contract = null; m.tier = 'practice'; m.faSince = state.season; m.askMult = 1;
-    logTx(state, 'free-agent', `${spName(catalog, m)} left ${state.teams[teamId].name} in free agency`, [teamId], [m.id]);
-    if (human) inbox(state, 'deal', `${spName(catalog, m)} hit free agency`, 'The contract ran out without a new deal.', {kind: 'mon', id: m.id});
+    logTx(state, 'free-agent', `${spName(catalog, state, m)} left ${state.teams[teamId].name} in free agency`, [teamId], [m.id]);
+    if (human) inbox(state, 'deal', `${spName(catalog, state, m)} hit free agency`, 'The contract ran out without a new deal.', {kind: 'mon', id: m.id});
   }
 }
 
+/** FA bidding knobs: a club bids more the more the mon adds to its lineup (rating points over its current best fit in
+ *  the strategies it builds toward), and a club under the salary floor spends toward it (the shortfall is charged
+ *  as dead money anyway). */
+export const FA_BID = {gainEager: 1 / 40, gainEagerMax: 0.15, needGain: 3, floorEager: 0.25, floorPay: 4, floorExtra: 3, floorMargin: 1.04};
+
 /**
- * One bidding round: AI teams bid by role needs and cap room; each free agent
- * takes the best offer by total money weighted to guaranteed years; unsigned
- * free agents lower their ask.
+ * One bidding round: AI teams bid by lineup gain and cap room, and spend toward the floor; each free agent
+ * takes the best offer by total money weighted to guaranteed years; unsigned free agents lower their ask.
  */
 export function faRound(catalog: Catalog, state: LeagueState, rng: Rng): number {
   const fas = freeAgents(state);
@@ -141,6 +162,8 @@ export function faRound(catalog: Catalog, state: LeagueState, rng: Rng): number 
     const vs = teamMons(state, t).filter(m => m.tier !== 'ir').map(m => monValue(catalog, state, m, t)).sort((a, b) => a - b);
     worst.set(t, vs[0] ?? 0);
   }
+  // the floor these contracts count toward: next season's (it grows with the cap), with a little margin for cuts
+  const floorTarget = round50k(state.settings.floor * (capYear(state) > state.season ? 1 + state.settings.capGrowth : 1) * FA_BID.floorMargin);
   let signed = 0;
   for (const fa of fas) {
     const ask = askingPrice(catalog, state, fa);
@@ -149,10 +172,18 @@ export function faRound(catalog: Catalog, state: LeagueState, rng: Rng): number 
       if (team.human) continue;
       const n = counts.get(team.id)!;
       const v = monValue(catalog, state, fa, team.id);
-      const wants = n < ROSTER || (n < ROSTER + 2 && v > worst.get(team.id)! + 10);
+      const gain = lineupGain(catalog, state, team.id, fa);
+      const short = floorTarget - payroll(state, team.id);
+      // a spot to fill, a real lineup upgrade, or a clear upgrade on the worst player (who would be cut)
+      const wants = n < ROSTER || (n < ROSTER + 2 && (gain >= FA_BID.needGain || v > worst.get(team.id)! + 10))
+        || (short > 0 && n < ROSTER + FA_BID.floorExtra);
       if (!wants) continue;
-      const eager = 0.95 + rng.next() * 0.15 + (n < ROSTER - 2 ? 0.05 : 0);
-      const salary = Math.min(maxSalary(state), Math.max(state.settings.minSalary, round50k(ask.salary * eager)));
+      // a full-enough roster doesn't pay for a body that doesn't play
+      if (n >= ROSTER - 1 && gain <= 0 && short <= 0) continue;
+      const eager = 0.95 + rng.next() * 0.1 + Math.min(FA_BID.gainEagerMax, gain * FA_BID.gainEager)
+        + (n < ROSTER - 2 ? 0.05 : 0) + (short > 0 ? FA_BID.floorEager : 0);
+      let salary = Math.min(maxSalary(state), Math.max(state.settings.minSalary, round50k(ask.salary * eager)));
+      if (short > 0) salary = Math.min(maxSalary(state), Math.max(salary, round50k(Math.min(short, ask.salary * FA_BID.floorPay))));
       if (!canAfford(state, team.id, salary)) continue;
       const years = Math.max(1, Math.min(5, ask.years + (rng.chance(0.3) ? 1 : 0)));
       const guaranteed = Math.ceil(years / 2);

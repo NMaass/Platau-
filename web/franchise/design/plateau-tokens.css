@@ -365,8 +365,8 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* status chip of one width (clinch, interest, verdict, lottery move): sized for the longest word ("Clinched spot") */
 :root{--chip-w:128px}
 .chip.fix{width:var(--chip-w);justify-content:center;overflow:hidden;text-overflow:ellipsis}
-/* two equal buttons in one table cell (Scout · 1 / Full · 5) */
-.l-cellacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+/* two (or --n) equal buttons in one table cell (Scout · 1 / Full · 5; Open / Export / Delete) */
+.l-cellacts{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:var(--s2)}
 .l-cellacts>.btn{min-width:0;padding:0 var(--s2)}
 /* toolbar above a table: switches/filters left, a count right; fixed height so toggling never moves the table */
 .l-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:var(--ctl-h-touch);flex-wrap:wrap}

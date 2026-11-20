@@ -2,10 +2,10 @@
 // verdict with a meter score and a reason, AI offers to the user, AI-AI trades.
 import type {Catalog, DraftPick, LeagueState, Mon, MonId, TeamId, TradeOffer} from '../types.ts';
 import type {Rng} from './rng.ts';
-import {monValue, pickValue} from './value.ts';
+import {monValue, pickValue, targetStrategies} from './value.ts';
 import {capPayroll} from './cap.ts';
-import {ROSTER, autoLineup, normalizeTiers, removeFromLineup} from './lineup.ts';
-import {logTx, newId, rosterCount, teamMons} from './util.ts';
+import {ROSTER, autoLineup, normalizeTiers, planLineup, removeFromLineup} from './lineup.ts';
+import {logTx, monLabel, newId, rosterCount, teamMons} from './util.ts';
 import {inbox} from './inbox.ts';
 import {enforceRosters} from './roster.ts';
 import {leagueRng} from './rng.ts';
@@ -15,7 +15,7 @@ export type TradeProposal = Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>;
 /** The AI wants at least this edge (score, -100..100) to accept. */
 export const ACCEPT_SCORE = 5;
 
-const spName = (catalog: Catalog, state: LeagueState, id: MonId) => catalog.species[state.mons[id]?.speciesId]?.name ?? id;
+const spName = (catalog: Catalog, state: LeagueState, id: MonId) => state.mons[id] ? monLabel(catalog, state, state.mons[id]) : id;
 const samePick = (a: DraftPick, b: DraftPick) => a.season === b.season && a.round === b.round && a.originalTeamId === b.originalTeamId;
 
 export function tradeWindowOpen(state: LeagueState): {open: boolean; reason: string} {
@@ -108,7 +108,9 @@ export function executeTrade(catalog: Catalog, state: LeagueState, o: TradePropo
   for (const t of [A, B]) {
     if (!t.human || t.lineup.auto) autoLineup(catalog, state, t.id); else normalizeTiers(catalog, state, t.id);
   }
-  if (state.phase === 'regular' || state.phase === 'preseason') enforceRosters(catalog, state, leagueRng(state), [A.id, B.id]);
+  // AI clubs refill/trim at once; the user's club is never back-filled silently (the UI offers the signing, or Play fills it)
+  const ai = [A.id, B.id].filter(t => !state.teams[t].human);
+  if ((state.phase === 'regular' || state.phase === 'preseason') && ai.length) enforceRosters(catalog, state, leagueRng(state), ai);
 }
 
 export function proposeTrade(catalog: Catalog, state: LeagueState, o: TradeProposal): {accepted: boolean; reason: string} {
@@ -132,6 +134,13 @@ export function respondOffer(catalog: Catalog, state: LeagueState, offerId: stri
 export function expireOffers(state: LeagueState): void {
   for (const o of state.offers) if (o.status === 'open' && (o.expiresWeek < state.week || !tradeWindowOpen(state).open)) o.status = 'expired';
   if (state.offers.length > 60) state.offers = state.offers.filter(o => o.status === 'open').concat(state.offers.filter(o => o.status !== 'open').slice(-40));
+}
+
+/** Is an incoming offer good for the user by the model's own measure (the bar the AI uses to accept)? */
+export function offerGoodForUser(catalog: Catalog, state: LeagueState, o: TradeProposal): boolean {
+  const {inValue, outValue} = tradeBalance(catalog, state, o, o.toTeamId);
+  const score = ((inValue - outValue) / Math.max(10, outValue, inValue)) * 100;
+  return score >= ACCEPT_SCORE && !tradeProblem(catalog, state, o);
 }
 
 /** Tradeable assets of a team, least valuable to it first (never its starters unless asked). */
@@ -172,20 +181,46 @@ export function makeAiOffer(catalog: Catalog, state: LeagueState, rng: Rng): Tra
   return full;
 }
 
-/** AI-to-AI: a 1-for-1 swap both clubs value (needs make the same mon worth more to one side). */
+/** AI-AI trade knobs: neutral values (viewer null) within `fair` of each other, and at least one side's lineup
+ *  (or `slack` points for cheap players), and at least one side's lineup must improve by `minLineupGain` rating
+ *  points (no more bench-for-bench swaps). */
+export const AI_TRADE = {fair: 0.3, slack: 2, minLineupGain: 2};
+
+/** Change in a club's best lineup (planLineup over the strategies it builds toward: rating sum, off-role slots
+ *  costed like chooseStrategy) if it swapped `out` for `inc`. Tried on the state and put back. */
+export function planDelta(catalog: Catalog, state: LeagueState, teamId: TeamId, inc: Mon, out: Mon): number {
+  const score = () => Math.max(...targetStrategies(state, teamId).map(([sid, w]) => {
+    const p = planLineup(catalog, state, teamId, sid);
+    return w * (p.ratingSum - (6 - p.onRole) * 40);
+  }));
+  const before = score();
+  const keep = [inc.teamId, inc.tier, out.teamId, out.tier] as const;
+  inc.teamId = teamId; if (inc.tier !== 'ir') inc.tier = 'backup';
+  out.teamId = null;
+  const after = score();
+  [inc.teamId, inc.tier, out.teamId, out.tier] = keep;
+  return after - before;
+}
+
+/** AI-to-AI: a 1-for-1 swap both clubs value (needs make the same mon worth more to one side), fair by neutral
+ *  value, that improves at least one club's lineup in the strategies it builds toward. */
 export function aiTrade(catalog: Catalog, state: LeagueState, rng: Rng): boolean {
   if (!tradeWindowOpen(state).open) return false;
   const ids = Object.keys(state.teams).filter(t => !state.teams[t].human);
   const a = rng.pick(ids), b = rng.pick(ids.filter(t => t !== a));
-  const sa = spareMons(catalog, state, a).slice(0, 5), sb = spareMons(catalog, state, b).slice(0, 5);
+  const sa = spareMons(catalog, state, a).slice(0, 8), sb = spareMons(catalog, state, b).slice(0, 8);
   for (const x of sa) for (const y of sb) {
     const o: TradeProposal = {fromTeamId: a, toTeamId: b, give: {mons: [x.id], picks: []}, get: {mons: [y.id], picks: []}};
     const gainA = monValue(catalog, state, y, a) - monValue(catalog, state, x, a);
     const gainB = monValue(catalog, state, x, b) - monValue(catalog, state, y, b);
-    if (gainA > 2 && gainB > 2 && !tradeProblem(catalog, state, o)) {
-      executeTrade(catalog, state, o);
-      return true;
-    }
+    if (gainA <= 2 || gainB <= 2) continue;
+    const vx = monValue(catalog, state, x, null), vy = monValue(catalog, state, y, null);
+    if (Math.abs(vx - vy) > Math.max(AI_TRADE.fair * Math.max(vx, vy), AI_TRADE.slack)) continue;
+    const lineupA = planDelta(catalog, state, a, y, x), lineupB = planDelta(catalog, state, b, x, y);
+    if (Math.max(lineupA, lineupB) < AI_TRADE.minLineupGain || Math.min(lineupA, lineupB) < 0) continue;
+    if (tradeProblem(catalog, state, o)) continue;
+    executeTrade(catalog, state, o);
+    return true;
   }
   return false;
 }

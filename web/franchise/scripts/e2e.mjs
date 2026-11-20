@@ -147,6 +147,18 @@ try {
     }
   }
 
+  // the hosted replay viewer is blocked here: after ~10 s the frame says so, the box score stays
+  if (battle) {
+    await page.setViewportSize({width: 1280, height: 900});
+    step('replay viewer timeout');
+    await page.goto(BASE + battle); await settle();
+    await page.waitForFunction(() => /couldn't load/.test(document.querySelector('#replay-host')?.textContent ?? ''), null, {timeout: 20000}).catch(() => {});
+    const ok = await page.evaluate(() => /couldn't load/.test(document.querySelector('#replay-host')?.textContent ?? ''));
+    const online = await page.evaluate(() => /Turn \d|Team preview/.test(document.querySelector('#replay-host')?.textContent ?? ''));
+    if (!ok && !online) problems.push('[battle] the replay frame neither played nor said it could not load');
+    if (!(await page.$('#h-box'))) problems.push('[battle] no box score next to the replay');
+  }
+
   // Draft start: the league opens on the startup draft (empty rosters); Sim to end, then sign contracts
   await page.setViewportSize({width: 1280, height: 900});
   step('new league: Draft');
@@ -156,6 +168,10 @@ try {
   const slot = await page.$eval('#h-np', (h) => h.textContent);
   if (!/Eterna/.test(slot ?? '')) problems.push(`[draft start] preview shows "${slot}", expected Eterna`);
   await page.click('[data-act="newleague"]');
+  // a league is open: starting another asks first, and the open one stays saved
+  await page.waitForSelector('#dlg [data-dlg="ok"]');
+  if (!/stays saved/.test(await page.$eval('#dlg', (d) => d.innerText))) problems.push('[new league] confirm does not say the current league stays saved');
+  await page.click('#dlg [data-dlg="ok"]');
   await page.waitForFunction(() => location.hash === '#draft');
   await page.waitForSelector('[data-fo="simend"]');
   await checkRendered('#draft (startup)');
@@ -179,6 +195,14 @@ try {
   await page.goto(BASE + '#week'); await settle();
   const ph = await page.$eval('#view h1', (h) => h.textContent);
   if (!/preseason/i.test(ph ?? '')) problems.push(`[startup draft] expected the preseason after the draft, got "${ph}"`);
+  step('your leagues');
+  await page.goto(BASE + '#settings'); await settle();
+  const saves = await page.$$eval('#view [data-act="saveopen"]', (b) => b.length);
+  if (saves !== 2) problems.push(`[your leagues] ${saves} saved leagues listed, expected 2`);
+  await page.click('#view [data-act="saveopen"]:not([aria-disabled="true"])');
+  await page.waitForFunction(() => location.hash === '#week'); await settle();
+  const back = await page.$eval('#view h1', (h) => h.textContent);
+  if (!/Week 2/.test(back ?? '')) problems.push(`[your leagues] reopening the first league shows "${back}", expected Week 2`);
 } catch (e) {
   problems.push(`[${where}] ${e.message}`);
 } finally {

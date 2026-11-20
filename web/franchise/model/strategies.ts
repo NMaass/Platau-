@@ -5,11 +5,15 @@ import {WEATHER_ABUSER, WEATHER_SETTER} from '../catalog/roles.ts';
 
 const SETTER: Role[] = ['rocks', 'spikes', 'screens', 'rain-setter', 'sun-setter', 'sand-setter', 'snow-setter'];
 
+/** Weather: its setter and abusers come first (the solver prefers earlier roles), but a typical roster can field it
+ *  on-role: the lead slot takes another setter when the club has no weather setter (only 4 species set sand), and
+ *  the abuser slots take the attackers a weather team plays alongside them. */
 function weather(id: string, name: string, w: Weather): StrategyDef {
   const ab = WEATHER_ABUSER[w];
   return {
     id, name, weather: w,
-    slots: [[WEATHER_SETTER[w]], [ab, 'sweeper'], [ab, 'wallbreaker'], [ab, 'attacker'], ['sweeper', ab], ['pivot', 'remover']],
+    slots: [[WEATHER_SETTER[w], 'rocks', 'spikes', 'screens'], [ab, 'sweeper', 'attacker'], [ab, 'wallbreaker', 'attacker'],
+      [ab, 'attacker', 'wallbreaker'], ['sweeper', ab, 'attacker'], ['pivot', 'remover', 'wall']],
   };
 }
 
@@ -26,8 +30,9 @@ export const STRATEGIES: StrategyDef[] = [
   weather('sun', 'Sun', 'sun'),
   weather('sand', 'Sand', 'sand'),
   weather('snow', 'Snow', 'snow'),
+  // hazards first; spikes setters are rare (62 species), so a second rocks/screens lead and walls that phaze stand in
   {id: 'hazard-stack', name: 'Hazard Stack', slots: [
-    ['rocks'], ['spikes'], ['phazer'], ['wall', 'remover'], ['pivot'], ['attacker', 'wallbreaker']]},
+    ['rocks', 'spikes'], ['spikes', 'rocks', 'screens'], ['phazer', 'wall', 'pivot'], ['wall', 'remover', 'phazer'], ['pivot', 'remover', 'wall'], ['attacker', 'wallbreaker', 'sweeper']]},
 ];
 
 export function strategyById(id: string): StrategyDef {

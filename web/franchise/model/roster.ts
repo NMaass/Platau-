@@ -6,12 +6,12 @@ import {ROSTER, normalizeTiers, removeFromLineup, autoLineup} from './lineup.ts'
 import {addDeadMoney, canAfford, deadMoneyOnCut, makeContract, marketSalary} from './cap.ts';
 import {monValue} from './value.ts';
 import {bestRole} from './ratings.ts';
-import {freeAgents, logTx, money, rosterCount, teamMons} from './util.ts';
+import {freeAgents, logTx, money, monLabel, rosterCount, teamMons} from './util.ts';
 import {inbox} from './inbox.ts';
 import {drawFamily} from './pool.ts';
 import {createMon} from './mons.ts';
 
-const spName = (catalog: Catalog, m: Mon) => catalog.species[m.speciesId].name;
+const spName = (catalog: Catalog, state: LeagueState, m: Mon) => monLabel(catalog, state, m);
 
 export function signMon(catalog: Catalog, state: LeagueState, teamId: TeamId, mon: Mon, contract: Contract, kind = 'signed'): void {
   mon.teamId = teamId;
@@ -20,7 +20,7 @@ export function signMon(catalog: Catalog, state: LeagueState, teamId: TeamId, mo
   mon.prospect = undefined;
   mon.faSince = undefined;
   mon.askMult = undefined;
-  logTx(state, kind, `${state.teams[teamId].name} ${kind} ${spName(catalog, mon)} (${money(contract.salary)} x ${contract.yearsLeft})`, [teamId], [mon.id]);
+  logTx(state, kind, `${state.teams[teamId].name} ${kind} ${spName(catalog, state, mon)} (${money(contract.salary)} x ${contract.yearsLeft})`, [teamId], [mon.id]);
 }
 
 /** Release to free agency; dead money for the remaining guarantee. */
@@ -35,7 +35,7 @@ export function releaseMon(catalog: Catalog, state: LeagueState, mon: Mon, why =
   mon.faSince = state.season;
   mon.askMult = 1;
   mon.tempFor = undefined;
-  logTx(state, 'release', `${state.teams[teamId].name} ${why} ${spName(catalog, mon)}`, [teamId], [mon.id]);
+  logTx(state, 'release', `${state.teams[teamId].name} ${why} ${spName(catalog, state, mon)}`, [teamId], [mon.id]);
 }
 
 /** A replacement-level free agent made on the spot when the FA pool is empty. */
@@ -111,7 +111,7 @@ export function enforceRosters(catalog: Catalog, state: LeagueState, rng: Rng, o
         : minimumDeal(state);
       signMon(catalog, state, teamId, fa, c);
       if (irOut && (state.phase === 'regular' || state.phase === 'playoffs')) fa.tempFor = irOut.id;
-      if (team.human) inbox(state, 'deal', `Signed ${spName(catalog, fa)} to fill the roster`, `Your roster was short, so ${spName(catalog, fa)} joined on a ${money(c.salary)} deal. Review it on the roster page.`, {kind: 'mon', id: fa.id});
+      if (team.human) inbox(state, 'deal', `Signed ${spName(catalog, state, fa)} to fill the roster`, `Your roster was short, so ${spName(catalog, state, fa)} joined on a ${money(c.salary)} deal. Review it on the roster page.`, {kind: 'mon', id: fa.id});
       mons = teamMons(state, teamId);
       changed = true;
     }
@@ -119,7 +119,7 @@ export function enforceRosters(catalog: Catalog, state: LeagueState, rng: Rng, o
       const cut = releaseCandidate(catalog, state, teamId);
       if (!cut) break;
       releaseMon(catalog, state, cut);
-      if (team.human) inbox(state, 'deal', `Released ${spName(catalog, cut)}`, `Rosters hold 18 outside injured reserve, so ${spName(catalog, cut)} was released.`, {kind: 'mon', id: cut.id});
+      if (team.human) inbox(state, 'deal', `Released ${spName(catalog, state, cut)}`, `Rosters hold 18 outside injured reserve, so ${spName(catalog, state, cut)} was released.`, {kind: 'mon', id: cut.id});
       mons = teamMons(state, teamId);
       changed = true;
     }

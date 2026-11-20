@@ -1,12 +1,12 @@
 // How a team values a Pokémon or a draft pick (trades, FA bids, cuts, draft).
 // From role ratings, age/potential, contract surplus and the team's role needs.
-import type {Catalog, CatalogSpecies, DraftPick, LeagueState, Mon, TeamId} from '../types.ts';
+import type {Catalog, CatalogSpecies, DraftPick, LeagueState, Mon, MonId, Role, TeamId} from '../types.ts';
 import {EV_ADJ, allRoles, bestRole, speciesRoles} from './ratings.ts';
 import {knownPotential, knownRating} from './scouting.ts';
 import {marketSalary} from './cap.ts';
 import {strategyById} from './strategies.ts';
-import {gi, gradeAt} from './grades.ts';
-import {clamp} from './util.ts';
+import {GROWTH_BAND_HI, gi, gradeAt, gradeForGrowth} from './grades.ts';
+import {clamp, teamMons} from './util.ts';
 import {reverseStandings} from './standings.ts';
 
 const finalBaseCache = new WeakMap<CatalogSpecies, number>();
@@ -28,31 +28,91 @@ export function perceivedOvr(catalog: Catalog, state: LeagueState, viewer: TeamI
   return (k.lo + k.hi) / 2;
 }
 
-/** Projected peak rating (young mons with room to grow and evolve). */
+/** Growth a young mon gains in a season (measured in fast-sim leagues: ~14 at 23 and under, ~7 at 24–26) and how
+ *  many seasons a club plans ahead when it values young mons (draft, trades, FA). */
+export const GROWTH_PER_SEASON = {young: 14, prime: 7};
+export const PLAN_SEASONS = 3;
+
+const bestBase = (sp: CatalogSpecies): number => Math.max(0, ...speciesRoles(sp).map(r => r.base));
+/** Best role base the species reaches by this Growth (evolutions happen at their level, measured on Growth). */
+function baseAtGrowth(catalog: Catalog, sp: CatalogSpecies, growth: number): number {
+  let best = bestBase(sp);
+  for (const e of sp.evolvesTo) {
+    const n = catalog.species[e.id];
+    if (n?.sets.length && growth >= e.level) best = Math.max(best, baseAtGrowth(catalog, n, growth));
+  }
+  return best;
+}
+
+/** Projected rating PLAN_SEASONS ahead: the Growth a young mon can still gain by then (time to peak), capped by its
+ *  potential, with the evolutions that Growth reaches. A ceiling five seasons away counts only as far as it gets. */
 export function projectedOvr(catalog: Catalog, state: LeagueState, viewer: TeamId | null, mon: Mon): number {
   const now = perceivedOvr(catalog, state, viewer, mon);
   if (mon.age > 25) return now;
   const pot = viewer ? knownPotential(state, viewer, mon) : {lo: mon.potential, hi: mon.potential};
   const potGrade = gradeAt(Math.round((gi(pot.lo) + gi(pot.hi)) / 2));
-  const peak = ceilingBase(catalog, catalog.species[mon.speciesId]) + EV_ADJ[potGrade];
-  const w = clamp((26 - mon.age) / 5, 0, 1);
-  return now + Math.max(0, peak - now) * 0.6 * w;
+  const sp = catalog.species[mon.speciesId];
+  const perSeason = mon.age <= 23 ? GROWTH_PER_SEASON.young : GROWTH_PER_SEASON.prime;
+  const g = Math.min(Math.max(mon.growth, GROWTH_BAND_HI[potGrade]), mon.growth + PLAN_SEASONS * perSeason);
+  const grade = gradeAt(Math.min(gi(potGrade), gi(gradeForGrowth(g))));
+  const adjNow = now - (bestBase(sp) + EV_ADJ[gradeForGrowth(mon.growth)]);   // IVs, scouting error: carried over
+  const proj = baseAtGrowth(catalog, sp, g) + EV_ADJ[grade] + adjNow;
+  return now + Math.max(0, proj - now) * 0.8;
 }
 
-/** How much this team would gain in its lineup by adding the mon (0..0.35). */
-export function needBoost(catalog: Catalog, state: LeagueState, teamId: TeamId, mon: Mon): number {
+const fitFor = (roles: {role: Role; ovr: number}[], slot: Role[]): number => {
+  let f = 0;
+  for (const r of roles) if (r.ovr > f && slot.includes(r.role)) f = r.ovr;
+  return f;
+};
+
+/** On-role fit of each slot of a strategy from the team's roster (greedy, best fits first; 0 = open slot). */
+export function slotFits(catalog: Catalog, state: LeagueState, teamId: TeamId, strategyId: string, exclude?: MonId | MonId[], extra: Mon[] = []): number[] {
+  const strat = strategyById(strategyId);
+  const ex = new Set(Array.isArray(exclude) ? exclude : exclude ? [exclude] : []);
+  const mons = [...teamMons(state, teamId).filter(m => m.tier !== 'ir' && !ex.has(m.id)), ...extra];
+  const pairs: [number, number, number][] = [];
+  mons.forEach((m, i) => {
+    const roles = allRoles(catalog, m);
+    strat.slots.forEach((slot, si) => { const f = fitFor(roles, slot); if (f > 0) pairs.push([si, i, f]); });
+  });
+  pairs.sort((a, b) => b[2] - a[2]);
+  const fit = strat.slots.map(() => 0), used = new Set<number>();
+  for (const [si, i, f] of pairs) if (!fit[si] && !used.has(i)) { fit[si] = f; used.add(i); }
+  return fit;
+}
+
+/** The strategies a club builds toward: the one it plays and its two favourites (second favourite weighs a bit less). */
+export function targetStrategies(state: LeagueState, teamId: TeamId): [string, number][] {
   const team = state.teams[teamId];
-  const strat = strategyById(team.lineup.strategyId);
+  const out = new Map<string, number>([[team.lineup.strategyId, 1]]);
+  const [f1, f2] = team.favoriteStrategies ?? [];
+  if (f1) out.set(f1, 1);
+  if (f2 && !out.has(f2)) out.set(f2, 0.8);
+  return [...out];
+}
+
+/** Rating points the mon adds to the team's best slot in the strategies it builds toward (0 = no better than now). */
+export function lineupGain(catalog: Catalog, state: LeagueState, teamId: TeamId, mon: Mon): number {
   const roles = allRoles(catalog, mon);
   let gain = 0;
-  strat.slots.forEach((slotRoles, i) => {
-    const fit = Math.max(0, ...roles.filter(r => slotRoles.includes(r.role)).map(r => r.ovr));
-    if (!fit) return;
-    const cur = team.lineup.slots[i]?.monId ? state.mons[team.lineup.slots[i].monId!] : undefined;
-    const curFit = cur && cur.teamId === teamId ? Math.max(0, ...allRoles(catalog, cur).filter(r => slotRoles.includes(r.role)).map(r => r.ovr)) : 0;
-    gain = Math.max(gain, fit - curFit);
-  });
-  return clamp(gain / 25, 0, 0.35);
+  for (const [sid, w] of targetStrategies(state, teamId)) {
+    const fits = slotFits(catalog, state, teamId, sid, mon.id);
+    strategyById(sid).slots.forEach((slot, i) => {
+      const f = fitFor(roles, slot);
+      if (f) gain = Math.max(gain, w * (f - fits[i]));
+    });
+  }
+  return gain;
+}
+
+/** How much this team would gain by adding the mon (0..0.35): its lineup gain in the club's current and favourite
+ *  strategies, plus a little for the gym's type. */
+export function needBoost(catalog: Catalog, state: LeagueState, teamId: TeamId, mon: Mon): number {
+  const team = state.teams[teamId];
+  let b = clamp(lineupGain(catalog, state, teamId, mon) / 25, 0, 0.35);
+  if (team.gymType && catalog.species[mon.speciesId]?.types.includes(team.gymType)) b += 0.03;
+  return clamp(b, 0, 0.35);
 }
 
 /** Trade value in points (an OVR-95 prime starter ~100). */

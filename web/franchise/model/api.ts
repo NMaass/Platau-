@@ -19,9 +19,10 @@ import * as dr from './draft.ts';
 import * as tr from './trades.ts';
 import * as fa from './freeagency.ts';
 import * as po from './playoffs.ts';
-import {releaseMon, rosterExcess as excess, trimRoster as trim} from './roster.ts';
+import {minimumDeal, releaseMon, rosterExcess as excess, signMon, trimRoster as trim} from './roster.ts';
+import {monValue} from './value.ts';
 import {strategyById} from './strategies.ts';
-import {freeAgents as faList, teamMons} from './util.ts';
+import {freeAgents as faList, rosterCount, teamMons} from './util.ts';
 import {inbox as pushInbox, markRead} from './inbox.ts';
 
 // Remembered for the few contract calls whose signature has no catalog (franchiseTag, cut).
@@ -137,6 +138,54 @@ export function cut(state: LeagueState, monId: MonId): void {
   const m = state.mons[monId];
   if (!m?.teamId) return;
   releaseMon(needCatalog(), state, m);
+}
+
+/** What releasing one of the user's Pokémon costs, for the confirm dialog: dead money (this cap year) and cap room. */
+export function releaseInfo(catalog: Catalog, state: LeagueState, monId: MonId): {ok: boolean; reason: string; deadMoney: number; salary: number; capRoomBefore: number; capRoomAfter: number; rosterAfter: number} {
+  remember(catalog);
+  const m = state.mons[monId];
+  const room = cap.capSpace(state, state.userTeamId);
+  const base = {deadMoney: 0, salary: 0, capRoomBefore: room, capRoomAfter: room, rosterAfter: rosterCount(teamMons(state, state.userTeamId))};
+  if (!m || m.teamId !== state.userTeamId) return {ok: false, reason: 'Not on your roster', ...base};
+  if (!m.contract) return {ok: false, reason: 'Contracts are signed when the startup draft ends', ...base};
+  const dead = cap.deadMoneyOnCut(m.contract), hit = cap.contractHit(m.contract);
+  return {ok: true, reason: '', deadMoney: dead, salary: hit, capRoomBefore: room, capRoomAfter: room + hit - dead,
+    rosterAfter: base.rosterAfter - (m.tier === 'ir' ? 0 : 1)};
+}
+/** Release one of the user's Pokémon to free agency (dead money for the guarantee); the lineup refills its slot. */
+export function release(catalog: Catalog, state: LeagueState, monId: MonId): {ok: boolean; reason: string} {
+  const info = releaseInfo(catalog, state, monId);
+  if (!info.ok) return {ok: false, reason: info.reason};
+  releaseMon(catalog, state, state.mons[monId]);
+  const team = state.teams[state.userTeamId];
+  if (team.lineup.auto) lu.autoLineup(catalog, state, team.id); else lu.normalizeTiers(catalog, state, team.id);
+  return {ok: true, reason: 'Released'};
+}
+/** Why the user can't sign this free agent at any price right now ('' = can negotiate); rosterFull → offer a release. */
+export function signBlock(state: LeagueState, monId: MonId): {reason: string; rosterFull: boolean} { return fa.signBlock(state, state.userTeamId, state.mons[monId]); }
+/** The hard-cap rule for one salary ('' = fits; over the cap only minimum deals fit). */
+export function capBlock(state: LeagueState, salary: number): string { return fa.capBlock(state, state.userTeamId, salary); }
+
+/** In season the user's roster is never back-filled silently: how many spots are open and who would fill them (minimum deals). */
+export function rosterFill(catalog: Catalog, state: LeagueState): {open: number; candidates: Mon[]} {
+  remember(catalog);
+  const inSeason = state.phase === 'regular' || state.phase === 'playoffs' || state.phase === 'preseason';
+  const open = inSeason ? Math.max(0, lu.ROSTER - rosterCount(teamMons(state, state.userTeamId))) : 0;
+  if (!open) return {open: 0, candidates: []};
+  const me = state.userTeamId;
+  const fas = faList(state).sort((a, b) => monValue(catalog, state, b, me) - monValue(catalog, state, a, me) || a.id.localeCompare(b.id));
+  return {open, candidates: fas.slice(0, open)};
+}
+/** Sign one free agent on a minimum deal to fill an open spot (the choice offered after a trade). */
+export function signToFill(catalog: Catalog, state: LeagueState, monId: MonId): {ok: boolean; reason: string} {
+  const {open} = rosterFill(catalog, state);
+  const m = state.mons[monId];
+  if (!open) return {ok: false, reason: 'Your roster is full'};
+  if (!m || m.teamId || m.retired || m.prospect !== undefined) return {ok: false, reason: 'No longer a free agent'};
+  signMon(catalog, state, state.userTeamId, m, minimumDeal(state));
+  const team = state.teams[state.userTeamId];
+  if (team.lineup.auto) lu.autoLineup(catalog, state, team.id); else lu.normalizeTiers(catalog, state, team.id);
+  return {ok: true, reason: 'Signed'};
 }
 
 // ---- week simulation

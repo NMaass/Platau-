@@ -1,7 +1,7 @@
 // Plateau entry: boot (catalog + league), shell, router, event delegation.
 import {ICONS} from './ui/icons.ts';
 import {esc, ic, $, plural, record} from './ui/dom.ts';
-import {store, onChange, notify, act, S, C, loadCatalog, loadLast, save, exportSave, importSave, playWeek, setPool, setFastSim} from './ui/store.ts';
+import {store, onChange, notify, act, S, C, loadCatalog, loadLast, save, exportSave, importSave, playWeek, setPool, setFastSim, refreshSaveList, savedLeagues, openSave, exportSaveById, deleteSave} from './ui/store.ts';
 import {M, api, setFixtureMode, isFixtureMode} from './ui/model.ts';
 import {parse, type Route} from './ui/router.ts';
 import {ROUTES} from './ui/routes.ts';
@@ -15,6 +15,7 @@ import {viewRoster} from './ui/screens/roster.ts';
 import {viewLineup, openChooser} from './ui/screens/lineup.ts';
 import {viewMon} from './ui/screens/mon.ts';
 import {viewBattle, afterBattle, leaveBattle} from './ui/screens/battle.ts';
+import {releaseDialog} from './ui/screens/moves.ts';
 import {viewSettings, viewNewLeague, applyTheme, newPreview, newMode, newTeamIndex, rerollNewLeague, takePreview} from './ui/screens/settings.ts';
 import {fixtureCatalog, fixtureLeague} from './ui/dev-fixture.ts';
 import {createSimPool} from './sim/pool.ts';
@@ -235,8 +236,24 @@ document.addEventListener('click', (e) => {
     case 'newmode': keepName(); store.ui.newMode = b.dataset.v; render(); $(`[data-act="newmode"][data-v="${b.dataset.v}"]`)?.focus(); break;
     case 'newreroll': keepName(); rerollNewLeague(); render(); $('[data-act="newreroll"]')?.focus(); break;
     case 'newleague': void newLeague(); break;
+    case 'release': releaseDialog(b.dataset.mon!); break;
+    case 'saveopen': void openSave(b.dataset.id!).then((ok) => { if (ok) location.hash = S().phase === 'draft' ? '#draft' : '#week'; }); break;
+    case 'saveexport': void exportSaveById(b.dataset.id!); break;
+    case 'savedelete': void deleteLeague(b.dataset.id!); break;
   }
 });
+
+/** Delete a saved league, after a confirm that names it. Deleting the open league goes back to New league. */
+async function deleteLeague(id: string): Promise<void> {
+  const m = savedLeagues().find((x) => x.id === id);
+  if (!m) return;
+  const open = store.state?.id === id;
+  const ok = await confirmDialog(`Delete ${esc(m.name)}?`, `${esc(m.team)}, season ${m.season}. The save is removed from this browser and can't be recovered${open ? '. It is the league open now' : ''}. Export it first to keep a copy.`, 'Delete league');
+  if (!ok) return;
+  await deleteSave(id);
+  if (open) { location.hash = '#new'; }
+  notify();
+}
 document.addEventListener('change', (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === 'importFile') {
@@ -275,6 +292,12 @@ function openNewPreview(): void {
 
 async function newLeague(): Promise<void> {
   keepName();
+  // a league is open: say what happens to it (it stays saved) before starting another
+  if (store.state && !isFixtureMode()) {
+    const cur = store.state, t = cur.teams[cur.userTeamId];
+    const ok = await confirmDialog('Start a new league?', `${esc(cur.name)} (${esc(t ? `${t.city} ${t.name}` : '')}, season ${cur.season}) stays saved in this browser. Reopen it any time from Your leagues on this page or in Settings.`, 'Start new league');
+    if (!ok) return;
+  }
   const idx = newTeamIndex();
   const name = ((store.ui.newName as string | undefined) || 'Indigo League').trim();
   const draft = newMode() === 'draft';
@@ -285,6 +308,7 @@ async function newLeague(): Promise<void> {
     // the previewed league is the one that starts
     const st = takePreview() ?? api.newLeague(catalog, {start: draft ? 'draft' : 'random', userTeamIndex: idx, name, seed: Math.floor(Math.random() * 2 ** 31)});
     st.name = name; st.createdAt = Date.now();
+    st.id = `${st.id}-${st.createdAt.toString(36)}`;  // every league its own save, even on the same seed
     setFixtureMode(false);
     store.catalog = catalog; store.state = st;
   } catch (e) {
@@ -318,6 +342,7 @@ async function boot(): Promise<void> {
   } else {
     store.catalog = await loadCatalog();
     store.state = store.catalog ? await loadLast() : null;
+    await refreshSaveList();
     try { setPool(createSimPool(new URL('sim-worker.js', location.href))); } catch (e) { console.warn('[plateau] no sim pool', e); }
   }
   if (!store.state && !location.hash.startsWith('#settings')) history.replaceState(null, '', '#new');

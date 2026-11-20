@@ -19,7 +19,7 @@ const GROUPS = [
   {key: 'practice', label: 'Practice', of: (m: Mon) => m.tier === 'practice'},
   {key: 'ir', label: 'Injured reserve', of: (m: Mon) => m.tier === 'ir'},
 ];
-const W = ['34%', '18%', '20%', '12%', '16%'];
+const W = ['30%', '17%', '19%', '10%', '13%', '11%'];
 
 export const slotRoleOf = (m: Mon): Role | null => {
   const sl = S().teams[S().userTeamId].lineup.slots.find((x) => x.monId === m.id);
@@ -47,22 +47,24 @@ export function viewRoster(): string {
   const expSum = exp.reduce((t, m) => t + (m.contract?.salary ?? 0), 0);
   const who: Col<Mon> = {key: 'name', label: 'Pokémon', width: W[0], cell: (m) => `<span class="who">${monRef(m)}${injuryTag(m)}</span>`, sort: (m) => monName(m)};
   const rating = (m: Mon) => { const r = slotRoleOf(m); return r ? (M.roleRating(c, s, m, r) ?? 0) : M.bestRole(c, s, m).ovr; };
+  // row action: Release (confirm dialog with dead money); same column in every lens so the grid never moves
+  const rel: Col<Mon> = {key: 'act', label: '<span class="sr">Actions</span>', width: W[5], cell: (m) => m.contract ? `<button type="button" class="btn sm" data-act="release" data-mon="${esc(m.id)}" aria-label="Release ${esc(monName(m))}">Release</button>` : ''};
   const cols: Record<string, Col<Mon>[]> = {
     list: [who,
       {key: 'role', label: 'Role', width: W[1], cell: (m) => monBadge(m, slotRoleOf(m)), sort: rating, desc: true},
       {key: 'set', label: 'Set', width: W[2], cell: (m) => { const st = setOf(m); return st ? `${esc(st.tier)} · ${esc(st.name)}` : '<span class="dash">—</span>'; }, sort: (m) => setOf(m)?.name ?? ''},
       {key: 'age', label: 'Age', width: W[3], num: true, cell: (m) => String(m.age), sort: (m) => m.age},
-      {key: 'sal', label: 'Salary', width: W[4], num: true, cell: (m) => m.contract ? money(m.contract.salary) : '—', sort: (m) => m.contract?.salary ?? 0, desc: true}],
+      {key: 'sal', label: 'Salary', width: W[4], num: true, cell: (m) => m.contract ? money(m.contract.salary) : '—', sort: (m) => m.contract?.salary ?? 0, desc: true}, rel],
     contracts: [who,
       {key: 'sal', label: 'Salary', width: W[1], num: true, cell: (m) => m.contract ? money(m.contract.salary) : '—', sort: (m) => m.contract?.salary ?? 0, desc: true},
       {key: 'yrs', label: 'Years left', width: W[2], cell: (m) => m.contract ? `<span class="l-row">${ticked && m.contract.yearsLeft <= 0 ? '' : plural(m.contract.yearsLeft, 'year')}${expiring(m) ? expiringTag() : ''}</span>` : '—', sort: (m) => m.contract?.yearsLeft ?? 0},
       {key: 'ends', label: 'Ends', width: W[3], num: true, cell: (m) => m.contract ? String(s.season + m.contract.yearsLeft - (ticked ? 0 : 1)) : '—', sort: (m) => m.contract?.yearsLeft ?? 0},
-      {key: 'share', label: 'Cap share', width: W[4], num: true, cell: (m) => m.contract ? (m.contract.salary / s.settings.cap * 100).toFixed(1) + '%' : '—', sort: (m) => m.contract?.salary ?? 0, desc: true}],
+      {key: 'share', label: 'Cap share', width: W[4], num: true, cell: (m) => m.contract ? (m.contract.salary / s.settings.cap * 100).toFixed(1) + '%' : '—', sort: (m) => m.contract?.salary ?? 0, desc: true}, rel],
     growth: [who,
       {key: 'grade', label: 'EV grade', width: W[1], cell: gradePeek, sort: (m) => m.growth, desc: true},
       {key: 'growth', label: 'Growth', width: W[2], cell: growthBar, sort: (m) => m.growth, desc: true},
       {key: 'age', label: 'Age', width: W[3], num: true, cell: (m) => String(m.age), sort: (m) => m.age},
-      {key: 'stage', label: 'Stage', width: W[4], cell: (m) => stage(m.age), sort: (m) => m.age}],
+      {key: 'stage', label: 'Stage', width: W[4], cell: (m) => stage(m.age), sort: (m) => m.age}, rel],
   };
   const pay = M.payroll(s, me), cap = s.settings.cap;
   const closest = mons.filter((m) => m.tier !== 'ir').map((m) => ({m, n: nextOf(M.evGrade(s, m))})).filter((x) => x.n)
@@ -75,7 +77,7 @@ export function viewRoster(): string {
   return head('Roster', `${plural(mons.filter((m) => m.tier !== 'ir').length, 'Pokémon', 'Pokémon')} · ${money(expSum)} ${ticked ? "expiring now" : "expires after this season"}`) +
     `<section class="l-panel flush" aria-label="Roster">${lensTabs('rosterLens', lens, [['list', 'List'], ['contracts', 'Contracts'], ['growth', 'Growth']])}
     <div class="lensbar">${bar[lens]}</div>
-    ${table<Mon>({id: 'roster-' + lens, cols: cols[lens], rows: mons, groups: GROUPS, minWidth: 760, rowClass: (m) => m.injury && m.injury.kind !== 'day-to-day' ? 'off' : '', label: 'Roster'})}
+    ${table<Mon>({id: 'roster-' + lens, cols: cols[lens], rows: mons, groups: GROUPS, minWidth: 860, rowClass: (m) => m.injury && m.injury.kind !== 'day-to-day' ? 'off' : '', label: 'Roster'})}
     </section>`;
 }
 void ROLE_LABEL;

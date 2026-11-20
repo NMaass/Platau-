@@ -184,6 +184,17 @@ function smogonTier(format: string): string {
 }
 const tierBase = (tier: string) => TIER_BASE[tier] ?? 62;
 
+/** A Smogon set never rates above what the species actually plays at: its own Showdown tier (data/tiers.json,
+ *  latest generation). Odd formats (AG) count only when that is the species' own tier; NFE/LC species cap at ZU. */
+function cappedTier(setTier: string, speciesId: string): string {
+  const raw = speciesTiers[speciesId];
+  if (!raw) return setTier === 'AG' ? 'Uber' : setTier;
+  const own = raw === 'NFE' || raw === 'LC' ? 'ZU' : raw;
+  if (setTier === 'AG' && own !== 'AG') return own;
+  if (setTier === 'LC') return setTier;
+  return (TIER_BASE[setTier] ?? 62) > (TIER_BASE[own] ?? 62) ? own : setTier;
+}
+
 /** Rating base for randbats/generated sets: by battle level; NFEs below 62 by BST. */
 function levelBase(s: Sp, level: number): number {
   if (s.evos.some((e) => included.has(toId(e)))) {
@@ -433,6 +444,7 @@ const badItems = unknownNames('item', allItems), badAbilities = unknownNames('ab
 const engineUnknownItems = [...allItems].filter((i) => badItems.has(toId(i).toUpperCase())).sort();
 
 const species: Record<string, CatalogSpecies> = {};
+let tierCapped = 0;
 const problems: string[] = [];
 for (const s of speciesList) {
   const fam = family(s);
@@ -456,7 +468,9 @@ for (const s of speciesList) {
     for (let n = 2; sets.some((x) => x.name === name || x.id === `${s.id}:${slug(name)}`); n++) name = `${d.name} (${n})`;
     names.set(d.name, (names.get(d.name) ?? 0) + 1);
     const {rbRole, ...rest} = d;
-    sets.push({id: `${s.id}:${slug(name)}`, ...rest, name, roles: deriveRoles(d, rbRole, ctx)});
+    const tier = d.source === 'smogon' ? cappedTier(d.tier, s.id) : d.tier;
+    if (tier !== d.tier) tierCapped++;
+    sets.push({id: `${s.id}:${slug(name)}`, ...rest, tier, name, roles: deriveRoles(d, rbRole, ctx)});
   }
   if (!sets.length) { problems.push(`${s.id}: no sets`); continue; }
   for (const x of sets) counts[x.source]++;
@@ -495,6 +509,7 @@ const randOnly = Object.values(species).filter((x) => x.sets.every((y) => y.sour
 const genOnly = Object.values(species).filter((x) => x.sets.every((y) => y.source === 'generated')).length;
 log(`wrote ${outDir}/catalog.json: ${(json.length / 1e6).toFixed(2)} MB, ${Object.keys(species).length} species, sets ${JSON.stringify(counts)}`);
 log(`species with randbats-only sets: ${randOnly}, generated-only: ${genOnly}; Mega/Z sets skipped: ${megaSkipped}; growth-rate fallbacks: ${growthFallbacks}`);
+log(`Smogon sets capped at the species' own tier: ${tierCapped}`);
 log(`species per role: ${JSON.stringify(roleDist)}`);
 log(`items unknown to the engine (kept; searched as no item): ${engineUnknownItems.length}: ${engineUnknownItems.join(', ')}`);
 if (problems.length) log(`problems (${problems.length}):\n  ${problems.join('\n  ')}`);

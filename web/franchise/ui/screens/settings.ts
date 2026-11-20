@@ -1,6 +1,7 @@
 // Settings (theme, save export/import, budgets, new league) and the New League screen.
 import {esc, ic, money} from '../dom.ts';
-import {store, fastSim} from '../store.ts';
+import {store, fastSim, savedLeagues, type SaveMeta} from '../store.ts';
+import {table} from '../components/table.ts';
 import {head, panel} from '../components/page.ts';
 import {isFixtureMode} from '../model.ts';
 import {divisionName} from '../shell.ts';
@@ -8,6 +9,7 @@ import type {LeagueState, Mon} from '../../types.ts';
 import {api, strategies} from '../model.ts';
 import {TEAM_SEEDS, CONFERENCE_NAMES, DIVISION_NAMES, type TeamSeed} from '../../model/teams.ts';
 import {ROLE_LABEL} from '../../catalog/roles.ts';
+import {monLabel} from '../../model/util.ts';
 import {roleBadge, typeChips} from '../components/badges.ts';
 import {ico, spr, teamLogo, trainerImg} from '../sprites.ts';
 
@@ -36,8 +38,25 @@ export function viewSettings(): string {
     <div class="l-stack loose">
       ${s ? panel('budget', 'Battle think time', budgets) : ''}
       ${s ? panel('testing', 'Fast sim (no battles, for testing)', `<div class="l-seg" role="group" aria-label="Fast sim">${[['0', 'Off'], ['1', 'On']].map(([v, l]) => `<button type="button" data-act="fastsim" data-v="${v}" aria-pressed="${fastSim() === (v === '1')}">${l}</button>`).join('')}</div><p class="x-small">On: every week is decided by a quick rating model instead of real battles, so a season takes seconds. No replays.</p>`) : ''}
-      ${panel('newl', 'New league', `<p class="muted">Start over with a new league. Your current save stays until you replace it.</p><div class="l-actions"><a class="btn" href="#new">${ic('plus')}New league</a></div>`)}
-    </div></div>`;
+      ${panel('newl', 'New league', `<p class="muted">Start another league. Every league stays saved in this browser; switch between them under Your leagues.</p><div class="l-actions"><a class="btn" href="#new">${ic('plus')}New league</a></div>`)}
+    </div></div>` + leaguesPanel();
+}
+
+const PHASE_WORD: Record<string, string> = {preseason: 'Preseason', regular: 'Week', playoffs: 'Indigo Plateau', awards: 'Awards', 'draft-lottery': 'Draft lottery', draft: 'Draft', resign: 'Re-sign window', 'free-agency': 'Free agency'};
+const whereText = (m: SaveMeta): string => `Season ${m.season} · ${m.phase === 'regular' ? `week ${m.week}` : PHASE_WORD[m.phase] ?? m.phase}`;
+
+/** "Your leagues": every league saved in this browser, with Open / Export / Delete (delete asks first). */
+export function leaguesPanel(): string {
+  const rows = savedLeagues();
+  const cur = store.state?.id;
+  if (!rows.length) return '';
+  const body = table<SaveMeta>({id: 'saves', label: 'Your leagues', rows, minWidth: 820, cols: [
+    {key: 'name', label: 'League', width: '26%', cell: (m) => `<b>${esc(m.name)}</b>${m.id === cur ? ' <span class="chip c-growth">Open now</span>' : ''}`},
+    {key: 'club', label: 'Club', width: '30%', cell: (m) => esc(m.team)},
+    {key: 'where', label: 'Where', width: '22%', cell: (m) => esc(whereText(m))},
+    {key: 'act', label: '', width: '340px', cell: (m) => `<span class="l-cellacts" style="--n:3"><button type="button" class="btn sm" data-act="saveopen" data-id="${esc(m.id)}"${m.id === cur ? ' aria-disabled="true"' : ''} aria-label="Open ${esc(m.name)}">Open</button><button type="button" class="btn sm" data-act="saveexport" data-id="${esc(m.id)}" aria-label="Export ${esc(m.name)}">Export</button><button type="button" class="btn sm" data-act="savedelete" data-id="${esc(m.id)}" aria-label="Delete ${esc(m.name)}">Delete</button></span>`},
+  ]});
+  return `<section class="l-panel flush l-section" aria-labelledby="h-saves"><h2 id="h-saves">Your leagues</h2>${body}</section>`;
 }
 
 // ---------------------------------------------------------------- New League
@@ -91,7 +110,7 @@ const iconCell = (st: LeagueState, m: Mon | undefined, label?: string): string =
   if (!m) return '<span><span class="ico"></span><span class="dash">—</span></span>';
   const sp = c.species[m.speciesId];
   const b = api.bestRole(c, st, m);
-  return `<span title="${esc(`${sp?.name ?? m.speciesId} · ${ROLE_LABEL[b.role]} ${b.ovr} · age ${m.age}`)}">${ico(sp)}<span>${esc(label ?? String(b.ovr))}</span></span>`;
+  return `<span title="${esc(`${monLabel(c, st, m)} · ${ROLE_LABEL[b.role]} ${b.ovr} · age ${m.age}`)}">${ico(sp)}<span>${esc(label ?? String(b.ovr))}</span></span>`;
 };
 
 /** The fixed-size preview: header, five facts, six tiles, two icon rows. Same boxes in both modes. */
@@ -125,7 +144,7 @@ export function newPreview(): string {
       if (!m) return '<span><span class="spr md"></span><span class="nm dash">Empty</span></span>';
       const sp = c.species[m.speciesId];
       const r = api.roleRating(c, st, m, sl.role) ?? api.bestRole(c, st, m).ovr;
-      return `<span>${spr(sp, 'md')}<span class="nm">${esc(sp?.name ?? m.speciesId)}</span>${roleBadge(sl.role, r, {sm: true})}</span>`;
+      return `<span>${spr(sp, 'md')}<span class="nm">${esc(monLabel(c, st, m))}</span>${roleBadge(sl.role, r, {sm: true})}</span>`;
     });
     while (tiles.length < 6) tiles.push('<span><span class="spr md"></span><span class="nm dash">Empty</span></span>');
     const byOvr = (a: Mon, b: Mon) => api.bestRole(c, st, b).ovr - api.bestRole(c, st, a).ovr;
@@ -162,5 +181,5 @@ export function viewNewLeague(): string {
   const sub = mode === 'premade' ? 'Pick a gym. Every club starts with a roster built around its gym type.' : 'Pick a gym. Every club starts empty and drafts 18 Pokémon from one board.';
   return head('New league', sub, `<button class="btn" type="button" data-act="newreroll">${ic('refresh')}Reroll</button><button class="btn go" type="button" data-act="newleague">${ic('play')}Start league</button>`) +
     `<div class="l-toolbar">${seg}<label class="l-row"><span class="cap">League name</span><input type="text" id="leagueName" class="txt-in" value="${esc((store.ui.newName as string | undefined) ?? 'Indigo League')}" maxlength="40" aria-label="League name"></label></div>` +
-    `<div class="l-cols"><div class="l-stack loose">${regions}</div><div>${newPreview()}</div></div>`;
+    `<div class="l-cols"><div class="l-stack loose">${regions}</div><div>${newPreview()}</div></div>` + leaguesPanel();
 }

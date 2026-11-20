@@ -9,8 +9,9 @@ const STATUSES = ['brn', 'par', 'psn', 'tox', 'slp'];
 const HAZARD_ROLES: Role[] = ['rocks', 'spikes'];
 const WEATHER_PAIRS: [Role, Role][] = [['rain-setter', 'rain-abuser'], ['sun-setter', 'sun-abuser'], ['sand-setter', 'sand-abuser'], ['snow-setter', 'snow-abuser']];
 
-/** Temperature of the outcome: rating gap of ~8 points ≈ 73% win. */
-export const QUICKSIM_SCALE = 6.5;
+/** Temperature of the outcome, fitted to the real engine (eval/calibration.ts over 530 battles): a 10-point
+ *  starter-OVR edge wins ~54%. (Was 6.5, i.e. 82% for 10 points: about 10x overconfident.) */
+export const QUICKSIM_SCALE = 60;
 
 interface Side { ids: MonId[]; ratings: number[]; roles: Set<Role>[] }
 

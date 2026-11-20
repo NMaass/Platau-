@@ -23,11 +23,11 @@ import {aiScout} from './scouting.ts';
 import {availableProspects, completeDraft, ensurePicks, generateClass, runLottery} from './draft.ts';
 import {FA_ROUNDS, aiResign, faRound, pruneFreeAgents, releaseExpiring} from './freeagency.ts';
 import {enforceRosters} from './roster.ts';
-import {aiTrade, expireOffers, makeAiOffer} from './trades.ts';
+import {aiTrade, expireOffers, makeAiOffer, offerGoodForUser} from './trades.ts';
 import {quickSim} from './quicksim.ts';
 import {checkGoal, setGoal} from './goals.ts';
 import {bestRole} from './ratings.ts';
-import {freeAgents, logTx, money, monsByTeam, rosterCount, round50k, teamMons} from './util.ts';
+import {freeAgents, logTx, money, monLabel, monsByTeam, rosterCount, round50k, teamMons} from './util.ts';
 import {GRADES, GROWTH_BAND_HI} from './grades.ts';
 
 export const DEFAULT_SETTINGS: LeagueSettings = {
@@ -49,7 +49,7 @@ export interface NewLeagueOptions {
   settings?: Partial<LeagueSettings>; pool?: PoolCounts;
 }
 
-const spName = (catalog: Catalog, m: Mon) => catalog.species[m.speciesId]?.name ?? m.speciesId;
+const spName = (catalog: Catalog, state: LeagueState, m: Mon) => monLabel(catalog, state, m);
 
 // ---------------------------------------------------------------- creation
 export function newLeague(catalog: Catalog, opts: NewLeagueOptions): LeagueState {
@@ -248,8 +248,9 @@ export function enforceFloor(catalog: Catalog, state: LeagueState): void {
   }
 }
 
-/** Strategy-choice knobs: favourites win ties, but never over a strategy the roster can fill on-role. */
-export const STRATEGY_PICK = {offRolePenalty: 40, favourite1: 6, favourite2: 3};
+/** Strategy-choice knobs: a club keeps playing its favourite while it can field it on-role (worth `favourite1`
+ *  rating points a slot over another strategy), but never over a strategy the roster can fill on-role. */
+export const STRATEGY_PICK = {offRolePenalty: 40, favourite1: 10, favourite2: 6};
 
 /**
  * AI: try every strategy and play the strongest lineup the roster can fill on-role, leaning to
@@ -338,7 +339,7 @@ export function applyResults(catalog: Catalog, state: LeagueState, results: Batt
         applyInjury(mon, inj);
         if (mon.teamId === state.userTeamId) {
           const what = inj.kind === 'day-to-day' ? 'day-to-day (plays one grade lower)' : inj.kind === 'out' ? `out ${inj.weeksLeft} week${inj.weeksLeft > 1 ? 's' : ''}` : `on injured reserve for ${inj.weeksLeft} weeks`;
-          inbox(state, 'health', `${spName(catalog, mon)}: ${inj.description}`, `${spName(catalog, mon)} is ${what}.${inj.severe ? ' A severe injury: it will not fully recover.' : ''}`, {kind: 'mon', id: mon.id});
+          inbox(state, 'health', `${spName(catalog, state, mon)}: ${inj.description}`, `${spName(catalog, state, mon)} is ${what}.${inj.severe ? ' A severe injury: it will not fully recover.' : ''}`, {kind: 'mon', id: mon.id});
         }
       }
     }
@@ -434,17 +435,17 @@ export function finishWeek(catalog: Catalog, state: LeagueState): void {
   for (const e of events) {
     if (e.mon.teamId !== user) continue;
     if (e.kind === 'evolved') inbox(state, 'growth', `${e.from} evolved into ${e.to}`, `Growth ${e.mon.growth} unlocked the evolution.`, {kind: 'mon', id: e.mon.id});
-    else if (e.kind === 'grade-up') inbox(state, 'growth', `${spName(catalog, e.mon)} reached grade ${e.to}`, `Up from ${e.from}: its EV spread grows to the new grade.`, {kind: 'mon', id: e.mon.id});
+    else if (e.kind === 'grade-up') inbox(state, 'growth', `${spName(catalog, state, e.mon)} reached grade ${e.to}`, `Up from ${e.from}: its EV spread grows to the new grade.`, {kind: 'mon', id: e.mon.id});
   }
   // injuries count down
   const healed = tickInjuries(state);
-  for (const m of healed) if (m.teamId === user && m.tier === 'ir') inbox(state, 'health', `${spName(catalog, m)} is back from injured reserve`, 'Ready to play.', {kind: 'mon', id: m.id});
+  for (const m of healed) if (m.teamId === user && m.tier === 'ir') inbox(state, 'health', `${spName(catalog, state, m)} is back from injured reserve`, 'Ready to play.', {kind: 'mon', id: m.id});
   // a starter (in the lineup, or active before an IR injury moved it) hurt this week for 2+ weeks
   const starters = new Set(state.teams[user].lineup.slots.map(sl => sl.monId).filter(Boolean));
   for (const id in state.mons) {
     const m = state.mons[id];
     if (m.teamId === user && !m.retired && m.injury && m.injury.kind !== 'day-to-day' && m.injury.sinceWeek === state.week && m.injury.season === state.season && m.injury.weeksLeft >= 2 && (m.tier === 'active' || starters.has(m.id))) {
-      pause.push(`${spName(catalog, m)} is out ${m.injury.weeksLeft} weeks${m.injury.kind === 'ir' ? ' (injured reserve)' : ''}`);
+      pause.push(`${spName(catalog, state, m)} is out ${m.injury.weeksLeft} weeks${m.injury.kind === 'ir' ? ' (injured reserve)' : ''}`);
     }
   }
   // tiers, lineups, rosters (waiver priority = reverse standings)
@@ -456,7 +457,8 @@ export function finishWeek(catalog: Catalog, state: LeagueState): void {
   if (state.phase === 'regular' && state.week < state.settings.tradeDeadlineWeek) {
     if (rng.chance(START.aiOfferChance)) {
       const o = makeAiOffer(catalog, state, rng);
-      if (o) pause.push(`${state.teams[o.fromTeamId].name} sent a trade offer`);
+      // Play until pauses only for an offer the model rates as good for the user (not for every lopsided ask)
+      if (o && offerGoodForUser(catalog, state, o)) pause.push(`${state.teams[o.fromTeamId].name} sent a trade offer worth a look`);
     }
     if (rng.chance(START.aiTradeChance)) aiTrade(catalog, state, rng);
   }
@@ -506,8 +508,8 @@ function enterAwards(catalog: Catalog, state: LeagueState): void {
   logTx(state, 'champion', `${champ.city} ${champ.name} win the Indigo Plateau`, [champ.id], []);
   inbox(state, 'honour', `${champ.city} ${champ.name} are champions`, fin.summary ?? '', {kind: 'series', id: fin.id});
   const mvp = awards.find(a => a.award === 'MVP');
-  if (mvp) inbox(state, 'honour', `${spName(catalog, state.mons[mvp.monId])} is the MVP`, `${state.teams[mvp.teamId].name}`, {kind: 'mon', id: mvp.monId});
-  for (const a of awards) if (a.teamId === state.userTeamId && a.award !== 'MVP') inbox(state, 'honour', `${spName(catalog, state.mons[a.monId])}: ${a.award}`, '', {kind: 'mon', id: a.monId});
+  if (mvp) inbox(state, 'honour', `${spName(catalog, state, state.mons[mvp.monId])} is the MVP`, `${state.teams[mvp.teamId].name}`, {kind: 'mon', id: mvp.monId});
+  for (const a of awards) if (a.teamId === state.userTeamId && a.award !== 'MVP') inbox(state, 'honour', `${spName(catalog, state, state.mons[a.monId])}: ${a.award}`, '', {kind: 'mon', id: a.monId});
 }
 
 function retire(catalog: Catalog, state: LeagueState, m: Mon): void {
@@ -518,9 +520,9 @@ function retire(catalog: Catalog, state: LeagueState, m: Mon): void {
   m.teamId = null; m.contract = null; m.injury = null; m.prospect = undefined;
   returnToPool(state, m.family);
   if (hof) {
-    logTx(state, 'hall-of-fame', `${spName(catalog, m)} enters the hall of fame`, teamId ? [teamId] : [], [m.id]);
-    inbox(state, 'honour', `${spName(catalog, m)} enters the hall of fame`, `Retired at ${m.age}.`, {kind: 'mon', id: m.id});
-  } else if (teamId === state.userTeamId) inbox(state, 'decline', `${spName(catalog, m)} retired`, `Retired at ${m.age}.`, {kind: 'mon', id: m.id});
+    logTx(state, 'hall-of-fame', `${spName(catalog, state, m)} enters the hall of fame`, teamId ? [teamId] : [], [m.id]);
+    inbox(state, 'honour', `${spName(catalog, state, m)} enters the hall of fame`, `Retired at ${m.age}.`, {kind: 'mon', id: m.id});
+  } else if (teamId === state.userTeamId) inbox(state, 'decline', `${spName(catalog, state, m)} retired`, `Retired at ${m.age}.`, {kind: 'mon', id: m.id});
 }
 
 function tickContracts(catalog: Catalog, state: LeagueState): void {
@@ -534,7 +536,7 @@ function tickContracts(catalog: Catalog, state: LeagueState): void {
       const sal = Math.max(c.salary, round50k(marketSalary(catalog, state, m) * 0.9));
       if (bestRole(catalog, m).ovr >= 78 && canAfford(state, m.teamId, sal)) {
         m.contract = {...c, salary: sal, yearsLeft: 1, originalYears: c.originalYears + 1, exception: undefined};
-        logTx(state, 'option', `${state.teams[m.teamId].name} picked up ${spName(catalog, m)}'s fifth-year option`, [m.teamId], [m.id]);
+        logTx(state, 'option', `${state.teams[m.teamId].name} picked up ${spName(catalog, state, m)}'s fifth-year option`, [m.teamId], [m.id]);
       }
     }
   }
@@ -551,7 +553,7 @@ function newSeason(catalog: Catalog, state: LeagueState, rng: Rng): void {
     const m = state.mons[id];
     if (m.retired) continue;
     const ev = ageMon(catalog, rng, m);
-    if (ev && m.teamId === state.userTeamId) inbox(state, 'decline', `${spName(catalog, m)} slipped to grade ${ev.to}`, `Age ${m.age} is past its prime.`, {kind: 'mon', id: m.id});
+    if (ev && m.teamId === state.userTeamId) inbox(state, 'decline', `${spName(catalog, state, m)} slipped to grade ${ev.to}`, `Age ${m.age} is past its prime.`, {kind: 'mon', id: m.id});
   }
   healAll(state);
   for (const t of Object.values(state.teams)) t.deadMoney = t.deadMoney.filter(d => d.season >= state.season);

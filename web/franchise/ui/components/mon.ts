@@ -1,5 +1,6 @@
 // Pokémon and team references: Glance (icon + name + badge) -> Peek (popover) -> Page.
-import type {Mon, Role, Team, TeamId, CatalogSet, CatalogSpecies, Grade} from '../../types.ts';
+import type {Mon, MonId, LeagueState, Role, Team, TeamId, CatalogSet, CatalogSpecies, Grade} from '../../types.ts';
+import {dupNumbers} from '../../model/util.ts';
 import {ROLE_LABEL} from '../../catalog/roles.ts';
 import {esc, money} from '../dom.ts';
 import {C, S} from '../store.ts';
@@ -10,7 +11,19 @@ import {roleBadge, gradeChip, typeChips} from './badges.ts';
 import {GRADE_PCT} from '../fallback.ts';
 
 export const speciesOf = (m: Mon): CatalogSpecies | undefined => C().species[m.speciesId];
-export const monName = (m: Mon): string => speciesOf(m)?.name ?? m.speciesId;
+let dupCache: {state: LeagueState; nums: Map<MonId, number>} | null = null;
+/** Same-species club-mates numbered (model dupNumbers), computed once per render tick. */
+const dupNums = (): Map<MonId, number> => {
+  const s = S();
+  if (!dupCache || dupCache.state !== s) { dupCache = {state: s, nums: dupNumbers(s)}; queueMicrotask(() => { dupCache = null; }); }
+  return dupCache.nums;
+};
+/** Display name: species, plus "#2", "#3"… for later club-mates of the same species (so two never read as one). */
+export const monName = (m: Mon): string => {
+  const name = speciesOf(m)?.name ?? m.speciesId;
+  const n = dupNums().get(m.id) ?? 0;
+  return n > 1 ? `${name} #${n}` : name;
+};
 export const setOf = (m: Mon, setId = m.setId): CatalogSet | undefined => speciesOf(m)?.sets.find((x) => x.id === setId) ?? speciesOf(m)?.sets[0];
 export const team = (id: TeamId): Team => S().teams[id];
 export const teamName = (id: TeamId): string => `${team(id).city} ${team(id).name}`;

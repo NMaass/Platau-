@@ -10,6 +10,7 @@ import type {LeagueState, MonId} from '../types.ts';
 import {fieldedLineup} from '../model/lineup.ts';
 import {monEvs, monIvs} from '../model/export.ts';
 import {STATS} from '../model/grades.ts';
+import {QUICKSIM_SCALE} from '../model/quicksim.ts';
 import {catalog, league, simTo, step, mean, f2, pct, rng, play, closePool, ci, OUT, type Match, type Pick} from './lib.ts';
 
 const R = rng(31);
@@ -45,8 +46,12 @@ if (!process.argv.includes('--analyse-only')) {
 }
 
 // ---------------------------------------------------------------- analysis over every battle played
-interface B { tag: string; aWon: boolean; qsP: number; ovrA: number; ovrB: number; meta?: {powA?: number; powB?: number} }
-const raw: B[] = readFileSync(`${OUT}battles.jsonl`, 'utf8').trim().split('\n').map(l => JSON.parse(l));
+interface B { tag: string; aWon: boolean; qsP: number; qsScale?: number; ovrA: number; ovrB: number; meta?: {powA?: number; powB?: number} }
+// Battles recorded under another QUICKSIM_SCALE (older records: 6.5) are re-expressed at the current one: the quick
+// sim's P(A) is a logistic in strength gap / scale, so logit(P) scales by recorded/current (P clamped off 0 and 1).
+const lg = (p: number) => { const q = Math.min(1 - 1 / 800, Math.max(1 / 800, p)); return Math.log(q / (1 - q)); };
+const raw: B[] = readFileSync(`${OUT}battles.jsonl`, 'utf8').trim().split('\n').map(l => JSON.parse(l))
+  .map((b: B) => ({...b, qsP: 1 / (1 + Math.exp(-lg(b.qsP) * (b.qsScale ?? 6.5) / QUICKSIM_SCALE))}));
 // the level control changes the export behind the quick sim's back (same mon ids), so it is not a quick-sim matchup
 const all = raw.filter(b => b.tag !== 'ctl-level-10');
 const lines: string[] = [];
@@ -79,7 +84,7 @@ const kq = fitSlope(qs.map(logit), y);
 L(`Logistic fit real ~ k·logit(quick sim): k = ${f2(kq.k)} ± ${f2(1.96 * kq.se)} (1 = calibrated; <1 = quick sim overconfident).`);
 const dO = all.map(b => b.ovrA - b.ovrB);
 const ko = fitSlope(dO, y);
-L(`Real win vs mean-starter-OVR gap: slope ${f2(ko.k)} ± ${f2(1.96 * ko.se)} per point → a 10-point OVR edge = ${pct(1 / (1 + Math.exp(-10 * ko.k)))} (quick sim's own scale: 10 pts ≈ ${pct(1 / (1 + Math.exp(-10 * 1.0 / 6.5)))} before roles).`);
+L(`Real win vs mean-starter-OVR gap: slope ${f2(ko.k)} ± ${f2(1.96 * ko.se)} per point → a 10-point OVR edge = ${pct(1 / (1 + Math.exp(-10 * ko.k)))} (quick sim at QUICKSIM_SCALE ${QUICKSIM_SCALE}: 10 pts ≈ ${pct(1 / (1 + Math.exp(-10 / QUICKSIM_SCALE)))} before roles; scale that would match: ${f2(1 / Math.max(1e-6, ko.k))}).`);
 const cal = all.filter(b => b.meta?.powA !== undefined);
 if (cal.length) {
   const dp = cal.map(b => (b.meta!.powA! - b.meta!.powB!) / 10);

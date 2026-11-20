@@ -71,11 +71,12 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
   opponent, strategy and lineup, practice focus: base XP for all healthy, extra for 2–3 picks) →
   lock and sim (every match in the league in parallel).
 - "Play until": next week, trade deadline, end of regular season, Indigo Plateau, draft. A
-  multi-week sim pauses on a multi-week injury to a starter or a strong trade offer.
+  multi-week sim pauses on a multi-week injury to a starter or a strong trade offer (one the model rates
+  as good for the user, not every lopsided ask).
 
 ## Pokémon as players
-- Every Pokémon is a unique individual: species, nickname-free name = species (+ disambiguating
-  number only in data), age, IV grades, Growth, EV grade, contract, injury, stats, awards, fame.
+- Every Pokémon is a unique individual: species, nickname-free name = species (+ a visible "#2", "#3"
+  when one club has two of a species, so they never read as one Pokémon), age, IV grades, Growth, EV grade, contract, injury, stats, awards, fame.
 - **Rarity pool**: finite, drawn without replacement: 1 of each legendary/mythical, ~3 of each
   pseudo-legendary, ~20 of each other species line (tunable). Legendary arrivals per season:
   0 (25%), 1 (70%), 2 (5%). ~9 legendaries in the league at start.
@@ -117,10 +118,13 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
   Bulky Offense (Setter, Pivot, 2 Attackers, Wallbreaker, Sweeper), Balance (Setter, 2 Walls,
   Pivot, Attacker, Wallbreaker), Stall (Setter, 4 Walls, Pivot), Rain/Sun/Sand/Snow (Weather
   setter, 3 weather abusers, Sweeper, Pivot), Hazard Stack (Rocks setter, Spikes setter, Phazer,
-  Wall, Pivot, Attacker). Saved lineups; auto-assign or manual; each slot has backups in a depth
+  Wall, Pivot, Attacker). Each slot lists fallback roles after its preferred one, so a typical roster
+  can field weather and Hazard Stack on-role (e.g. a Rocks lead when the club has no weather setter,
+  attackers beside the abusers, a Wall for the Phazer). Saved lineups; auto-assign or manual; each slot has backups in a depth
   chart. No stat penalty for off-role picks. Lineup cards: role name is the card heading (no slot
   numbers), Pokémon + OVR, set dropdown from its Smogon sets, backups underneath.
-- AI GMs have a primary and secondary favourite strategy and value Pokémon by role ratings.
+- AI GMs have a primary and secondary favourite strategy, keep playing the first while they can field
+  it on-role, and value Pokémon by role ratings and what they add to those strategies' slots.
 - **Injuries** (all tunable): KO ~2.5%, ending a battle with a status ~1.2% (burn/toxic riskier, age
   raises risk). Designations: day-to-day (plays one EV grade lower), out 1–3 weeks, injured
   reserve 4+ weeks (spot can be filled from FA). Tuned to ~4 per club a season, ~2/3 day-to-day. Injuries carry between games of a series. Rare
@@ -128,7 +132,7 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
 
 ## Contracts, cap, free agency
 - Hard cap $100M (grows ~4%/yr), floor, $0.5M minimum, max 20% of cap. Over cap → minimum deals
-  only. Contracts up to 7 years; rookie deals by draft slot with a fifth-year option on
+  only (every contract counts toward the cap, as payroll shows it). Contracts up to 7 years; rookie deals by draft slot with a fifth-year option on
   first-rounders; second contract at market value. Signing bonuses prorated; cuts/trades leave
   dead money. Asking price by EV grade (and role OVR) and age; no fame/legendary premium.
 - Re-sign window first + one franchise tag (1 yr, high fixed price). Then 3 FA bidding rounds:

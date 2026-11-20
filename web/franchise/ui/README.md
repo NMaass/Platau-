@@ -41,7 +41,7 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `injuryTag(mon)`, `expiringTag()`, `typeChips(types)`, `eventChip(cat, icon, word)` | inline tags/chips |
 | `mon.ts` `monRef(mon, {icon, inline, noLink})` | icon + name link to `#mon-<id>` with a peek |
 | `monBadge(mon, role?, opts)` | role badge for a mon (slot role or best role) with the rating peek |
-| `teamAbbr(id)` (badge + 3-letter label), `teamCell(id)` (badge + name), `teamName(id)`, `speciesOf`, `monName`, `setOf`, `stage` | helpers |
+| `teamAbbr(id)` (badge + 3-letter label), `teamCell(id)` (badge + name), `teamName(id)`, `speciesOf`, `monName` (species + "#2" for a second of a species on one club; always use it for a name), `setOf`, `stage` | helpers |
 | `table.ts` `table({id, cols, rows, groups?, rowClass?, minWidth?, defaultSort?})` | `.l-table` with one colgroup; a column with `sort` gets a header button (`aria-sort`, reserved arrow slot). Sort state per table id; clicks handled in app.ts |
 | `page.ts` `head(title, sub, actions)` | page head; actions are `.btn`s in `.l-actions` (equal widths) |
 | `panel(id, title, body, {flush})` | boxed section with h2 |
@@ -53,11 +53,11 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `capStrip(teamId)`, `rosterUsed`, `beforeAfter(rows)` | cap room strip; before → after money lines |
 | `knownBadge(mon)`, `knownMid(mon)` | what your club knows: exact badge or fixed-width range badge; sort value |
 | `tradeMeter(ev)`, `pickLabel(p)`, `pickKey(p)`, `once(key, fn)` | will-they-accept meter; draft pick label/key; install a delegated listener once |
-| `layer.ts` `openDialog({title, cap, body, actions, onAction, onClose, wide, locked})` | the one shared dialog; `updateDialog`, `closeDialog`, `confirmDialog` |
+| `layer.ts` `openDialog({title, cap, body, actions, onAction, onClose, wide, locked})` | the one shared dialog; `updateDialog`, `closeDialog`, `confirmDialog`. An action with `disabled` + `why` stays in place with the reason in a peek |
 | `info(label, popHtml)`, `peekLabel(label, popHtml)`, `prow(k, v)` | peeks (one floating layer, hover/focus/tap) |
 
 ## data-* actions (app.ts)
-`data-act="play|until|auto|swap|chooser|theme|fastsim|export|import|pickteam|newmode|newreroll|newleague"` (click; `until` opens Play until, `fastsim` is the Settings dev toggle read by `store.fastSim()`),
+`data-act="play|until|auto|swap|chooser|theme|fastsim|export|import|pickteam|newmode|newreroll|newleague|release|saveopen|saveexport|savedelete"` (click; `release` opens the Release confirm (moves.ts `releaseDialog`), `save*` act on Your leagues (store.ts `savedLeagues`/`openSave`/`exportSaveById`/`deleteSave`); `until` opens Play until, `fastsim` is the Settings dev toggle read by `store.fastSim()`),
 `data-act="strategy|slotset|monset|tier|budget"` (change), `data-sort="<table>:<col>:<desc 0|1>"`,
 `data-lens="<uiKey>:<value>"`. Re-render after state changes with `act()` or `notify()`.
 
@@ -70,7 +70,7 @@ ROUTES.standings = {view: (r) => head('Standings') + panel(...), after: (r) => {
 League / front office screens live in `screens/league.ts` (standings, playoffs, schedule, history),
 `screens/draft.ts` (scouting, draft), `screens/moves.ts` (trades, offers, free agents) and are registered in
 `routes.ts`. Their buttons use `data-fo="..."`, handled by one delegated listener per module (`once`).
-Design-system primitives added for them: `.chip.fix`, `.l-cellacts` (two equal buttons in a cell), `.l-toolbar`.
+Design-system primitives added for them: `.chip.fix`, `.l-cellacts` (two equal buttons in a cell; `--n` for more), `.l-toolbar`.
 New League (`screens/settings.ts`) adds `.logo`, `.l-pick` (selectable card of one height, accent `--c`), `.l-tiles`
 (N equal fixed tiles), `.l-icons` (six row icons with a number), `.l-sticky` (side panel in view on desktop).
 

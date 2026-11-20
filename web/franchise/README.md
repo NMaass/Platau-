@@ -24,7 +24,14 @@ deciding games with the quick sim.
 **Fast sim** (Settings → "Fast sim (no battles, for testing)", stored per browser): weeks are decided by
 `model/quicksim.ts` instead of battles, so a season takes seconds. No replays for those weeks.
 **Play until…** (This week) sims to the next week, the trade deadline, the end of the regular season, the end of
-the Indigo Plateau or the draft, and stops early when a starter is hurt for 2+ weeks or a club sends an offer.
+the Indigo Plateau or the draft, and stops early when a starter is hurt for 2+ weeks or a club sends an offer
+the model rates as good for you (`trades.ts` `offerGoodForUser`).
+**Saves**: every league is its own save in IndexedDB. Settings and New league list them under *Your leagues*
+(Open, Export, Delete with a confirm); starting a new league asks first and keeps the open one.
+**Roster moves**: Release (roster row, Pokémon page) confirms with the dead money and the cap room it frees. In season a
+full roster can't negotiate (the Negotiate dialog says so first and links to Release); a trade that leaves you short
+signs nobody silently: its result dialog offers the best free agent on a minimum deal, or leaves the spot for Play.
+Two of a species on one club show as "Espathra" and "Espathra #2" everywhere (`model/util.ts` `monLabel`).
 
 ## Starting a league
 New league is one page: Pre-made teams or Draft, the 16 gyms as cards by region, and a preview of the picked club.
@@ -74,20 +81,26 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
 | `model/draft.ts` | lottery odds, rounds, class size, legendary arrivals |
 | `model/scouting.ts` | range widths per scouting level, miss rate, games until revealed |
 | `model/freeagency.ts`, `model/cap.ts`, `model/trades.ts` | FA rounds and ask drop, market salary curve, AI trade acceptance |
-| `model/quicksim.ts` `QUICKSIM_SCALE` | how decisive rating gaps are in the quick sim |
+| `model/quicksim.ts` `QUICKSIM_SCALE` | how decisive rating gaps are in the quick sim (60: fitted to the engine, a 10-OVR edge ≈ 54%) |
+| `model/value.ts` `PLAN_SEASONS`, `GROWTH_PER_SEASON` | how far ahead clubs value young mons (projected rating = the Growth and evolutions reachable in 3 seasons); `needBoost`/`lineupGain` = what a mon adds to the club's current and favourite strategies |
+| `model/trades.ts` `AI_TRADE`, `model/freeagency.ts` `FA_BID` | AI-AI trades: fair by neutral value (30%) and a lineup gain for one side; FA bids by lineup gain, under-floor clubs spend toward next season's floor |
 | `model/pool.ts`, `model/awards.ts` | rarity pool counts; fame values (hall of fame) |
 | `model/teams.ts`, `model/season.ts` `THEME`, `model/draft.ts` `STARTUP_AI` | the 16 gym clubs (badge, type, leader, favourite strategies); pre-made rosters: picks drawn from the gym type, balance spread; startup-draft AI bonuses |
 
 ## Known gaps
 - The replay viewer and Showdown sprites hotlink play.pokemonshowdown.com (PokeAPI sprite fallback); offline or
-  blocked, replays don't paint. Fast-sim weeks have no replays.
+  blocked, the replay frame says so after 10 s (`sim/replay.ts` `LOAD_TIMEOUT_S`) and the box score stays. Fast-sim
+  weeks have no replays.
 - Little Cup is simplified (no battles: half the clubs' rookies get bonus Growth).
 - Trainer sprites (gym leaders) hotlink Showdown too; blocked, their boxes stay empty. Badge logos are local
   (`assets/badges/<n>.png`, PokeAPI badge sprites, copied into `dist/` by `build.mjs`).
 - Auto lineups solve the slot assignment (on-role first, then rating); a slot is off-role only when no one on
   the roster has a set for it, and then it plays its best set (dashed badge). The user's club keeps its strategy.
 - Salary floor: a club under it at the start of the regular season pays the shortfall as dead money (inbox note).
-  AI clubs don't spend toward the floor in free agency, so a few pay it every season.
+  AI clubs spend toward next season's floor in free agency; one or two still pay it in a typical season.
+- Smogon sets never rate above the species' own Showdown tier (`data/tiers.json`; AG sets only for AG species):
+  `scripts/build-catalog.ts` `cappedTier`. Battle levels and the tier basis of ratings are unchanged (open question
+  in `eval/RESULTS.md`: OVR barely predicts real battles, so the quick sim is now close to a coin flip too).
 - In the offseason rosters can be over 18 and practice squads over 6. AI clubs are trimmed when the regular
   season starts; the user's club is never trimmed silently: Home advises, and Play lists who would be released
   (lowest-rated, then cheapest, never a starter) in a confirm dialog.

@@ -209,16 +209,44 @@ try {
   if (!/No deal/.test(low)) fail(`a lowball offer was not rejected: ${low}`);
   // payrolls start near the cap (85–95%), so walk down the list to someone the club can afford
   let signed = '';
-  for (let nth = 6; nth < 40 && !/signs/.test(signed); nth++) {
-    signed = await negotiate(nth, 6, 'up');
-    if (!/signs|Not enough cap space/.test(signed)) break;
-  }
+  // (over the cap only minimum deals fit: Send offer stays disabled with the reason, so try the next one)
+  for (let nth = 6; nth < 40 && !/signs/.test(signed); nth++) signed = await negotiate(nth, 6, 'up');
   if (!/signs/.test(signed)) fail(`signing failed: ${signed}`);
   for (let i = 0; i < 4 && (await phaseOf()) !== 'preseason'; i++) await continueOnce(`free agency round ${i + 1}`);
   s = await invariants('next preseason');
   if (!(s.season === 2 && s.phase === 'preseason')) fail(`expected season 2 preseason, got season ${s.season} ${s.phase}`);
   await continueOnce('season 2 opens');
   await invariants('season 2 week 1', {rosters: true});
+
+  step('in season: roster full is said before any offer, then release and sign');
+  await page.goto(BASE + '#freeagents'); await settle();
+  const neg = await page.$('#view [data-fo="negotiate"]');
+  if (!neg) fail('no free agent to negotiate with in season');
+  else {
+    await neg.click(); await settle();
+    const note = await page.$eval('#dlg .x-note', (e) => e.innerText).catch(() => '');
+    if (!/Roster full/.test(note)) fail(`full roster: no note before the offer (got "${note}")`);
+    if (await page.getAttribute('#dlg [data-dlg="offer"]', 'aria-disabled') !== 'true') fail('Send offer enabled on a full roster');
+    if (!(await page.$('#dlg a[data-dlg="release"]'))) fail('no "Release someone" in the Negotiate dialog');
+    await closeDlg();
+  }
+  await page.goto(BASE + '#roster'); await settle();
+  const rel = (await page.$$('#view [data-act="release"]')).at(-1);
+  if (!rel) fail('no Release action on the roster');
+  else {
+    await rel.click(); await settle();
+    if (!/Dead money/.test(await dlgText())) fail('release confirm does not show dead money');
+    await page.click('#dlg [data-dlg="release"]'); await settle();
+    if (!/released/.test(await dlgText())) fail('release did not go through');
+    await closeDlg();
+    s = await state();
+    const n = Object.values(s.mons).filter((m) => m.teamId === s.userTeamId && m.tier !== 'ir').length;
+    if (n !== 17) fail(`after a release the roster has ${n}, expected 17`);
+    await page.goto(BASE + '#freeagents'); await settle();
+    let ok = '';
+    for (let nth = 0; nth < 30 && !/signs/.test(ok); nth++) ok = await negotiate(nth, 0, 'up');
+    if (!/signs/.test(ok)) fail(`in-season signing after a release failed: ${ok}`);
+  }
 
   step('export / import');
   const before = JSON.stringify(await state());

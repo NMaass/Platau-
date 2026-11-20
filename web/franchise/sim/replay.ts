@@ -14,6 +14,8 @@ export interface ReplayOptions { log: string[]; p1: ReplaySide; p2: ReplaySide; 
 
 export const VIEW_W = 640;
 export const VIEW_H = 360;
+/** Seconds the frame may try to start the hosted viewer before the "couldn't load" message. */
+export const LOAD_TIMEOUT_S = 10;
 
 /** Player speeds as [messageFadeTime, messageShownTime] (embed.ts SPEEDS: normal, fast, hyperfast). */
 export const SPEEDS: Record<string, [number, number]> = {'1x': [300, 1], '2x': [50, 1], '4x': [40, 1]};
@@ -134,6 +136,19 @@ export function mountReplay(container: HTMLElement, opts: ReplayOptions): Mounte
   };
   const timer = setInterval(refresh, 250);
   f.addEventListener('load', () => { const b = battle(); if (b) applySpeed(b); refresh(); });
+  // The viewer comes from play.pokemonshowdown.com: offline or blocked it never starts. After LOAD_TIMEOUT_S
+  // seconds of the frame trying, say so in the same fixed box (the box score below stays).
+  let waited = 0;
+  const watchdog = setInterval(() => {
+    if (battle()) { clearInterval(watchdog); return; }
+    if (f.srcdoc) waited++;
+    if (waited < LOAD_TIMEOUT_S) return;
+    clearInterval(watchdog); clearInterval(timer);
+    f.remove();
+    box.innerHTML = `<div class="l-empty" role="status" style="position:absolute;inset:0;margin:0;place-content:center;justify-items:center;text-align:center"><b>Replay viewer couldn't load</b><span>It needs play.pokemonshowdown.com. The box score below has the game.</span></div>`;
+    turnEl.textContent = 'Viewer unavailable';
+    root.querySelectorAll<HTMLButtonElement>('[data-a],[data-speed]').forEach((b) => { b.setAttribute('aria-disabled', 'true'); b.disabled = true; });
+  }, 1000);
 
   root.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button');
@@ -160,6 +175,6 @@ export function mountReplay(container: HTMLElement, opts: ReplayOptions): Mounte
   lazyLoadReplay(f, replayDocument(opts));
   return {
     frame: f, root,
-    destroy() { clearInterval(timer); ro?.disconnect(); root.remove(); },
+    destroy() { clearInterval(timer); clearInterval(watchdog); ro?.disconnect(); root.remove(); },
   };
 }

@@ -5,6 +5,7 @@ import {addXp} from './progression.ts';
 import {seriesTotals} from './summaries.ts';
 import {allRoles} from './ratings.ts';
 import {inbox} from './inbox.ts';
+import {monLabel} from './util.ts';
 
 export const GOAL_XP = {team: 40, mon: 150};
 
@@ -12,7 +13,7 @@ type Goal = NonNullable<LeagueState['teams'][string]['weeklyGoal']>;
 
 export function setGoal(catalog: Catalog, state: LeagueState, rng: Rng, teamId: TeamId, starters: Mon[]): Goal {
   const team = state.teams[teamId];
-  const name = (m: Mon) => catalog.species[m.speciesId].name;
+  const name = (m: Mon) => monLabel(catalog, state, m);
   const hazard = starters.find(m => allRoles(catalog, m).some(r => r.role === 'rocks' || r.role === 'spikes'));
   const options: Goal[] = [{kind: 'win-series', text: 'Win the series', target: 1, week: state.week}];
   if (state.week > 1) options.push({kind: 'sweep', text: 'Win the series without dropping a game', target: 1, week: state.week});
