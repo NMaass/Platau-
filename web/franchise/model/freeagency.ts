@@ -32,7 +32,9 @@ export function interest(state: LeagueState, mon: Mon, teamId: TeamId): 'Keen' |
   return n < 3 ? 'Keen' : n < 8 ? 'Neutral' : 'Cool';
 }
 
-const interestMult = {Keen: 0.95, Neutral: 1, Cool: 1.08};
+/** What interest does to the salary a free agent takes (× its ask). */
+export const INTEREST_MULT = {Keen: 0.95, Neutral: 1, Cool: 1.08};
+const interestMult = INTEREST_MULT;
 
 /** Why this team can't sign this mon at any price right now ('' = it can negotiate). Checked before an offer is built. */
 export function signBlock(state: LeagueState, teamId: TeamId, mon: Mon): {reason: string; rosterFull: boolean} {

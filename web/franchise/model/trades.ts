@@ -74,19 +74,24 @@ export function tradeBalance(catalog: Catalog, state: LeagueState, o: TradePropo
   return {inValue: v(getsSide), outValue: v(sendsSide) + roster};
 }
 
-export function evaluateTrade(catalog: Catalog, state: LeagueState, o: TradeProposal): {accept: boolean; score: number; reason: string} {
+/** The receiving club's verdict. score: value in minus value out, as a percent of the bigger side (-100..100);
+ *  need: the score it takes (ACCEPT_SCORE); problem: a rule the trade breaks (then no score counts);
+ *  keyMonId: the Pokémon that decides it (the best one they get if yes, the best one they give if no). */
+export function evaluateTrade(catalog: Catalog, state: LeagueState, o: TradeProposal): {accept: boolean; score: number; need: number; reason: string; problem?: string; keyMonId?: MonId} {
   const problem = tradeProblem(catalog, state, o);
   const {inValue, outValue} = tradeBalance(catalog, state, o, o.toTeamId);
   const score = Math.round(Math.max(-100, Math.min(100, ((inValue - outValue) / Math.max(10, outValue, inValue)) * 100)));
-  if (problem) return {accept: false, score, reason: problem};
+  const need = ACCEPT_SCORE;
+  if (problem) return {accept: false, score, need, reason: problem, problem};
   const them = state.teams[o.toTeamId];
+  const best = (ids: MonId[]) => ids.map(id => state.mons[id]).sort((a, b) => monValue(catalog, state, b, o.toTeamId) - monValue(catalog, state, a, o.toTeamId))[0];
   if (score >= ACCEPT_SCORE) {
-    const star = o.give.mons.map(id => state.mons[id]).sort((a, b) => monValue(catalog, state, b, o.toTeamId) - monValue(catalog, state, a, o.toTeamId))[0];
-    return {accept: true, score, reason: star ? `${them.name} like what ${spName(catalog, state, star.id)} brings` : `${them.name} like the picks`};
+    const star = best(o.give.mons);
+    return {accept: true, score, need, keyMonId: star?.id, reason: star ? `${them.name} like what ${spName(catalog, state, star.id)} brings` : `${them.name} like the picks`};
   }
-  const key = o.get.mons.map(id => state.mons[id]).sort((a, b) => monValue(catalog, state, b, o.toTeamId) - monValue(catalog, state, a, o.toTeamId))[0];
-  if (score > -15) return {accept: false, score, reason: `Close: ${them.name} want a little more${key ? ` for ${spName(catalog, state, key.id)}` : ''}`};
-  return {accept: false, score, reason: `${them.name} value ${key ? spName(catalog, state, key.id) : 'their side'} much higher`};
+  const key = best(o.get.mons);
+  if (score > -15) return {accept: false, score, need, keyMonId: key?.id, reason: `Close: ${them.name} want a little more${key ? ` for ${spName(catalog, state, key.id)}` : ''}`};
+  return {accept: false, score, need, keyMonId: key?.id, reason: `${them.name} value ${key ? spName(catalog, state, key.id) : 'their side'} much higher`};
 }
 
 /** Carry out a trade (no checks). Rosters are rebalanced to 18 afterwards. */

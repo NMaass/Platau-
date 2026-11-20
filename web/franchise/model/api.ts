@@ -223,7 +223,7 @@ export function simDraftToUser(catalog: Catalog, state: LeagueState): void {
 export function simDraftToEnd(catalog: Catalog, state: LeagueState): void {
   if (state.phase === 'draft') dr.completeDraft(remember(catalog), state);
 }
-export function evaluateTrade(catalog: Catalog, state: LeagueState, offer: Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>): {accept: boolean; score: number; reason: string} { return tr.evaluateTrade(remember(catalog), state, offer); }
+export function evaluateTrade(catalog: Catalog, state: LeagueState, offer: Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>): ReturnType<typeof tr.evaluateTrade> { return tr.evaluateTrade(remember(catalog), state, offer); }
 export function proposeTrade(catalog: Catalog, state: LeagueState, offer: Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>): {accepted: boolean; reason: string} { return tr.proposeTrade(remember(catalog), state, offer); }
 export function respondOffer(catalog: Catalog, state: LeagueState, offerId: string, accept: boolean): void { tr.respondOffer(remember(catalog), state, offerId, accept); }
 export function askingPrice(catalog: Catalog, state: LeagueState, monId: MonId): {salary: number; years: number} { return fa.askingPrice(remember(catalog), state, state.mons[monId]); }
