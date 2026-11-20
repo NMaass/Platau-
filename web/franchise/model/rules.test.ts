@@ -12,6 +12,7 @@ import {canAfford, capPayroll, deadMoneyOnCut, rookieContract, makeContract} fro
 import {offerContract} from './freeagency.ts';
 import {evaluateTrade} from './trades.ts';
 import {freeAgents, teamMons} from './util.ts';
+import {clubFamilies, monFamily} from './pool.ts';
 import {roleRating, bestRole} from './ratings.ts';
 
 const mon = (over: Partial<Mon> = {}): Mon => ({
@@ -146,8 +147,10 @@ test('trades: over-the-cap trades that add salary are refused; deadline closes t
   const s = newLeague(C, {seed: 9, start: 'random'});
   s.phase = 'regular'; s.week = 3;
   const t = s.userTeamId;
-  const theirs = teamMons(s, 't5').sort((a, b) => b.contract!.salary - a.contract!.salary)[0];
-  const mine = teamMons(s, t).filter(m => !m.contract!.exception).sort((a, b) => a.contract!.salary - b.contract!.salary)[0];
+  // a swap the species clause allows: neither club already has the other's line
+  const famT = clubFamilies(s, t), fam5 = clubFamilies(s, 't5');
+  const theirs = teamMons(s, 't5').filter(m => !famT.has(monFamily(m, C))).sort((a, b) => b.contract!.salary - a.contract!.salary)[0];
+  const mine = teamMons(s, t).filter(m => !m.contract!.exception && !fam5.has(monFamily(m, C))).sort((a, b) => a.contract!.salary - b.contract!.salary)[0];
   const offer = {fromTeamId: t, toTeamId: 't5', give: {mons: [mine.id], picks: []}, get: {mons: [theirs.id], picks: []}};
   // push the user to the cap
   const filler = teamMons(s, t).find(m => !m.contract!.exception && m.id !== mine.id)!;

@@ -81,7 +81,8 @@ function runSeasons(catalog: Catalog, seasons: number, seed: number): {state: Le
 
 test('three full seasons on the fixture catalog keep every invariant', () => {
   const t0 = performance.now();
-  const {state: s, phases, weekMs} = runSeasons(FIXTURE_CATALOG, 3, 7);
+  // seed 10: AI trades are rare (about one a season), this seed has some
+  const {state: s, phases, weekMs} = runSeasons(FIXTURE_CATALOG, 3, 10);
   for (const p of ['preseason', 'regular', 'playoffs', 'awards', 'draft-lottery', 'draft', 'resign', 'free-agency'] as Phase[]) assert.ok(phases.has(p), `visited ${p}`);
   assert.equal(s.history.length, 3);
   for (const h of s.history) {

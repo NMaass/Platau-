@@ -5,7 +5,8 @@
 import type {BattleJob, BattleJobResult, BattleResult, Catalog, DraftPick, LeagueSettings, LeagueState, Mon, MonBox, MonId, Series, Team, TeamId} from '../types.ts';
 import {hash01, leagueRng, type Rng} from './rng.ts';
 import {TEAM_SEEDS, teamIdAt} from './teams.ts';
-import {initPool, drawFamily, familyTypes, returnToPool, type FamilyInfo, type PoolCounts} from './pool.ts';
+import {initPool, drawFamily, returnToPool, type PoolCounts} from './pool.ts';
+import {premadeRosters} from './premade.ts';
 import {createMon} from './mons.ts';
 import {STRATEGIES} from './strategies.ts';
 import {ROSTER, STARTERS, applyPlan, autoLineup, canBattle, fieldedLineup, normalizeTiers, planLineup, removeFromLineup, type LineupPlan} from './lineup.ts';
@@ -105,10 +106,6 @@ function staggeredAges(rng: Rng, n: number): number[] {
     .map(a => Math.max(START.ageMin, Math.min(START.ageMax, a))));
 }
 
-/** Knobs for pre-made rosters: how many of the 18 are drawn from the gym type, and how even the clubs must be
- *  (mean of each club's best six ratings; filler Pokémon of similar age are swapped until the spread is under `spread`). */
-export const THEME = {typed: 9, spread: 2, swaps: 400};
-
 export const hasType = (catalog: Catalog, m: Mon, type: string | undefined): boolean =>
   !!type && (catalog.species[m.speciesId]?.types ?? []).includes(type);
 
@@ -119,22 +116,7 @@ export function topSix(catalog: Catalog, mons: Mon[]): number {
 }
 
 function randomRosters(catalog: Catalog, state: LeagueState, rng: Rng, teamIds: TeamId[]): void {
-  const legendTeams = rng.shuffle([...teamIds]).slice(0, START.legendaries);
-  for (const t of teamIds) {
-    const type = state.teams[t].gymType;
-    const prefer = type ? (f: FamilyInfo) => familyTypes(catalog, f).has(type) : undefined;
-    const ages = staggeredAges(rng, START.perTeam);
-    ages.forEach((age, k) => {
-      const legend = k === 0 && legendTeams.includes(t);
-      // every other draw leans to the gym type (about half the roster), the rest fill the strategy roles
-      const typed = k % 2 === 1 && Math.floor(k / 2) < THEME.typed;
-      const fam = (legend ? drawFamily(catalog, state, rng, 'legendary') : null) ?? drawFamily(catalog, state, rng, 'nonlegendary', typed ? prefer : undefined)!;
-      const m = createMon(catalog, state, rng, {family: fam, age: legend ? Math.max(age, 24) : age, teamId: t, tier: 'backup'});
-      if (m.age <= 21) m.rookieSeason = 1;
-    });
-  }
-  balanceRosters(catalog, state, teamIds);
-  for (const t of teamIds) setPracticeSquad(state, t);
+  premadeRosters(catalog, state, rng, teamIds, {perTeam: START.perTeam, legendaries: START.legendaries, ages: n => staggeredAges(rng, n), practice: t => setPracticeSquad(state, t)});
 }
 
 /** Practice squad = the youngest six; everyone else starts as a backup (lineups promote the starters). */
@@ -142,39 +124,6 @@ function setPracticeSquad(state: LeagueState, teamId: TeamId): void {
   const mons = teamMons(state, teamId);
   for (const m of mons) m.tier = 'backup';
   [...mons].sort((a, b) => a.age - b.age || a.id.localeCompare(b.id)).slice(0, 6).forEach(m => { m.tier = 'practice'; });
-}
-
-/** Even out the clubs: swap filler Pokémon (not legendary, not of either gym's type, within 2 years of age)
- *  between the strongest and the weakest club while that narrows their gap. */
-function balanceRosters(catalog: Catalog, state: LeagueState, teamIds: TeamId[]): void {
-  const legend = (m: Mon) => catalog.species[m.speciesId]?.rarity === 'legendary' || catalog.species[m.speciesId]?.rarity === 'mythical';
-  // a swap must not cost either club a Pokémon of its gym type
-  const keepsTypes = (a: Mon, ta: TeamId, b: Mon, tb: TeamId) =>
-    (!hasType(catalog, a, state.teams[ta].gymType) || hasType(catalog, b, state.teams[ta].gymType))
-    && (!hasType(catalog, b, state.teams[tb].gymType) || hasType(catalog, a, state.teams[tb].gymType));
-  for (let guard = 0; guard < THEME.swaps; guard++) {
-    const str = teamIds.map(t => ({t, v: topSix(catalog, teamMons(state, t))})).sort((a, b) => b.v - a.v);
-    let done = true;
-    // try the strongest against the weakest first, then the next pairs out
-    outer: for (let i = 0; i < 3; i++) for (let j = str.length - 1; j > str.length - 4; j--) {
-      const hi = str[i], lo = str[j];
-      if (hi.v - lo.v <= THEME.spread) break outer;
-      const A = teamMons(state, hi.t), B = teamMons(state, lo.t);
-      let best: {a: Mon; b: Mon; gap: number} | null = null;
-      for (const a of A) {
-        if (legend(a)) continue;
-        for (const b of B) {
-          if (legend(b) || Math.abs(a.age - b.age) > 2 || !keepsTypes(a, hi.t, b, lo.t)) continue;
-          if (bestRole(catalog, a).ovr <= bestRole(catalog, b).ovr) continue;
-          const A2 = A.map(x => x === a ? b : x), B2 = B.map(x => x === b ? a : x);
-          const gap = Math.abs(topSix(catalog, A2) - topSix(catalog, B2));
-          if (gap < hi.v - lo.v && (!best || gap < best.gap)) best = {a, b, gap};
-        }
-      }
-      if (best) { best.a.teamId = lo.t; best.b.teamId = hi.t; done = false; break outer; }
-    }
-    if (done) break;
-  }
 }
 
 // ---------------------------------------------------------------- startup draft
@@ -249,7 +198,7 @@ export function enforceFloor(catalog: Catalog, state: LeagueState): void {
 
 /** Strategy-choice knobs: a club keeps playing its favourite while it can field it on-role (worth `favourite1`
  *  rating points a slot over another strategy), but never over a strategy the roster can fill on-role. */
-export const STRATEGY_PICK = {offRolePenalty: 40, favourite1: 10, favourite2: 6};
+export const STRATEGY_PICK = {offRolePenalty: 40, favourite1: 20, favourite2: 12};
 
 /**
  * AI: try every strategy and play the strongest lineup the roster can fill on-role, leaning to

@@ -7,6 +7,7 @@ import * as api from './api.ts';
 import {teamMons, rosterCount} from './util.ts';
 import {makeAiOffer} from './trades.ts';
 import {leagueRng} from './rng.ts';
+import {draftableFor} from './draft.ts';
 
 /** 10% over the ask, within the max salary. */
 const above = (s: LeagueState, ask: number) => Math.min(s.settings.cap * s.settings.maxSalaryPct, Math.ceil(ask * 1.1 / 50_000) * 50_000);
@@ -27,7 +28,8 @@ test('draft: the user picks when on the clock; AI picks up to the user', () => {
   const p = api.onTheClock(s)!;
   assert.equal(p.ownerTeamId, s.userTeamId);
   const before = s.draft!.picks.length;
-  const pick = api.draftBoard(s)[0];
+  // the best prospect the user may take (one of a species line per club)
+  const pick = api.draftBoard(s).find(m => draftableFor(s, s.userTeamId).includes(m))!;
   api.draftPick(C, s, pick.id);
   assert.equal(s.draft!.picks.length, before + 1);
   assert.equal(s.mons[pick.id].teamId, s.userTeamId);
