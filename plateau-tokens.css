@@ -201,6 +201,8 @@ span.peek:not(.ref){display:inline-block}
 /* stacks and rows */
 .l-stack{display:grid;gap:var(--s3);align-content:start;min-width:0;grid-template-columns:minmax(0,1fr)} .l-stack>*{min-width:0} .l-stack.tight{gap:var(--s2)} .l-stack.loose{gap:var(--s5)}
 .l-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0}          /* inline things share one centre line */
+.l-row.one{flex-wrap:nowrap;min-height:28px}                                             /* one line, never wraps: a tag added later cannot push content down */
+.l-row.one>.ref{min-width:0;flex:0 1 auto} .l-row.one .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}  /* the popover child stays unclipped */
 .l-split{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);min-width:0}
 /* two sides facing each other (battle frame): never wraps; long names ellipsise; right side is mirrored */
 .l-versus{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--s3);min-width:0}
@@ -365,8 +367,8 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* status chip of one width (clinch, interest, verdict, lottery move): sized for the longest word ("Clinched spot") */
 :root{--chip-w:128px}
 .chip.fix{width:var(--chip-w);justify-content:center;overflow:hidden;text-overflow:ellipsis}
-/* two equal buttons in one table cell (Scout · 1 / Full · 5) */
-.l-cellacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+/* two (or --n) equal buttons in one table cell (Scout · 1 / Full · 5; Open / Export / Delete) */
+.l-cellacts{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:var(--s2)}
 .l-cellacts>.btn{min-width:0;padding:0 var(--s2)}
 /* toolbar above a table: switches/filters left, a count right; fixed height so toggling never moves the table */
 .l-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:var(--ctl-h-touch);flex-wrap:wrap}
