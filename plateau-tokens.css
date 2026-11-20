@@ -18,7 +18,7 @@
   --ev-scout:#0F655C;   --ev-scout-bg:#DAEEEB;    /* report ready, lottery, pick made */
   --gr-F:#8E1F16; --gr-F-bg:#F7DCD8; --gr-D:#8A3D05; --gr-D-bg:#F9E2CF; --gr-C:#6B4C00; --gr-C-bg:#F4E6BC;
   --gr-B:#22602A; --gr-B-bg:#DCEDD6; --gr-A:#0B5A52; --gr-A-bg:#D3ECE7; --gr-AA:#1B4E8C; --gr-AA-bg:#DAE6F6; --gr-AAA:#2B2A30;
-  --spr-bg:#EDEBE4;
+  --spr-bg:#EDEBE4; --badge-plate:#E9E6DE; --badge-ring:#D3D0C7;
   --foil:linear-gradient(115deg,#d9dde3 0%,#f3e9c9 22%,#d7e9e4 44%,#e6d6ee 66%,#f1f0e6 86%,#d9dde3 100%);
   --font-display:"Rokkitt",Rockwell,"Roboto Slab",Georgia,serif;
   --font-ui:"Archivo","Helvetica Neue",Arial,sans-serif;
@@ -34,7 +34,7 @@
   --ev-scout:#7FD3C7; --ev-scout-bg:#163330;
   --gr-F:#F7B0A8; --gr-F-bg:#4A1E1A; --gr-D:#F6BE8E; --gr-D-bg:#4A2A14; --gr-C:#EDD08A; --gr-C-bg:#42361A;
   --gr-B:#9ED89A; --gr-B-bg:#1F3A22; --gr-A:#86D9CD; --gr-A-bg:#143A36; --gr-AA:#A5C8F2; --gr-AA-bg:#1B2E4A; --gr-AAA:#141318;
-  --spr-bg:#2A2930;
+  --spr-bg:#2A2930; --badge-plate:#3B3A41; --badge-ring:#4C4A53;
   --foil:linear-gradient(115deg,#8a909a 0%,#c4b37e 22%,#8ab0a8 44%,#ad97ba 66%,#c0bdb0 86%,#8a909a 100%);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); --scrim:rgba(0,0,0,.6); color-scheme:dark }}
 :root[data-theme="dark"]{
@@ -46,7 +46,7 @@
   --ev-scout:#7FD3C7; --ev-scout-bg:#163330;
   --gr-F:#F7B0A8; --gr-F-bg:#4A1E1A; --gr-D:#F6BE8E; --gr-D-bg:#4A2A14; --gr-C:#EDD08A; --gr-C-bg:#42361A;
   --gr-B:#9ED89A; --gr-B-bg:#1F3A22; --gr-A:#86D9CD; --gr-A-bg:#143A36; --gr-AA:#A5C8F2; --gr-AA-bg:#1B2E4A; --gr-AAA:#141318;
-  --spr-bg:#2A2930;
+  --spr-bg:#2A2930; --badge-plate:#3B3A41; --badge-ring:#4C4A53;
   --foil:linear-gradient(115deg,#8a909a 0%,#c4b37e 22%,#8ab0a8 44%,#ad97ba 66%,#c0bdb0 86%,#8a909a 100%);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); --scrim:rgba(0,0,0,.6); color-scheme:dark }
 
@@ -62,7 +62,7 @@
   /* layout */
   --page-max:1240px; --side-w:200px; --gutter:16px; --card-min:260px; --dialog-w:560px; --label-w:112px;
   /* fixed component widths (sized for the widest member of each set: AAA, "SAND | 100", "Hazard remover", "68–81") */
-  --logo:32px; --logo-lg:56px;
+  --logo:32px; --logo-lg:56px; --logo-xl:112px; --logo-pad:3px;
   --grade-w:46px; --rb-r-w:52px; --rb-n-w:40px; --rb-full-w:124px; --rb-range-w:72px;
 }
 @media (max-width:640px){ :root{ --ctl-h:var(--ctl-h-touch); --ctl-h-sm:var(--ctl-h-touch); --t-h1:24px; --t-h2:20px } }
@@ -154,10 +154,14 @@ span.peek:not(.ref){display:inline-block}
 .spr img{width:72px;height:72px;image-rendering:pixelated;display:block}
 .spr.xl{width:112px;height:112px}.spr.xl img{width:96px;height:96px}
 .spr.md{width:56px;height:56px}.spr.md img{width:56px;height:56px}
-/* club logo = its gym badge: one fixed square everywhere a club is named (.lg only on the New League page) */
-.logo{display:inline-grid;place-items:center;flex:none;width:var(--logo);height:var(--logo)}
+/* club logo = its gym badge on a round plate: one fixed circle everywhere a club is named (.lg / .xl on New League).
+   The badge art is normalised (assets/badges: trimmed, centred on a 128 px square, ~90% of it), so every badge
+   reads the same size; the plate's inset ring is the only border (no box, nothing pokes out: overflow hidden). */
+.logo{display:inline-grid;place-items:center;flex:none;width:var(--logo);height:var(--logo);padding:var(--logo-pad);border-radius:50%;background:var(--badge-plate);box-shadow:inset 0 0 0 1px var(--badge-ring);overflow:hidden}
 .logo img{width:100%;height:100%;object-fit:contain;display:block}
-.logo.lg{width:var(--logo-lg);height:var(--logo-lg)}
+.logo svg.i{width:60%;height:60%}
+.logo.lg{width:var(--logo-lg);height:var(--logo-lg);--logo-pad:6px}
+.logo.xl{width:var(--logo-xl);height:var(--logo-xl);--logo-pad:12px}
 
 /* ===== Layout layer: primitives ===== */
 /* app shell: sidebar of rooms + main column; on phone the sidebar becomes .l-tabbar */
@@ -395,3 +399,137 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* side panel that stays in view beside a long list (desktop); a normal block when the columns stack */
 .l-sticky{position:sticky;top:var(--s4)}
 @media (max-width:1060px){ .l-sticky{position:static} }
+/* ===== Hero call to action (This week, 2026-11-20) ===== */
+/* .btn.xl: the page's main action, one size for every hero button: icon left, label + one-line hint.
+   .l-hero: numbered steps; each .step is a cap label over its buttons; .l-hero-acts holds N equal xl buttons. */
+:root{--ctl-h-xl:84px}
+.btn.xl{min-height:var(--ctl-h-xl);padding:var(--s3) var(--s5);display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;column-gap:var(--s3);row-gap:2px;align-content:center;justify-content:stretch;justify-items:start;text-align:left;white-space:normal;font-family:var(--font-display);font-size:var(--t-h2);font-weight:800;line-height:var(--lh-tight)}
+.btn.xl>svg.i{grid-row:1/3;align-self:center;width:28px;height:28px}
+.btn.xl>small{grid-column:2;font-family:var(--font-ui);font-size:var(--t-small);font-weight:600;line-height:var(--lh-tight);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.btn.xl[aria-disabled="true"]>small{opacity:1}
+.l-hero{display:grid;gap:var(--s4)}
+.l-hero>.step{display:grid;gap:var(--s2)}
+.l-hero .step>.cap{display:flex;align-items:center;gap:var(--s2)}
+.l-hero .step>.cap>b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid currentColor;font-size:var(--t-label)}
+.l-hero .step.is-done>.cap>b{background:var(--ev-growth-bg);color:var(--ev-growth)}
+.l-hero .step.is-todo>.cap>b{background:var(--ev-decline-bg);color:var(--ev-decline)}
+.l-hero-acts{display:grid;grid-template-columns:repeat(var(--n,1),minmax(0,1fr));gap:var(--s3)}
+@media (max-width:480px){ .l-hero-acts{grid-template-columns:minmax(0,1fr)} }
+.l-hero .step>.cap>b>svg.i{width:13px;height:13px}
+
+/* ===== Motion (2026-11-20). Only opacity and transform move: nothing animates size or position in the flow, so
+   motion never shifts layout. prefers-reduced-motion turns every animation and transition off (rule above), and
+   script-driven sequences (the league-start intro) are skipped there too.
+   --dur-fast  120ms  state feedback on one control: hover, press, a toggle, a chip appearing.
+   --dur-base  200ms  something on the page changes: a wizard step, a panel's content, a dialog.
+   --dur-slow  360ms  a moment worth noticing: an entrance, the badge in the league-start intro.
+   --ease-out     things arriving (fast start, soft landing): entrances, step content.
+   --ease-in      things leaving (soft start, quick end): exits, the intro fading away. Exits use --dur-fast.
+   --ease-in-out  one state to another on the spot: toggles, a selection moving.
+   Sequences (the intro) are built from these steps with delays; keep a whole sequence under 2 s and skippable. */
+:root{--dur-fast:120ms;--dur-base:200ms;--dur-slow:360ms;--ease-out:cubic-bezier(.2,.8,.2,1);--ease-in:cubic-bezier(.4,0,1,1);--ease-in-out:cubic-bezier(.65,0,.35,1)}
+@keyframes l-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes l-enter-back{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes l-fade{from{opacity:0}to{opacity:1}}
+@keyframes l-pop{from{opacity:0;transform:scale(.6)}70%{opacity:1;transform:scale(1.04)}to{opacity:1;transform:none}}
+.l-enter{animation:l-enter var(--dur-base) var(--ease-out) both}
+.l-enter.back{animation-name:l-enter-back}
+
+/* ===== New League wizard (focus page: no sidebar, no tab bar). body.focus is set by the shell on #new. =====
+   .l-wizard: top bar (brand, steps, close) / step body / footer bar (Back, hint, Next: fixed equal widths, Back keeps
+   its place hidden on step 1, so nothing moves between steps). */
+:root{--decide-h:248px;--club-h:132px;--club-h-row:64px;--wz-foot-h:68px}
+body.focus .l-shell{grid-template-columns:minmax(0,1fr);max-width:var(--page-max)}
+body.focus .l-side,body.focus .l-tabbar,body.focus .mhead,body.focus #subnav{display:none}
+body.focus .l-page{padding-bottom:0}
+.l-wizard{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto;min-height:calc(100vh - 2*var(--s4))}
+.l-wizard>*{min-width:0}
+.wz-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--s4);min-height:var(--ctl-h)}
+.wz-brand{display:flex;align-items:center;gap:var(--s2);font-family:var(--font-display);font-weight:800;font-size:var(--t-h3)}
+.wz-steps{display:flex;justify-content:center;gap:var(--s5);counter-reset:wz}
+.wz-steps li{display:flex;align-items:center;gap:var(--s2);color:var(--ink-3);font-weight:650;font-size:var(--t-small);white-space:nowrap}
+.wz-steps li::before{counter-increment:wz;content:counter(wz);display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--rule-strong);font-size:var(--t-label);font-weight:700}
+.wz-steps li[aria-current="step"]{color:var(--ink)}
+.wz-steps li[aria-current="step"]::before{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.wz-steps li.is-done::before{background:var(--ev-growth-bg);border-color:var(--ev-growth);color:var(--ev-growth)}
+.wz-top .wz-close{min-width:var(--ctl-w)}
+.wz-body{display:grid;gap:var(--s5);align-content:start;grid-template-columns:minmax(0,1fr)}
+.wz-body>*{min-width:0}
+.wz-head{display:grid;gap:var(--s2);justify-items:center;text-align:center}
+.wz-head h1{font-size:var(--t-h1);font-weight:800}
+.wz-head h1:focus{outline:none}
+.wz-head .sub{color:var(--ink-2);max-width:60ch}
+.wz-foot{position:sticky;bottom:0;z-index:20;display:grid;grid-template-columns:var(--ctl-w) minmax(0,1fr) var(--ctl-w);align-items:center;gap:var(--s4);min-height:var(--wz-foot-h);padding:var(--s3) 0 calc(var(--s3) + env(safe-area-inset-bottom));background:var(--ground);border-top:1px solid var(--rule);margin-top:auto}
+.wz-foot>.btn{width:var(--ctl-w)}
+.wz-foot>.btn[hidden]{display:inline-flex;visibility:hidden}
+.wz-foot .hint{text-align:center;color:var(--ink-2);font-size:var(--t-small);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* decision cards: two equal, fixed-height choices (aria-pressed), big icon, title, two lines, two facts */
+.l-decide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s5);max-width:880px;width:100%;margin-inline:auto}
+.decide{display:grid;grid-template-rows:auto auto 1fr auto;gap:var(--s3);height:var(--decide-h);padding:var(--s5);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color var(--dur-fast) var(--ease-in-out),background-color var(--dur-fast) var(--ease-in-out),box-shadow var(--dur-fast) var(--ease-in-out)}
+.decide:hover{background:var(--paper-2)}
+.decide:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.decide[aria-pressed="true"]{border-color:var(--team);box-shadow:inset 0 0 0 1px var(--team),var(--shadow);background:var(--paper)}
+.decide .dic{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--paper-2);border:1px solid var(--rule)}
+.decide .dic svg.i{width:28px;height:28px}
+.decide[aria-pressed="true"] .dic{background:var(--team-tint);border-color:var(--team);color:var(--team-ink)}
+.decide b{font-family:var(--font-display);font-size:var(--t-h2);font-weight:800;line-height:var(--lh-tight)}
+.decide>span{color:var(--ink-2)}
+.decide ul{display:grid;gap:var(--s1);font-size:var(--t-small);font-weight:650}
+.decide li{display:flex;align-items:center;gap:var(--s2)}
+.decide li svg.i{color:var(--ink-3)}
+/* club tiles: four equal fixed tiles a row (badge, city, club, gym type + strategy icon); a row tile on phones */
+.l-clubs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s3)}
+.club-tile{display:grid;grid-template-rows:auto auto auto auto;justify-items:center;align-content:center;gap:2px;height:var(--club-h);padding:var(--s2);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);color:inherit;font:inherit;cursor:pointer;min-width:0;text-align:center;transition:border-color var(--dur-fast) var(--ease-in-out),background-color var(--dur-fast) var(--ease-in-out)}
+.club-tile:hover{background:var(--paper-2)}
+.club-tile:focus-visible{outline:2px solid var(--c,var(--team));outline-offset:2px}
+.club-tile[aria-pressed="true"]{border-color:var(--c,var(--team));box-shadow:inset 0 0 0 1px var(--c,var(--team)),inset 0 -4px 0 var(--c,var(--team));background:var(--paper-2)}
+.club-tile .logo{margin-bottom:var(--s1)}
+.club-tile b{font-family:var(--font-display);font-size:var(--t-lead);line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.club-tile small{font-size:var(--t-label);color:var(--ink-2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.club-tile .meta{display:flex;align-items:center;gap:var(--s1);height:20px}
+.club-tile .meta .type{height:18px;font-size:10px}
+.club-tile .meta svg.i{color:var(--ink-2)}
+.club-tile .sub2{display:none;align-items:center;gap:var(--s1);font-size:var(--t-label);color:var(--ink-2);max-width:100%;min-width:0;white-space:nowrap;overflow:hidden}
+@media (max-width:640px){
+  .l-decide{grid-template-columns:minmax(0,1fr);gap:var(--s3)}
+  .decide .dic{width:48px;height:48px}
+  .decide{padding:var(--s4)}
+  .l-clubs{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+  .club-tile{height:var(--club-h-row);grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;justify-items:start;text-align:left;column-gap:var(--s2);row-gap:0}
+  .club-tile .logo{grid-row:1/3;margin:0;width:40px;height:40px;--logo-pad:3px}
+  .club-tile small,.club-tile .meta{display:none}
+  .club-tile .sub2{display:flex}
+  .wz-steps{gap:var(--s3)}
+  .wz-steps li span{display:none}
+  .wz-steps li[aria-current="step"] span{display:inline}
+  .wz-brand span{display:none}
+  .wz-top .wz-close{min-width:0}
+  .wz-foot{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .wz-foot>.btn{width:auto}
+  .wz-foot .hint{display:none}
+}
+/* step 2 side preview only beside the grid (desktop); step 3 shows it in full on every width */
+@media (max-width:1060px){ .wz-side{display:none} }
+/* step 3 hero: the club, large */
+.wz-club{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s5);align-items:center}
+.wz-club h1{font-size:var(--t-h1);font-weight:800}
+.wz-club .facts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s4);color:var(--ink-2)}
+.wz-club .facts>span{display:inline-flex;align-items:center;gap:var(--s2)}
+.wz-club .facts svg.i{width:20px;height:20px;color:var(--ink)}
+.wz-club .facts b{color:var(--ink)}
+.plays{display:inline-flex;align-items:center;gap:var(--s2);min-width:0}
+.plays svg.i{flex:none}
+@media (max-width:640px){ .wz-club{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center} .wz-club .facts{justify-content:center} .wz-club .logo.xl{--logo-xl:96px} }
+
+/* ===== League-start intro: a fixed full-screen layer over the app (no layout under it moves) =====
+   badge pops in (--dur-slow, --ease-out), then the name and "Season 1" rise in (--dur-base, delayed), the layer
+   fades out (--dur-fast, --ease-in) once the team home is ready beneath. ~1.5 s; a click or key skips it. */
+.l-intro{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--ground);cursor:pointer;animation:l-fade var(--dur-fast) var(--ease-out) both}
+.l-intro.out{opacity:0;transition:opacity var(--dur-base) var(--ease-in)}
+.l-intro>div{display:grid;justify-items:center;gap:var(--s3);text-align:center;padding:var(--s5)}
+.l-intro .logo{box-shadow:inset 0 0 0 2px var(--c,var(--team)),var(--shadow);animation:l-pop var(--dur-slow) var(--ease-out) 80ms both}
+.l-intro h1{font-size:calc(var(--t-h1) * 1.3);font-weight:800;animation:l-enter var(--dur-base) var(--ease-out) 420ms both}
+.l-intro .cap{animation:l-enter var(--dur-base) var(--ease-out) 560ms both}
+.l-intro .bar{width:120px;height:4px;border-radius:2px;background:var(--c,var(--team));transform-origin:left;animation:l-fill 900ms var(--ease-in-out) 500ms both}
+.l-intro small{color:var(--ink-3);font-size:var(--t-label);animation:l-fade var(--dur-base) var(--ease-out) 700ms both}
+@keyframes l-fill{from{transform:scaleX(0)}to{transform:none}}
