@@ -17,6 +17,8 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 - Minimal headings; detail behind peeks (Glance → Peek → Page). EV grade never sits next to OVR in default rows.
 - Real sprites only (`sprites.ts`: Showdown, PokeAPI fallback). Team colour is an accent only.
 - Vocabulary: Strategy, Moveset, Series, Growth.
+- Numbers, not sentences: show a team, club, matchup or trade as icons, numbers and ratings (`components/stats.ts`),
+  never a generated sentence about advantages or strategy. Event logs, button labels and error messages stay words.
 
 ## Modules
 | File | What |
@@ -53,6 +55,10 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `capStrip(teamId)`, `rosterUsed`, `beforeAfter(rows)` | cap room strip; before → after money lines |
 | `knownBadge(mon)`, `knownMid(mon)` | what your club knows: exact badge or fixed-width range badge; sort value |
 | `tradeMeter(ev)`, `pickLabel(p)`, `pickKey(p)`, `once(key, fn)` | will-they-accept meter; draft pick label/key; install a delegated listener once |
+| `stats.ts` `stratChip(id, {iconOnly})` | the one way a strategy shows: icon + short name ("Rain", "Hyper offense"), fixed width (`--strat-w`); `stratName(id)` |
+| `stat(label, valueHtml, {icon, sub, title, wide})`, `stats(tiles, n, nSm)` | equal stat tiles (`.l-stats`/`.stat`, one height `--stat-h`; `wide` spans two) |
+| `meter(label, value, max)`, `meters(rows)` | rating bars, label \| bar \| number (`.l-meters`) |
+| `vs(a, b, ka, kb)` | yours vs theirs pair, the lower muted (`.vs`); `avg(xs)` |
 | `layer.ts` `openDialog({title, cap, body, actions, onAction, onClose, wide, locked})` | the one shared dialog; `updateDialog`, `closeDialog`, `confirmDialog`. An action with `disabled` + `why` stays in place with the reason in a peek |
 | `info(label, popHtml)`, `peekLabel(label, popHtml)`, `prow(k, v)` | peeks (one floating layer, hover/focus/tap) |
 
@@ -74,7 +80,7 @@ Design-system primitives added for them: `.chip.fix`, `.l-cellacts` (two equal b
 New League (`screens/settings.ts`, a wizard wired by its own `data-nl="mode|next|back|team|start"` listener) adds
 `body.focus` (no sidebar / tab bar), `.l-wizard` (`.wz-top` steps, `.wz-body`, `.wz-foot` Back/Next of fixed width),
 `.l-decide` + `.decide` (equal decision cards, aria-pressed), `.l-clubs` + `.club-tile` (badge tiles, a row tile on
-phones), `.plays` (strategy icon + plain words, `model/strategies.ts` `STRATEGY_LOOK`), `.l-tiles`, `.l-icons`,
+phones), `.strat` (strategy chip, `model/strategies.ts` `STRATEGY_LOOK`), `.l-tiles`, `.l-icons`,
 `.l-sticky`, and `.l-intro` (the league-start intro). Motion: `--dur-fast|base|slow`, `--ease-out|in|in-out` (when to
 use each is in the tokens file), `.l-enter` (a step's content arriving; `.back` from above).
 This week's hero: `.l-hero` (numbered `.step`s, `.is-done` / `.is-todo`) and `.btn.xl` (the main action: icon, label,

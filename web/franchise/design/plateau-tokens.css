@@ -438,7 +438,7 @@ dialog.l-dialog::backdrop{background:var(--scrim)}
 /* ===== New League wizard (focus page: no sidebar, no tab bar). body.focus is set by the shell on #new. =====
    .l-wizard: top bar (brand, steps, close) / step body / footer bar (Back, hint, Next: fixed equal widths, Back keeps
    its place hidden on step 1, so nothing moves between steps). */
-:root{--decide-h:248px;--club-h:132px;--club-h-row:64px;--wz-foot-h:68px}
+:root{--decide-h:240px;--club-h:132px;--club-h-row:64px;--wz-foot-h:68px}
 body.focus .l-shell{grid-template-columns:minmax(0,1fr);max-width:var(--page-max)}
 body.focus .l-side,body.focus .l-tabbar,body.focus .mhead,body.focus #subnav{display:none}
 body.focus .l-page{padding-bottom:0}
@@ -465,7 +465,7 @@ body.focus .l-page{padding-bottom:0}
 .wz-foot .hint{text-align:center;color:var(--ink-2);font-size:var(--t-small);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* decision cards: two equal, fixed-height choices (aria-pressed), big icon, title, two lines, two facts */
 .l-decide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s5);max-width:880px;width:100%;margin-inline:auto}
-.decide{display:grid;grid-template-rows:auto auto 1fr auto;gap:var(--s3);height:var(--decide-h);padding:var(--s5);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color var(--dur-fast) var(--ease-in-out),background-color var(--dur-fast) var(--ease-in-out),box-shadow var(--dur-fast) var(--ease-in-out)}
+.decide{display:grid;grid-template-rows:auto auto 1fr;gap:var(--s3);height:var(--decide-h);padding:var(--s5);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color var(--dur-fast) var(--ease-in-out),background-color var(--dur-fast) var(--ease-in-out),box-shadow var(--dur-fast) var(--ease-in-out)}
 .decide:hover{background:var(--paper-2)}
 .decide:focus-visible{outline:2px solid var(--team);outline-offset:2px}
 .decide[aria-pressed="true"]{border-color:var(--team);box-shadow:inset 0 0 0 1px var(--team),var(--shadow);background:var(--paper)}
@@ -473,10 +473,10 @@ body.focus .l-page{padding-bottom:0}
 .decide .dic svg.i{width:28px;height:28px}
 .decide[aria-pressed="true"] .dic{background:var(--team-tint);border-color:var(--team);color:var(--team-ink)}
 .decide b{font-family:var(--font-display);font-size:var(--t-h2);font-weight:800;line-height:var(--lh-tight)}
-.decide>span{color:var(--ink-2)}
-.decide ul{display:grid;gap:var(--s1);font-size:var(--t-small);font-weight:650}
-.decide li{display:flex;align-items:center;gap:var(--s2)}
-.decide li svg.i{color:var(--ink-3)}
+.decide ul{display:grid;gap:var(--s2);align-self:end;font-size:var(--t-small);font-weight:650;color:var(--ink-2)}
+.decide li{display:grid;grid-template-columns:18px 5ch minmax(0,1fr);align-items:baseline;gap:var(--s2)}
+.decide li svg.i{color:var(--ink-3);align-self:center}
+.decide li>b{font-family:var(--font-display);font-size:var(--t-h3);font-weight:800;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
 /* club tiles: four equal fixed tiles a row (badge, city, club, gym type + strategy icon); a row tile on phones */
 .l-clubs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s3)}
 .club-tile{display:grid;grid-template-rows:auto auto auto auto;justify-items:center;align-content:center;gap:2px;height:var(--club-h);padding:var(--s2);border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--paper);color:inherit;font:inherit;cursor:pointer;min-width:0;text-align:center;transition:border-color var(--dur-fast) var(--ease-in-out),background-color var(--dur-fast) var(--ease-in-out)}
@@ -517,8 +517,6 @@ body.focus .l-page{padding-bottom:0}
 .wz-club .facts>span{display:inline-flex;align-items:center;gap:var(--s2)}
 .wz-club .facts svg.i{width:20px;height:20px;color:var(--ink)}
 .wz-club .facts b{color:var(--ink)}
-.plays{display:inline-flex;align-items:center;gap:var(--s2);min-width:0}
-.plays svg.i{flex:none}
 @media (max-width:640px){ .wz-club{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center} .wz-club .facts{justify-content:center} .wz-club .logo.xl{--logo-xl:96px} }
 
 /* ===== League-start intro: a fixed full-screen layer over the app (no layout under it moves) =====
@@ -533,3 +531,39 @@ body.focus .l-page{padding-bottom:0}
 .l-intro .bar{width:120px;height:4px;border-radius:2px;background:var(--c,var(--team));transform-origin:left;animation:l-fill 900ms var(--ease-in-out) 500ms both}
 .l-intro small{color:var(--ink-3);font-size:var(--t-label);animation:l-fade var(--dur-base) var(--ease-out) 700ms both}
 @keyframes l-fill{from{transform:scaleX(0)}to{transform:none}}
+
+/* ===== Numbers, not sentences (2026-11-20): strategy chip, stat tiles, rating meters, a vs pair =====
+   .strat     the one way a strategy shows: icon + short name ("Rain", "Hyper offense"), one fixed width
+              (--strat-w, sized for "Hyper offense"); .strat.icon is the icon alone (26 px square, name in aria/title).
+   .l-stats   N equal stat tiles (--n; --n-sm under 480 px, default 2). .stat: cap label (optional icon) over a big
+              number, an optional one-line <small> under it. Every tile one height (--stat-h) whatever it holds.
+   .l-meters  rating bars: label | bar | number, fixed label and number columns so bars line up across rows.
+   .vs        two numbers side by side (yours | theirs), the higher one in ink, the other muted. */
+:root{--strat-w:136px;--stat-h:72px;--meter-k:96px}
+.strat{display:inline-flex;align-items:center;gap:6px;width:var(--strat-w);height:26px;padding:0 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper-2);color:var(--ink);font-size:12.5px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;flex:none;vertical-align:middle}
+.strat>svg.i{width:15px;height:15px;color:var(--ink-2)}
+.strat>span{overflow:hidden;text-overflow:ellipsis}
+.strat.icon{width:26px;padding:0;justify-content:center}
+.l-stats{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:var(--s2)}
+@media (max-width:480px){ .l-stats{grid-template-columns:repeat(var(--n-sm,2),minmax(0,1fr))} }
+.stat{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:2px;height:var(--stat-h);padding:var(--s2) var(--s3);border:1px solid var(--rule);border-radius:var(--r);background:var(--paper);min-width:0}
+.stat>.cap{display:flex;align-items:center;gap:var(--s1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat>.cap svg.i{width:13px;height:13px}
+.stat>b{display:flex;align-items:center;gap:var(--s1);min-width:0;font-family:var(--font-display);font-size:var(--t-h2);font-weight:800;line-height:1;white-space:nowrap;overflow:hidden}
+.stat>b>small{font-family:var(--font-ui);font-size:var(--t-small);font-weight:650;color:var(--ink-2)}
+.stat>b>.strat{font-family:var(--font-ui);width:auto;max-width:100%}
+.stat>small{font-size:var(--t-label);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l-meters{display:grid;gap:var(--s2)}
+.meter{display:grid;grid-template-columns:var(--meter-k) minmax(0,1fr) 3ch;align-items:center;gap:var(--s3);min-width:0}
+.meter>.cap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter>.fitbar{height:8px;border-radius:4px}
+.meter>.fitbar i{background:var(--team)}
+.meter>b{text-align:right;font-family:var(--font-display);font-weight:800;font-size:var(--t-num);line-height:1}
+.vs{display:inline-grid;grid-template-columns:auto auto auto;align-items:baseline;gap:var(--s2);font-family:var(--font-display);font-weight:800;font-size:var(--t-h2);line-height:1}
+.vs>i{font-style:normal;font-family:var(--font-ui);font-size:var(--t-label);font-weight:700;color:var(--ink-3);text-transform:uppercase}
+.vs>.lo{color:var(--ink-3)}
+.chip.c-plain{color:var(--ink);background:var(--paper-2);border:1px solid var(--rule)}
+.club-tile .meta .strat.icon{width:20px;height:20px;border:0;background:none}
+.stat.wide{grid-column:span 2}
+.stat>b>.vs{font-size:inherit}
+@media (max-width:640px){ :root{--decide-h:196px} }
