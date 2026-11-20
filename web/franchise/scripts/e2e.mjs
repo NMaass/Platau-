@@ -92,15 +92,38 @@ async function playOnce(label) {
   await page.keyboard.press('Escape');
 }
 
+/** New League wizard: 1 Pre-made teams / Draft, 2 the club (preview names it), 3 Start; then the intro plays and
+ *  the team home (or the draft board) opens. `confirm`: a league is open, so Start asks first. */
+async function wizard(mode, idx, city, confirm = false) {
+  await page.waitForSelector('[data-nl="mode"]');
+  if (await page.getAttribute('[data-nl="next"]', 'aria-disabled') !== 'true') problems.push('[wizard] Next is enabled before a choice');
+  await page.click(`[data-nl="mode"][data-v="${mode}"]`);
+  await page.click('[data-nl="next"]');
+  await page.click(`[data-nl="team"][data-i="${idx}"]`);
+  const np = await page.$eval('#h-np', (h) => h.textContent).catch(() => '');
+  if (!np.includes(city)) problems.push(`[wizard ${mode}] preview shows "${np}", expected ${city}`);
+  const backAt = await page.$eval('[data-nl="back"]', (b) => b.getBoundingClientRect().x);
+  await page.click('[data-nl="next"]');
+  const h1 = await page.$eval('#wz-body h1', (h) => h.textContent);
+  if (!h1.includes(city)) problems.push(`[wizard ${mode}] step 3 shows "${h1}", expected ${city}`);
+  if (await page.$eval('[data-nl="back"]', (b) => b.getBoundingClientRect().x) !== backAt) problems.push('[wizard] Back moved between steps');
+  await page.click('[data-nl="start"]');
+  if (confirm) {
+    await page.waitForSelector('#dlg [data-dlg="ok"]');
+    if (!/stays saved/.test(await page.$eval('#dlg', (d) => d.innerText))) problems.push('[new league] confirm does not say the current league stays saved');
+    await page.click('#dlg [data-dlg="ok"]');
+  }
+  await page.waitForSelector('.l-intro', {timeout: 5000}).catch(() => problems.push('[wizard] no league-start intro'));
+  await page.waitForSelector('.l-intro', {state: 'detached', timeout: 5000});
+}
+
 let exit = 0;
 try {
   step('new league');
   await page.goto(BASE);
   await page.evaluate(async () => { indexedDB.deleteDatabase('plateau'); });
   await page.goto(BASE + '#new'); await page.reload();
-  await page.waitForSelector('[data-act="newleague"]');
-  await page.click('[data-act="pickteam"][data-i="5"]');
-  await page.click('[data-act="newleague"]');
+  await wizard('premade', 5, 'Goldenrod');
   await page.waitForFunction(() => location.hash === '#week');
   await page.waitForSelector('#view h1');
 
@@ -163,15 +186,8 @@ try {
   await page.setViewportSize({width: 1280, height: 900});
   step('new league: Draft');
   await page.goto(BASE + '#new'); await settle();
-  await page.click('[data-act="newmode"][data-v="draft"]');
-  await page.click('[data-act="pickteam"][data-i="12"]');
-  const slot = await page.$eval('#h-np', (h) => h.textContent);
-  if (!/Eterna/.test(slot ?? '')) problems.push(`[draft start] preview shows "${slot}", expected Eterna`);
-  await page.click('[data-act="newleague"]');
   // a league is open: starting another asks first, and the open one stays saved
-  await page.waitForSelector('#dlg [data-dlg="ok"]');
-  if (!/stays saved/.test(await page.$eval('#dlg', (d) => d.innerText))) problems.push('[new league] confirm does not say the current league stays saved');
-  await page.click('#dlg [data-dlg="ok"]');
+  await wizard('draft', 12, 'Eterna', true);
   await page.waitForFunction(() => location.hash === '#draft');
   await page.waitForSelector('[data-fo="simend"]');
   await checkRendered('#draft (startup)');

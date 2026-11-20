@@ -57,7 +57,7 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `info(label, popHtml)`, `peekLabel(label, popHtml)`, `prow(k, v)` | peeks (one floating layer, hover/focus/tap) |
 
 ## data-* actions (app.ts)
-`data-act="play|until|auto|swap|chooser|theme|fastsim|export|import|pickteam|newmode|newreroll|newleague|release|saveopen|saveexport|savedelete"` (click; `release` opens the Release confirm (moves.ts `releaseDialog`), `save*` act on Your leagues (store.ts `savedLeagues`/`openSave`/`exportSaveById`/`deleteSave`); `until` opens Play until, `fastsim` is the Settings dev toggle read by `store.fastSim()`),
+`data-act="play|auto|swap|chooser|theme|fastsim|export|import|pickteam|newmode|newreroll|newleague|release|saveopen|saveexport|savedelete"` (click; `release` opens the Release confirm (moves.ts `releaseDialog`), `save*` act on Your leagues (store.ts `savedLeagues`/`openSave`/`exportSaveById`/`deleteSave`); `play` takes `data-mode` watch | sim | step (screens/play.ts), `fastsim` is the Settings dev toggle read by `store.fastSim()`),
 `data-act="strategy|slotset|monset|tier|budget"` (change), `data-sort="<table>:<col>:<desc 0|1>"`,
 `data-lens="<uiKey>:<value>"`. Re-render after state changes with `act()` or `notify()`.
 
@@ -73,6 +73,8 @@ League / front office screens live in `screens/league.ts` (standings, playoffs, 
 Design-system primitives added for them: `.chip.fix`, `.l-cellacts` (two equal buttons in a cell; `--n` for more), `.l-toolbar`.
 New League (`screens/settings.ts`) adds `.logo`, `.l-pick` (selectable card of one height, accent `--c`), `.l-tiles`
 (N equal fixed tiles), `.l-icons` (six row icons with a number), `.l-sticky` (side panel in view on desktop).
+This week's hero: `.l-hero` (numbered `.step`s, `.is-done` / `.is-todo`) and `.btn.xl` (the main action: icon, label,
+one-line `<small>` hint; one height `--ctl-h-xl`) in `.l-hero-acts` (`--n` equal columns, stacked under 480 px).
 
 Dev: `node franchise/ui/dev/make-save.ts <phase|weekN> out.json [seed]` builds a quick-sim league at a phase
 (draft, resign, free-agency, awards, playoffs, week6, ...); `NODE_PATH=$(npm root -g) node franchise/ui/dev/shots.mjs

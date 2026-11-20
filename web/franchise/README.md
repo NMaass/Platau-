@@ -23,9 +23,9 @@ deciding games with the quick sim.
 
 **Fast sim** (Settings → "Fast sim (no battles, for testing)", stored per browser): weeks are decided by
 `model/quicksim.ts` instead of battles, so a season takes seconds. No replays for those weeks.
-**Play until…** (This week) sims to the next week, the trade deadline, the end of the regular season, the end of
-the Indigo Plateau or the draft, and stops early when a starter is hurt for 2+ weeks or a club sends an offer
-the model rates as good for you (`trades.ts` `offerGoodForUser`).
+**This week**: the hero is the one way forward: Set lineup, then **Watch week** (sims, then plays your games
+back with no spoilers: `#battle-<series>-<game>?watch=1`) or **Sim week** (straight to the result dialog);
+outside game weeks one button names the step. `ui/screens/play.ts` runs it.
 **Saves**: every league is its own save in IndexedDB. Settings and New league list them under *Your leagues*
 (Open, Export, Delete with a confirm); starting a new league asks first and keeps the open one.
 **Roster moves**: Release (roster row, Pokémon page) confirms with the dead money and the cap room it frees. In season a
@@ -66,7 +66,7 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
 | `catalog/` | Species, sets (Smogon → randbats → generated), roles, battle levels, growth rates; `scripts/build-catalog.ts` writes `data/catalog.json` |
 | `ui/` | Plain TS screens (`screens/`), components, `store.ts` (state, IndexedDB, the week loop), `routes.ts` |
 | `design/plateau-tokens.css` | The design system (tokens + `.l-*` layout layer), the source of truth for layout |
-| `app.ts` | Boot, router, event delegation, the Play / Play until dialogs |
+| `app.ts` | Boot, router, event delegation (Watch / Sim week and offseason steps live in `ui/screens/play.ts`) |
 
 ## Tuning knobs
 | Where | Knobs |
@@ -75,7 +75,7 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
 | `model/season.ts` `START` | roster size, starting legendaries, ages, payroll target (each club 85–95% of the cap at league start), AI offer/trade chance per week |
 | `model/season.ts` `STRATEGY_PICK` | how AI clubs pick a strategy: penalty per off-role slot, bonus for their 1st/2nd favourite |
 | `model/lineup.ts` `ON_ROLE`, `PRACTICE_PENALTY` | auto lineups: on-role slots first (assignment solver), then rating sum; when a practice-squad Pokémon is promoted to fill a role |
-| `model/progression.ts` `XP`, `xpToNext` | XP per battle action, practice XP by tier (active 30, backup 60, practice squad 75 a week), focus bonus (200); Growth curve |
+| `model/progression.ts` `XP`, `xpToNext`, `practiceXp` | XP per battle action (starters and backups only grow from battles they play), practice squad XP a week (190); Growth curve |
 | `model/grades.ts` | EV % per grade, Growth bands, IV values, IV caps on EV grade |
 | `model/ratings.ts` `EV_ADJ`, `catalog/roles.ts` `TIER_BASE` | rating = tier base + EV-grade adjustment |
 | `model/draft.ts` | lottery odds, rounds, class size, legendary arrivals |
@@ -102,9 +102,8 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
   `scripts/build-catalog.ts` `cappedTier`. Battle levels and the tier basis of ratings are unchanged (open question
   in `eval/RESULTS.md`: OVR barely predicts real battles, so the quick sim is now close to a coin flip too).
 - In the offseason rosters can be over 18 and practice squads over 6. AI clubs are trimmed when the regular
-  season starts; the user's club is never trimmed silently: Home advises, and Play lists who would be released
+  season starts; the user's club is never trimmed silently: Home advises, and Start season lists who would be released
   (lowest-rated, then cheapest, never a starter) in a confirm dialog.
 - League OVR drifts up a few points over the first ~6 seasons (prospects develop), then levels off
   (`season-sanity.ts 10`).
-- The user's practice focus starts on the three prospects with the most to gain until the user picks.
 - Imports are checked only for `schemaVersion` 1 and the basic shape; `migrate()` fills defaults (e.g. moves old saves to the new injury rates).

@@ -65,14 +65,16 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
 - Trade deadline after week 8. Draft picks are tradable. AI teams trade with each other.
 - Calendar: preseason → regular season → Indigo Plateau → awards & retirements → draft lottery &
   draft → re-signing → free agency → next season.
-- Each week (hub with advisories; Home shows the steps with status, Play always works, broken
-  slots auto-filled and flagged): Inbox (results with replay links, injury report, grade-ups and
-  evolutions, AI trade offers, weekly goals) → injury follow-up → Prepare (scouting report on the
-  opponent, strategy and lineup, practice focus: base XP for all healthy, extra for 2–3 picks) →
-  lock and sim (every match in the league in parallel).
-- "Play until": next week, trade deadline, end of regular season, Indigo Plateau, draft. A
-  multi-week sim pauses on a multi-week injury to a starter or a strong trade offer (one the model rates
-  as good for the user, not every lopsided ask).
+- Each week (hub with advisories; This week's hero shows the steps with status: 1 Set lineup, 2 Watch
+  week or Sim week, two equal choices that always work, broken slots auto-filled and flagged): Inbox
+  (results with replay links, injury report, grade-ups and evolutions, AI trade offers, weekly goals) →
+  injury follow-up → Prepare (scouting report on the opponent: weekly scouting points narrow their
+  starters' ratings; strategy and lineup) → sim (every match in the league in parallel). **Sim week**
+  shows the series result in a dialog; **Watch week** sims first, then plays the user's games back
+  one by one without spoilers (score so far, later games "Up next", each game's result and the series
+  result in dialogs). Outside game weeks the hero has one button that names the step (Start season,
+  Open free agency…); a step shows a dialog only when it has something to say.
+- No "Play until" (removed 2026-11-20 by the author): every week is started from This week.
 
 ## Pokémon as players
 - Every Pokémon is a unique individual: species, nickname-free name = species (+ a visible "#2", "#3"
@@ -91,8 +93,10 @@ its data is fake), (4) the design system `web/franchise/design/plateau-tokens.cs
   overall headline grade plus callouts only for stats some set of the species invests in. IVs cap
   how high the EV grade can go (tunable: e.g. headline F caps at B, D at A, C at AA).
 - **XP** from battle actions (box score): KOs, damage dealt, damage taken, statuses inflicted,
-  hazards set/removed, win, series MVP bonus; plus weekly goals, practice focus, partial XP for
-  backups, slow XP for practice squad.
+  hazards set/removed, win, series MVP bonus; plus weekly goals. Starters and backups earn XP only
+  from battles they play in (a backup that never comes off the bench earns nothing that week); the
+  practice squad trains and earns a fixed weekly XP (`XP.practiceSquad`) automatically. No practice
+  focus (removed 2026-11-20; old saves' `practiceFocus` field is ignored).
 - **Evolution** at the real level, measured on Growth (Gible 24, Gabite 48). Stone/trade/friendship
   evolutions get a level equivalent (e.g. 36). Keeps IVs, EV grade, age, contract; takes the new
   species' battle level and sets.

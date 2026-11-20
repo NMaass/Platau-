@@ -147,10 +147,14 @@ try {
   await page.goto(BASE);
   await page.evaluate(() => indexedDB.deleteDatabase('plateau'));
   await page.goto(BASE + '#new'); await page.reload();
-  await page.waitForSelector('[data-act="newleague"]');
-  await page.click('[data-act="pickteam"][data-i="9"]');
-  await page.click('[data-act="newleague"]');
+  // New League wizard: Pre-made teams → Lavaridge → Start (the intro plays, then the team home)
+  await page.click('[data-nl="mode"][data-v="premade"]');
+  await page.click('[data-nl="next"]');
+  await page.click('[data-nl="team"][data-i="9"]');
+  await page.click('[data-nl="next"]');
+  await page.click('[data-nl="start"]');
   await page.waitForFunction(() => location.hash === '#week');
+  await page.waitForSelector('.l-intro', {state: 'detached', timeout: 5000});
   await page.waitForSelector('#view h1');
 
   step('turn on fast sim');
