@@ -17,7 +17,7 @@ import {viewLineup, openChooser} from './ui/screens/lineup.ts';
 import {viewMon} from './ui/screens/mon.ts';
 import {viewBattle, afterBattle, leaveBattle} from './ui/screens/battle.ts';
 import {releaseDialog} from './ui/screens/moves.ts';
-import {viewSettings, viewNewLeague, applyTheme, newPreview, newMode, newTeamIndex, rerollNewLeague, takePreview} from './ui/screens/settings.ts';
+import {viewSettings, viewNewLeague, applyTheme} from './ui/screens/settings.ts';   // New League wizard wires its own clicks (data-nl)
 import {fixtureCatalog, fixtureLeague} from './ui/dev-fixture.ts';
 import {createSimPool} from './sim/pool.ts';
 
@@ -92,10 +92,6 @@ document.addEventListener('click', (e) => {
     case 'theme': try { localStorage.setItem('plateau-theme', b.dataset.theme!); } catch { /* private mode */ } applyTheme(b.dataset.theme); render(); break;
     case 'export': exportSave(); break;
     case 'import': $<HTMLInputElement>('#importFile')?.click(); break;
-    case 'pickteam': keepName(); store.ui.newTeam = +b.dataset.i!; render(); $(`[data-act="pickteam"][data-i="${b.dataset.i}"]`)?.focus(); if (matchMedia('(max-width:1060px)').matches) openNewPreview(); break;
-    case 'newmode': keepName(); store.ui.newMode = b.dataset.v; render(); $(`[data-act="newmode"][data-v="${b.dataset.v}"]`)?.focus(); break;
-    case 'newreroll': keepName(); rerollNewLeague(); render(); $('[data-act="newreroll"]')?.focus(); break;
-    case 'newleague': void newLeague(); break;
     case 'release': releaseDialog(b.dataset.mon!); break;
     case 'saveopen': void openSave(b.dataset.id!).then((ok) => { if (ok) location.hash = S().phase === 'draft' ? '#draft' : '#week'; }); break;
     case 'saveexport': void exportSaveById(b.dataset.id!); break;
@@ -140,49 +136,6 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); n.click();
   }
 });
-
-const keepName = (): void => { const v = $<HTMLInputElement>('#leagueName')?.value; if (v !== undefined) store.ui.newName = v; };
-
-/** Phone / narrow: the picked club's preview in the dialog, with Start right there. */
-function openNewPreview(): void {
-  openDialog({title: 'Preview', cap: newMode() === 'draft' ? 'Draft' : 'Pre-made teams', body: newPreview(),
-    actions: [{key: 'close', label: 'Back'}, {key: 'start', label: `${ic('play')}Start league`, go: true}],
-    onAction: (k) => { if (k === 'start') void newLeague(); }});
-}
-
-async function newLeague(): Promise<void> {
-  keepName();
-  // a league is open: say what happens to it (it stays saved) before starting another
-  if (store.state && !isFixtureMode()) {
-    const cur = store.state, t = cur.teams[cur.userTeamId];
-    const ok = await confirmDialog('Start a new league?', `${esc(cur.name)} (${esc(t ? `${t.city} ${t.name}` : '')}, season ${cur.season}) stays saved in this browser. Reopen it any time from Your leagues on this page or in Settings.`, 'Start new league');
-    if (!ok) return;
-  }
-  const idx = newTeamIndex();
-  const name = ((store.ui.newName as string | undefined) || 'Indigo League').trim();
-  const draft = newMode() === 'draft';
-  if (!store.catalog) store.catalog = await loadCatalog();
-  let catalog = store.catalog;
-  try {
-    if (!catalog) throw new Error('not implemented: catalog');
-    // the previewed league is the one that starts
-    const st = takePreview() ?? api.newLeague(catalog, {start: draft ? 'draft' : 'random', userTeamIndex: idx, name, seed: Math.floor(Math.random() * 2 ** 31)});
-    st.name = name; st.createdAt = Date.now();
-    st.id = `${st.id}-${st.createdAt.toString(36)}`;  // every league its own save, even on the same seed
-    setFixtureMode(false);
-    store.catalog = catalog; store.state = st;
-  } catch (e) {
-    if (!/not implemented/.test((e as Error).message)) { openDialog({title: 'Could not start the league', body: `<p>${esc((e as Error).message)}</p>`}); return; }
-    catalog = fixtureCatalog();
-    setFixtureMode(true);
-    store.catalog = catalog; store.state = fixtureLeague(catalog, idx);
-    openDialog({title: 'Started a dev league', body: `<p>The league model isn't finished yet, so this is the hand-built development league. It is not saved.</p>`});
-  }
-  await save();
-  closeDialog();
-  location.hash = store.state?.phase === 'draft' ? '#draft' : '#week';
-  notify();
-}
 
 // ---------------------------------------------------------------- boot
 async function boot(): Promise<void> {

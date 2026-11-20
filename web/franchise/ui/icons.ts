@@ -29,4 +29,14 @@ export const ICONS = `<svg width="0" height="0" style="position:absolute" aria-h
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 17V5M6 10l6-6 6 6M5 20h14"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+  <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 14.5a4 4 0 0 1-.4-8 5.5 5.5 0 0 1 10.6 1.3A3.4 3.4 0 0 1 17 14.5z"/><path d="M8.5 17.5l-1 2.5M12.5 17.5l-1 2.5M16.5 17.5l-1 2.5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></symbol>
+  <symbol id="i-sand" viewBox="0 0 24 24"><path d="M3 8h11a2.5 2.5 0 1 0-2.5-2.5M3 12.5h16a2.5 2.5 0 1 1-2.5 2.5M3 17h8"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/></symbol>
+  <symbol id="i-spikes" viewBox="0 0 24 24"><path d="M3 19.5h18M4.5 19.5 8 9l3.5 10.5M12.5 19.5 16 6l3.5 13.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/></symbol>
+  <symbol id="i-scales" viewBox="0 0 24 24"><path d="M12 4v16M8 20h8M5 7h14M5 7l-2.5 6a2.5 2.5 0 0 0 5 0zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0z"/></symbol>
+  <symbol id="i-fist" viewBox="0 0 24 24"><path d="M6 10V7.5a1.5 1.5 0 0 1 3 0V10M9 9V6.5a1.5 1.5 0 0 1 3 0V9M12 9V7a1.5 1.5 0 0 1 3 0v2M15 9.5V8.5a1.5 1.5 0 0 1 3 0v4.5a7 7 0 0 1-7 7h-.5A4.5 4.5 0 0 1 6 15.5V10a1.5 1.5 0 0 1 3 0v2"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24"><rect x="3" y="4" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="4" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="14" width="7.5" height="6.5" rx="1.5"/><rect x="13.5" y="14" width="7.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-draft" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M3.5 5l1 1 2-2M3.5 11l1 1 2-2"/><circle cx="4.8" cy="18" r="1.3"/></symbol>
 </svg>`;

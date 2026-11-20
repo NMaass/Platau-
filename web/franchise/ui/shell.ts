@@ -50,6 +50,8 @@ export function applyTeamColour(): void {
 export function renderShell(path: string): void {
   const {room, tab} = roomOf(path);
   const side = document.getElementById('side')!, mh = document.getElementById('mhead')!, sub = document.getElementById('subnav')!, bar = document.getElementById('tabbar')!;
+  // New League is a focus page (a wizard): no sidebar, phone header or tab bar (design system: body.focus)
+  document.body.classList.toggle('focus', path === 'new' || (!store.state && path !== 'settings'));
   if (!store.state) {
     side.innerHTML = `<div class="club"><span class="logo" aria-hidden="true">${ic('trophy')}</span><div><b>Plateau</b><span>No league yet</span></div></div><nav aria-label="Rooms"><a href="#new" aria-current="page">${ic('plus')}New league</a></nav>`;
     mh.innerHTML = `<span class="logo" aria-hidden="true">${ic('trophy')}</span><b>Plateau</b>`; sub.innerHTML = ''; bar.innerHTML = '';
