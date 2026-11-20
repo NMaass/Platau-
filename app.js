@@ -56,6 +56,7 @@ var money = (dollars) => {
   return (m < 0 ? "\u2212$" : "$") + Math.abs(m).toFixed(1) + "M";
 };
 var plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+var signed = (v) => v < 0 ? "\u2212" + Math.abs(v) : "+" + v;
 var record = (w, l) => `${w}\u2013${l}`;
 
 // franchise/model/api.ts
@@ -350,9 +351,9 @@ function gradeForGrowth(growth) {
   return g;
 }
 function ivHeadlineOf(ivs) {
-  const avg = STATS.reduce((s, k) => s + IV_VALUE[ivs[k]], 0) / STATS.length;
+  const avg2 = STATS.reduce((s, k) => s + IV_VALUE[ivs[k]], 0) / STATS.length;
   let best = "F";
-  for (const g of IV_GRADES) if (avg >= IV_VALUE[g] - 2) best = g;
+  for (const g of IV_GRADES) if (avg2 >= IV_VALUE[g] - 2) best = g;
   return best;
 }
 function baseEvGrade(mon) {
@@ -630,15 +631,15 @@ function strategyById(id) {
   return STRATEGIES.find((s) => s.id === id) ?? STRATEGIES[2];
 }
 var STRATEGY_LOOK = {
-  "hyper-offense": { icon: "bolt", says: "All-out attack" },
-  "bulky-offense": { icon: "fist", says: "Hits hard, takes hits" },
-  balance: { icon: "scales", says: "A bit of everything" },
-  stall: { icon: "shield", says: "Walls up, wears you down" },
-  rain: { icon: "rain", says: "Plays in the rain" },
-  sun: { icon: "sun", says: "Plays in the sun" },
-  sand: { icon: "sand", says: "Plays in the sand" },
-  snow: { icon: "snow", says: "Plays in the snow" },
-  "hazard-stack": { icon: "spikes", says: "Lays traps on the field" }
+  "hyper-offense": { icon: "bolt", short: "Hyper offense" },
+  "bulky-offense": { icon: "fist", short: "Bulky offense" },
+  balance: { icon: "scales", short: "Balance" },
+  stall: { icon: "shield", short: "Stall" },
+  rain: { icon: "rain", short: "Rain" },
+  sun: { icon: "sun", short: "Sun" },
+  sand: { icon: "sand", short: "Sand" },
+  snow: { icon: "snow", short: "Snow" },
+  "hazard-stack": { icon: "spikes", short: "Hazards" }
 };
 var strategyLook = (id) => STRATEGY_LOOK[id] ?? STRATEGY_LOOK.balance;
 var runsStrategy = (plan) => plan.onRole === plan.slots.length && plan.slots.every((sl) => sl.monId);
@@ -1519,8 +1520,8 @@ function rollInjury(state, rng2, mon, box) {
   const inj = { kind, weeksLeft, description: rng2.pick(pool2), sinceWeek: state.week, season: state.season };
   if (kind === "ir" && rng2.chance(0.06)) {
     if (rng2.chance(0.5)) {
-      const stats = Object.keys(mon.ivs).filter((s) => mon.ivs[s] !== "F");
-      if (stats.length) inj.severe = { ivLost: rng2.pick(stats) };
+      const stats2 = Object.keys(mon.ivs).filter((s) => mon.ivs[s] !== "F");
+      if (stats2.length) inj.severe = { ivLost: rng2.pick(stats2) };
     } else inj.severe = { gradeCap: baseEvGrade(mon) };
   }
   return inj;
@@ -2203,7 +2204,8 @@ function interest(state, mon, teamId) {
   const n = (parseInt(mon.id.slice(1), 36) + parseInt(teamId.slice(1), 10) * 7 + state.season) % 10;
   return n < 3 ? "Keen" : n < 8 ? "Neutral" : "Cool";
 }
-var interestMult = { Keen: 0.95, Neutral: 1, Cool: 1.08 };
+var INTEREST_MULT = { Keen: 0.95, Neutral: 1, Cool: 1.08 };
+var interestMult = INTEREST_MULT;
 function signBlock(state, teamId, mon) {
   const no = (reason, rosterFull = false) => ({ reason, rosterFull });
   if (mon.retired) return no("Retired");
@@ -2314,12 +2316,12 @@ function faRound(catalog, state, rng2) {
   const counts = new Map(Object.keys(state.teams).map((t) => [t, rosterCount(teamMons(state, t))]));
   const worst = /* @__PURE__ */ new Map();
   for (const t of Object.keys(state.teams)) {
-    const vs = teamMons(state, t).filter((m) => m.tier !== "ir").map((m) => monValue(catalog, state, m, t)).sort((a, b) => a - b);
-    worst.set(t, vs[0] ?? 0);
+    const vs2 = teamMons(state, t).filter((m) => m.tier !== "ir").map((m) => monValue(catalog, state, m, t)).sort((a, b) => a - b);
+    worst.set(t, vs2[0] ?? 0);
   }
   const floorTarget = round50k(state.settings.floor * (capYear(state) > state.season ? 1 + state.settings.capGrowth : 1) * FA_BID.floorMargin);
   const fams = new Map(Object.keys(state.teams).map((t) => [t, clubFamilies(state, t)]));
-  let signed = 0;
+  let signed2 = 0;
   for (const fa of fas) {
     const ask = askingPrice(catalog, state, fa);
     const bids = [];
@@ -2347,11 +2349,11 @@ function faRound(catalog, state, rng2) {
     signMon(catalog, state, b.teamId, fa, makeContract(b.salary, b.years, { exception: b.salary <= state.settings.minSalary ? "minimum" : void 0 }));
     counts.set(b.teamId, counts.get(b.teamId) + 1);
     fams.get(b.teamId).add(monFamily(fa));
-    signed++;
+    signed2++;
   }
   for (const m of freeAgents(state)) m.askMult = Math.max(0.3, (m.askMult ?? 1) * FA_ASK_DROP);
   for (const team3 of Object.values(state.teams)) if (!team3.human) autoLineup(catalog, state, team3.id);
-  return signed;
+  return signed2;
 }
 function pruneFreeAgents(catalog, state) {
   const gone = [];
@@ -2416,15 +2418,17 @@ function evaluateTrade(catalog, state, o) {
   const problem = tradeProblem(catalog, state, o);
   const { inValue, outValue } = tradeBalance(catalog, state, o, o.toTeamId);
   const score = Math.round(Math.max(-100, Math.min(100, (inValue - outValue) / Math.max(10, outValue, inValue) * 100)));
-  if (problem) return { accept: false, score, reason: problem };
+  const need = ACCEPT_SCORE;
+  if (problem) return { accept: false, score, need, reason: problem, problem };
   const them = state.teams[o.toTeamId];
+  const best = (ids) => ids.map((id) => state.mons[id]).sort((a, b) => monValue(catalog, state, b, o.toTeamId) - monValue(catalog, state, a, o.toTeamId))[0];
   if (score >= ACCEPT_SCORE) {
-    const star = o.give.mons.map((id) => state.mons[id]).sort((a, b) => monValue(catalog, state, b, o.toTeamId) - monValue(catalog, state, a, o.toTeamId))[0];
-    return { accept: true, score, reason: star ? `${them.name} like what ${spName3(catalog, state, star.id)} brings` : `${them.name} like the picks` };
+    const star = best(o.give.mons);
+    return { accept: true, score, need, keyMonId: star?.id, reason: star ? `${them.name} like what ${spName3(catalog, state, star.id)} brings` : `${them.name} like the picks` };
   }
-  const key = o.get.mons.map((id) => state.mons[id]).sort((a, b) => monValue(catalog, state, b, o.toTeamId) - monValue(catalog, state, a, o.toTeamId))[0];
-  if (score > -15) return { accept: false, score, reason: `Close: ${them.name} want a little more${key ? ` for ${spName3(catalog, state, key.id)}` : ""}` };
-  return { accept: false, score, reason: `${them.name} value ${key ? spName3(catalog, state, key.id) : "their side"} much higher` };
+  const key = best(o.get.mons);
+  if (score > -15) return { accept: false, score, need, keyMonId: key?.id, reason: `Close: ${them.name} want a little more${key ? ` for ${spName3(catalog, state, key.id)}` : ""}` };
+  return { accept: false, score, need, keyMonId: key?.id, reason: `${them.name} value ${key ? spName3(catalog, state, key.id) : "their side"} much higher` };
 }
 function executeTrade(catalog, state, o) {
   const move = (ids, from, to) => {
@@ -2787,8 +2791,8 @@ function startRosters(catalog, state, rng2, teamIds) {
   generateClass(catalog, state, rng2, 1);
 }
 function staggeredAges(rng2, n) {
-  const span = START.ageMax - START.ageMin;
-  return rng2.shuffle(Array.from({ length: n }, (_, k) => START.ageMin + Math.round(k * span / (n - 1)) + (rng2.chance(0.3) ? rng2.range(-1, 1) : 0)).map((a) => Math.max(START.ageMin, Math.min(START.ageMax, a))));
+  const span2 = START.ageMax - START.ageMin;
+  return rng2.shuffle(Array.from({ length: n }, (_, k) => START.ageMin + Math.round(k * span2 / (n - 1)) + (rng2.chance(0.3) ? rng2.range(-1, 1) : 0)).map((a) => Math.max(START.ageMin, Math.min(START.ageMax, a))));
 }
 function topSix(catalog, mons) {
   const o = mons.map((m) => bestRole(catalog, m).ovr).sort((a, b) => b - a).slice(0, 6);
@@ -3654,10 +3658,10 @@ function evGrade2(_s, mon) {
   return g;
 }
 function ivHeadline2(mon) {
-  const avg = STATS2.reduce((t, k) => t + IV_PTS[mon.ivs[k]], 0) / 6;
+  const avg2 = STATS2.reduce((t, k) => t + IV_PTS[mon.ivs[k]], 0) / 6;
   let best = "B", d = 99;
-  for (const [g, p] of Object.entries(IV_PTS)) if (Math.abs(p - avg) < d) {
-    d = Math.abs(p - avg);
+  for (const [g, p] of Object.entries(IV_PTS)) if (Math.abs(p - avg2) < d) {
+    d = Math.abs(p - avg2);
     best = g;
   }
   return best;
@@ -4704,6 +4708,30 @@ function once(key, fn) {
   }
 }
 
+// franchise/ui/components/stats.ts
+function stratChip(id, o = {}) {
+  const l = strategyLook(id), lbl = `Strategy: ${l.short}`;
+  return `<span class="strat${o.iconOnly ? " icon" : ""}" role="img" aria-label="${esc(lbl)}" title="${esc(lbl)}">${ic(l.icon)}${o.iconOnly ? "" : `<span aria-hidden="true">${esc(l.short)}</span>`}</span>`;
+}
+var stratName = (id) => strategyLook(id).short;
+function stat(label, value, o = {}) {
+  return `<div class="stat${o.wide ? " wide" : ""}"${o.title ? ` title="${esc(o.title)}"` : ""}><span class="cap">${o.icon ? ic(o.icon) : ""}${esc(label)}</span><b>${value}</b>${o.sub !== void 0 ? `<small>${o.sub || "&nbsp;"}</small>` : ""}</div>`;
+}
+var stats = (tiles, n = tiles.length, nSm = 2) => `<div class="l-stats" style="--n:${n};--n-sm:${nSm}">${tiles.join("")}</div>`;
+function meter(label, value, max = 100) {
+  const pct = value == null ? 0 : Math.max(0, Math.min(100, value / max * 100));
+  return `<div class="meter"><span class="cap">${esc(label)}</span><span class="fitbar" role="img" aria-label="${esc(label)} ${value ?? "unknown"}"><i style="width:${pct.toFixed(1)}%"></i></span><b>${value ?? "\u2014"}</b></div>`;
+}
+var meters = (rows) => `<div class="l-meters">${rows.join("")}</div>`;
+function vs(a, b, ka, kb, label = "Average rating, you vs them") {
+  const la = ka != null && kb != null && ka < kb, lb = ka != null && kb != null && kb < ka;
+  return `<span class="vs" role="img" aria-label="${esc(`${label}: ${a} vs ${b}`)}"><span class="${la ? "lo" : ""}">${esc(a)}</span><i>vs</i><span class="${lb ? "lo" : ""}">${esc(b)}</span></span>`;
+}
+var avg = (xs) => {
+  const v = xs.filter((x) => x != null);
+  return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
+};
+
 // franchise/ui/screens/week.ts
 var ADV = {
   injury: ["health", "health"],
@@ -4719,7 +4747,6 @@ function seriesScore(se, id) {
   const w = se.games.filter((g) => g.winnerTeamId === id).length;
   return [w, se.games.length - w];
 }
-var strategyName = (id) => strategies().find((x) => x.id === id)?.name ?? id;
 function likelyTeam(teamId, cls = "l-wrap") {
   const c = C(), s = S();
   const lu = M.likelyLineup(c, s, teamId);
@@ -4743,43 +4770,66 @@ function pips(se) {
 function lastMet(opp) {
   const s = S(), me = s.userTeamId;
   const se = [...s.schedule].reverse().find((x) => x.winnerId && (x.homeId === me && x.awayId === opp || x.awayId === me && x.homeId === opp));
-  if (!se) return "First meeting";
+  if (!se) return null;
   const [w, l] = seriesScore(se, me);
-  return `${w > l ? "Won" : "Lost"} ${record(w, l)}, week ${se.week}`;
+  return { text: `${w > l ? "W" : "L"} ${record(w, l)}`, week: se.week, won: w > l };
 }
 function nextSeries() {
   const s = S(), me = s.userTeamId;
   return M.userSeries(s) ?? (s.phase === "preseason" ? s.schedule.find((x) => x.season === s.season && x.week === 1 && (x.homeId === me || x.awayId === me)) ?? null : null);
 }
-function scoutLine(opp) {
+function scoutState(opp) {
   const s = S(), c = C(), me = s.userTeamId;
   const lu = M.likelyLineup(c, s, opp);
-  const known = lu.filter((x) => M.knownRating(c, s, me, s.mons[x.monId]).exact).length, n = lu.length;
-  if (!n) return "No likely starters to scout.";
-  if (known === n) return `You know all ${n} of their likely starters' ratings.`;
-  if (!known) return `You haven't scouted their ${n} likely starters. Their ratings show as ranges until you do.`;
-  return `You know ${known} of their ${n} likely starters' ratings. Scout the other ${n - known} to see them exactly.`;
+  const kr = lu.map((x) => {
+    const m = s.mons[x.monId], k = M.knownRating(c, s, me, m);
+    return k.exact ? { lo: M.roleRating(c, s, m, x.role) ?? k.hi, hi: M.roleRating(c, s, m, x.role) ?? k.hi, exact: true } : { ...k };
+  });
+  return { known: kr.filter((k) => k.exact).length, n: lu.length, lo: avg(kr.map((k) => k.lo)), hi: avg(kr.map((k) => k.hi)) };
+}
+function myAvg() {
+  const s = S(), c = C(), L = s.teams[s.userTeamId].lineup;
+  return avg(L.slots.map((sl) => sl.monId ? M.roleRating(c, s, s.mons[sl.monId], sl.role) : null));
+}
+var span = (lo, hi) => lo == null || hi == null ? "\u2014" : lo === hi ? String(lo) : `${lo}\u2013${hi}`;
+function oppChips(opp, home) {
+  const s = S(), st = M.standings(s).find((x) => x.teamId === opp);
+  return `<span class="l-row"><span class="chip c-plain" title="Record (wins\u2013losses)">${ic("trophy")}${record(st?.wins ?? 0, st?.losses ?? 0)}</span>${stratChip(s.teams[opp].lineup.strategyId)}${home === void 0 ? "" : `<span class="chip c-plain" title="${home ? "Home" : "Away"}">${ic(home ? "home" : "arrow")}${home ? "Home" : "Away"}</span>`}</span>`;
+}
+function matchupTiles(opp) {
+  const sc = scoutState(opp), mine = myAvg(), lm = lastMet(opp);
+  const theirs = span(sc.lo, sc.hi);
+  return stats([
+    stat("Scouted", `${sc.known}<small>/ ${sc.n}</small>`, { icon: "scout", title: `${sc.known} of ${sc.n} likely starters' ratings known exactly` }),
+    stat("Met", lm ? `<span class="${lm.won ? "" : "muted"}">${esc(lm.text)}</span><small>wk ${lm.week}</small>` : '<span class="dash">\u2014</span>', { icon: "clock", title: lm ? `Week ${lm.week}` : "First meeting" }),
+    stat("Avg rating", vs(mine == null ? "\u2014" : String(mine), theirs, mine, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null), { icon: "target", wide: true })
+  ], 4, 2);
 }
 function opponentCard() {
   const s = S();
   const se = nextSeries();
   if (!se) return panel("opp", "No series this week", `<p class="muted">${esc(phaseLabel2(s.phase))}: no games until next season.</p>`);
   const opp = oppOf(se, s.userTeamId), t = team2(opp);
-  const st = M.standings(s).find((x) => x.teamId === opp);
   const lu = M.likelyLineup(C(), s, opp);
   const ace = lu.map((x) => s.mons[x.monId]).sort((a, b) => M.bestRole(C(), s, b).ovr - M.bestRole(C(), s, a).ovr)[0];
   const home = se.homeId === s.userTeamId;
   const when = s.phase === "preseason" ? "Week 1 opponent" : "This week's opponent";
   return `<section class="l-panel l-section" aria-labelledby="h-opp">
-    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, "md")}<div><span class="cap">${when}</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2><p class="muted">${record(st?.wins ?? 0, st?.losses ?? 0)} \xB7 ${esc(strategyLook(t.lineup.strategyId).says)} \xB7 ${home ? "home" : "away"}</p></div></div>
+    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, "md")}<div><span class="cap">${when}</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2></div></div>
+    ${oppChips(opp, home)}
     <div class="l-facts">
       <div><span class="cap">Series \xB7 best of ${se.bestOf}</span>${pips(se)}</div>
       <div><span class="cap">Likely team</span>${likelyTeam(opp)}</div>
-      <div><span class="cap">Scouting</span><p>${esc(scoutLine(opp))}</p></div>
-      <div><span class="cap">Last met</span><p>${esc(lastMet(opp))}</p></div>
+      ${matchupTiles(opp)}
       <div class="l-actions"><a class="btn" href="#opponent">${ic("scout")}Scouting report</a></div>
     </div>
   </section>`;
+}
+function gameNums(g, side2) {
+  const s = S();
+  const top = Object.entries(g.box).filter(([, b]) => b.teamId === side2 && b.played).sort((x, y) => y[1].kos - x[1].kos || y[1].damageDealt - x[1].damageDealt)[0];
+  const m = top ? s.mons[top[0]] : void 0;
+  return `<span class="l-row g-nums"><span class="l-row" title="Turns">${ic("clock")}<b>${g.turns}</b><span class="muted">turns</span></span>${m ? `<span class="l-row" title="${esc(`Top Pok\xE9mon: ${monName(m)}, ${top[1].kos} KOs`)}">${ico(speciesOf(m))}<b>${top[1].kos}</b><span class="muted">KO</span></span>` : ""}</span>`;
 }
 function seriesResult(se, o = {}) {
   const s = S(), me = s.userTeamId;
@@ -4792,12 +4842,12 @@ function seriesResult(se, o = {}) {
     const won = g.winnerTeamId === a;
     const left = (t) => Object.values(g.box).filter((x) => x.teamId === t && x.played && !x.fainted).length;
     const la = left(a), lb = left(b);
-    return `<li><span class="cap">Game ${i + 1}</span><span class="chip ${won ? "c-growth" : "c-health"}" title="Pok\xE9mon left standing">${ic(won ? "check" : "x")}${won ? "Won" : "Lost"} ${la}\u2013${lb}</span><span class="l-clamp" style="--lines:2">${esc(g.summary || "")}</span><a class="btn sm" href="#battle-${esc(se.id)}-${i + 1}" aria-label="Watch game ${i + 1}">${ic("film")}Watch</a></li>`;
+    return `<li><span class="cap">Game ${i + 1}</span><span class="chip ${won ? "c-growth" : "c-health"}" title="Pok\xE9mon left standing">${ic(won ? "check" : "x")}${won ? "Won" : "Lost"} ${la}\u2013${lb}</span>${gameNums(g, a)}<a class="btn sm" href="#battle-${esc(se.id)}-${i + 1}" aria-label="Watch game ${i + 1}">${ic("film")}Watch</a></li>`;
   }).join("");
   return `${o.headless ? "" : ""}<div class="score"><span>${esc(teamName(a))}</span><b>${record(w, l)}</b><span>${esc(teamName(b))}</span></div>
     <ol class="l-list top games" aria-label="Game by game">${games}</ol>
     ${mvp ? `<div class="mvp">${spr(speciesOf(mvp), "md")}<div><span class="cap">Series MVP</span><b>${monRef(mvp, { icon: false })}</b><span class="muted">${mvpKos} KOs across ${se.games.length} games \xB7 ${esc(teamName(mvp.teamId))}</span></div></div>` : ""}
-    ${se.summary ? `<p class="l-clamp" style="--lines:2">${esc(se.summary)}</p>` : ""}`;
+`;
 }
 function lastWeek() {
   const s = S(), me = s.userTeamId;
@@ -4825,7 +4875,7 @@ function feed() {
 }
 var LINEUP_KINDS = /* @__PURE__ */ new Set(["lineup", "injury"]);
 function xl(o) {
-  const inner = `${ic(o.icon)}<span>${esc(o.label)}</span><small>${esc(o.why ?? o.hint)}</small>`;
+  const inner = `${ic(o.icon)}<span>${esc(o.label)}</span><small>${o.why ? esc(o.why) : o.hintHtml ?? esc(o.hint)}</small>`;
   if (o.why) return `<button class="btn xl peek" type="button" aria-disabled="true" aria-label="${esc(o.label)}: ${esc(o.why)}">${inner}<span class="pop"><strong>${esc(o.label)}</strong><span>${esc(o.why)}.</span></span></button>`;
   if (o.href) return `<a class="btn xl${o.go ? " go" : ""}" href="${esc(o.href)}">${inner}</a>`;
   return `<button class="btn xl${o.go ? " go" : ""}" type="button" data-act="${o.act ?? "play"}"${o.mode ? ` data-mode="${o.mode}"` : ""}>${inner}</button>`;
@@ -4852,18 +4902,18 @@ function phaseStep(s) {
   }
 }
 function lineupState(adv) {
-  const s = S(), c = C(), L = s.teams[s.userTeamId].lineup;
-  const issues = adv.filter((a) => LINEUP_KINDS.has(a.kind) && a.id !== "roster");
-  if (issues.length) return { ok: false, text: issues.length === 1 ? issues[0].text : `${issues.length} things to fix, listed below` };
-  const ovrs = L.slots.map((sl) => sl.monId ? M.roleRating(c, s, s.mons[sl.monId], sl.role) : null).filter((x) => x != null);
-  const avg = ovrs.length ? Math.round(ovrs.reduce((a, b) => a + b, 0) / ovrs.length) : 0;
-  return { ok: true, text: `${L.auto ? "Auto lineup" : "Your lineup"} \xB7 ${strategyName(L.strategyId)} \xB7 starters average ${avg}` };
+  const s = S(), L = s.teams[s.userTeamId].lineup;
+  const issues = adv.filter((a2) => LINEUP_KINDS.has(a2.kind) && a2.id !== "roster");
+  if (issues.length) return { ok: false, text: issues.length === 1 ? issues[0].text : `${issues.length} to fix, listed below` };
+  const a = myAvg(), look = stratName(L.strategyId);
+  const text = `${L.auto ? "Auto" : "Set by you"} \xB7 ${look} \xB7 average ${a ?? "\u2014"}`;
+  return { ok: true, text, html: `<span class="l-row hint-nums" aria-label="${esc(text)}">${ic(strategyLook(L.strategyId).icon)}<span>${esc(look)}</span><span class="muted">avg</span><b>${a ?? "\u2014"}</b><span class="muted">\xB7 ${L.auto ? "auto" : "set by you"}</span></span>` };
 }
 function hero(se, adv) {
   const s = S();
   const games = s.phase === "regular" || s.phase === "playoffs";
   const lu = lineupState(adv);
-  const lineupStep = step2(1, lu.ok ? "Lineup ready" : "Lineup needs a look", `<div class="l-hero-acts">${xl({ label: "Set lineup", hint: lu.text, icon: "lineup", href: "#lineup", go: !lu.ok })}</div>`, lu.ok ? "done" : "todo");
+  const lineupStep = step2(1, lu.ok ? "Lineup ready" : "Lineup needs a look", `<div class="l-hero-acts">${xl({ label: "Set lineup", hint: lu.text, hintHtml: lu.html, icon: "lineup", href: "#lineup", go: !lu.ok })}</div>`, lu.ok ? "done" : "todo");
   let play2;
   if (s.draft?.startup && s.phase === "draft") {
     return `<section class="l-panel l-hero" aria-label="Next step">${step2(1, "Startup draft", `<div class="l-hero-acts">${xl({ label: "Go to the draft board", hint: "Every club drafts 18 Pok\xE9mon from one board", icon: "scout", href: "#draft", go: true })}</div>`)}</section>`;
@@ -4919,15 +4969,14 @@ function viewOpponent() {
   once("scout-opp", () => document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-scout]");
     if (!b || b.getAttribute("aria-disabled") === "true") return;
-    act((st2, cat) => {
-      api_exports.scoutMon(cat, st2, st2.userTeamId, b.dataset.scout, b.dataset.full === "1");
+    act((st, cat) => {
+      api_exports.scoutMon(cat, st, st.userTeamId, b.dataset.scout, b.dataset.full === "1");
     });
     document.querySelector(`[data-scout="${b.dataset.scout}"]${b.dataset.full ? "[data-full]" : ":not([data-full])"}`)?.focus();
   }));
   const se = nextSeries();
   if (!se) return head("Scouting report", "No series this week") + empty("No opponent", "There is no series to scout right now.", `<a class="btn" href="#week">Back to This week</a>`);
   const opp = oppOf(se, me), t = team2(opp);
-  const st = M.standings(s).find((x) => x.teamId === opp);
   const lu = M.likelyLineup(c, s, opp);
   const cards = Array.from({ length: 6 }, (_, i) => {
     const x = lu[i];
@@ -4946,8 +4995,14 @@ function viewOpponent() {
     return `<li><span class="chip ${w > l ? "c-growth" : "c-health"}">${w > l ? "Won" : "Lost"} ${record(w, l)}</span><span>Week ${x.week} ${x.homeId === opp ? "vs" : "at"} ${esc(teamName(oppOf(x, opp)))}</span><span></span></li>`;
   }).join("");
   const pts2 = s.teams[me].scoutingPoints;
-  const intro2 = `<p>${esc(scoutLine(opp))}</p><p class="muted">You have <b>${pts2}</b> scouting ${pts2 === 1 ? "point" : "points"} left this week (shared with the draft class). ${s.settings.scoutCost} point narrows a rating; ${s.settings.fullScoutCost} in total show it exactly. A Pok\xE9mon's rating is known to everyone after ${REVEAL_BATTLES} battles.</p>`;
-  return `<a class="back" href="#week">${ic("back")}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, `Scouting report \xB7 ${record(st?.wins ?? 0, st?.losses ?? 0)} \xB7 ${esc(strategyLook(t.lineup.strategyId).says)}`, `<a class="btn" href="#lineup">Set lineup ${ic("arrow")}</a>`) + panel("likely", "Likely team", `${intro2}<div class="l-grid scout-grid">${cards}</div>`) + panel("recent", "Recent results", recent ? `<ul class="l-list top recent">${recent}</ul>` : `<p class="muted">No results yet.</p>`);
+  const sc = scoutState(opp), mine = myAvg();
+  const how = info("How scouting works", `<strong>Scouting points</strong><span>${s.settings.scoutCost} point narrows a rating; ${s.settings.fullScoutCost} in total show it exactly. Points are shared with the draft class and refill every week. Every club knows a Pok\xE9mon's rating after ${REVEAL_BATTLES} battles.</span>`);
+  const intro2 = `${stats([
+    stat("Scouted", `${sc.known}<small>/ ${sc.n}</small>`, { icon: "scout" }),
+    stat("Points", `${pts2}`, { icon: "target", title: "Scouting points left this week" }),
+    stat("Avg rating", vs(mine == null ? "\u2014" : String(mine), span(sc.lo, sc.hi), mine, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null), { icon: "lineup", wide: true })
+  ], 4, 2)}`;
+  return `<a class="back" href="#week">${ic("back")}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, oppChips(opp, se.homeId === me), `<a class="btn" href="#lineup">Set lineup ${ic("arrow")}</a>`) + panel("likely", `<span class="l-row">Likely team${how}</span>`, `${intro2}<div class="l-grid scout-grid">${cards}</div>`) + panel("recent", "Recent results", recent ? `<ul class="l-list top recent">${recent}</ul>` : `<p class="muted">No results yet.</p>`);
 }
 
 // franchise/ui/screens/league.ts
@@ -5128,7 +5183,7 @@ function viewSchedule() {
       { key: "wk", label: "Wk", width: "56px", num: true, cell: (x) => x.playoff ? "PO" : String(x.week) },
       { key: "opp", label: "Opponent", width: "34%", cell: (x) => teamCell(oppOf(x, me)) },
       { key: "where", label: "Where", width: "72px", cell: (x) => x.homeId === me ? "Home" : "Away" },
-      { key: "strat", label: "Strategy", width: "136px", cell: (x) => esc(strategyName(s.teams[oppOf(x, me)].lineup.strategyId)) },
+      { key: "strat", label: "Strategy", width: "160px", cell: (x) => stratChip(s.teams[oppOf(x, me)].lineup.strategyId) },
       { key: "res", label: "Result", width: "152px", cell: (x) => resultChip(x, me) || (x.week === s.week && (s.phase === "regular" || s.phase === "playoffs") ? fixChip("scout", "clock", "This week") : '<span class="dash">\u2014</span>') },
       { key: "act", label: "", width: "240px", cell: (x) => seriesActs(x, `week ${x.week}`) }
     ];
@@ -5297,7 +5352,7 @@ function viewScouting() {
     } }
   ];
   const how = info("How ranges work", "<strong>Scouting ranges</strong><span>Each point narrows the projected range. About one range in ten misses the true rating. Two points reveal maxed stats; three reveal the role it suits best. Everyone knows a Pok\xE9mon exactly after about six battles.</span>");
-  const pointsCard = `<div class="l-card"><span class="l-row"><span class="cap">Points this week</span>${how}</span><div class="x-points"><span class="fitbar" role="img" aria-label="${left} of ${per} points left"><i style="width:${Math.min(100, left / per * 100)}%"></i></span><b class="x-num">${left} / ${per}</b></div><span class="x-small">Scouting a prospect costs ${s.settings.scoutCost} point; full knowledge costs ${full()}. Points refill every week of the season.</span></div>`;
+  const pointsCard = `<div class="l-card"><span class="l-row"><span class="cap">Points this week</span>${how}</span><div class="x-points"><span class="fitbar" role="img" aria-label="${left} of ${per} points left"><i style="width:${Math.min(100, left / per * 100)}%"></i></span><b class="x-num">${left} / ${per}</b></div><span class="l-row x-small" title="Points refill every week of the season"><span class="cap">Cost</span><b class="x-num">${s.settings.scoutCost}</b><span class="muted">scout</span><b class="x-num">${full()}</b><span class="muted">full</span>${ic("refresh")}<span class="muted">weekly</span></span></div>`;
   const rows = store.ui.hideTaken ? ms.filter((m) => !taken.has(m.id)) : ms;
   return head("Scouting", `${s.draft.season} draft class \xB7 ${plural(ms.length, "prospect")}`) + `<div class="l-grid" style="--card-min:320px">${pointsCard}</div><section class="l-panel flush" aria-label="Draft class">${table({ id: "scout", cols, rows, minWidth: 940, defaultSort: { key: "rank", dir: "asc" }, rowClass: (m) => taken.has(m.id) ? "x-dim" : "", label: "Draft class" })}</section>`;
 }
@@ -5311,8 +5366,9 @@ function scoutDialog(monId, fullK) {
   const rng2 = (k) => k.exact ? String(k.hi) : `${k.lo}\u2013${k.hi}`;
   const body = res.ok ? `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${after.exact ? roleBadge(after.role, after.hi) : rangeBadge(after.role, after.lo, after.hi)}<span class="x-small">age ${m.age}</span></div>
     <div class="x-before-after"><span>Projected ${esc(ROLE_LABEL[after.role])}</span><b>${rng2(before)}</b><span class="x-arrow" aria-label="to">\u2192</span><b>${rng2(after)}</b>
-    <span>Points spent</span><b>${res.spent}</b><span></span><b>${s2.teams[me].scoutingPoints} left</b></div>
-    <p class="muted">${fresh.length ? `New: ${esc(fresh.join(" \xB7 "))}.` : traits.length ? `Known: ${esc(traits.join(" \xB7 "))}.` : "No traits stand out yet. Two points reveal maxed stats."} Potential ${pot.exact ? pot.lo : `${pot.lo}\u2013${pot.hi}`}.</p>` : `<p>${esc(res.reason)}.</p>`;
+    <span>Points spent</span><b>${res.spent}</b><span></span><b>${s2.teams[me].scoutingPoints} left</b>
+    <span>Potential</span><b>${pot.exact ? pot.lo : `${pot.lo}\u2013${pot.hi}`}</b><span></span><span></span></div>
+    <div class="l-row"><span class="cap">Traits</span>${traits.length ? traits.map((t) => `<span class="chip ${fresh.includes(t) ? "c-growth" : "c-plain"}">${fresh.includes(t) ? ic("plus") : ""}${esc(t)}</span>`).join("") : '<span class="dash">\u2014</span>'}</div>` : `<p>${esc(res.reason)}.</p>`;
   openDialog({ title: res.ok ? `Report: ${esc(monName(m))}` : "Not scouted", cap: res.ok ? fullK ? "Full knowledge" : "Scouted" : void 0, body });
 }
 function clockCard() {
@@ -5508,6 +5564,13 @@ var assetName = (k, owner2) => {
   const p = findPick(owner2, k);
   return p ? `season ${p.season} round ${p.round} pick` : "pick";
 };
+function verdictNums(ev) {
+  if (!ev) return "&nbsp;";
+  if (ev.problem) return `<span class="l-row x-vnums">${ic("alert")}<span>${esc(ev.problem)}</span></span>`;
+  const m = ev.keyMonId ? S().mons[ev.keyMonId] : void 0;
+  return `<span class="l-row x-vnums"><span class="cap">Value</span><b class="x-num${ev.score >= ev.need ? "" : " x-over"}">${signed(ev.score)}</b><span class="muted">of ${signed(ev.need)} needed</span>${m ? `<span class="l-row" title="${esc(`Key Pok\xE9mon: ${monName(m)}`)}">${ico(speciesOf(m))}<span class="muted">key</span></span>` : ""}</span>`;
+}
+var verdictPop = (ev, word) => `<strong>Will they accept: ${esc(word)}</strong>${ev ? ev.problem ? `<span>${esc(ev.problem)}.</span>` : prow("Their value", signed(ev.score)) + prow("Needed", signed(ev.need)) + (ev.keyMonId ? prow("Key Pok\xE9mon", esc(monName(S().mons[ev.keyMonId]))) : "") : prow("Score", "\u2014")}`;
 var tradeClosed = () => {
   const w = api_exports.tradeWindow(S());
   return w.open ? null : w.reason;
@@ -5537,7 +5600,7 @@ function builder() {
   const s = S(), c = C(), me = s.userTeamId, t = tradeUi();
   const p = proposal(t);
   const ev = isEmpty(p) ? null : api_exports.evaluateTrade(c, s, p);
-  const meter = tradeMeter(ev);
+  const meter2 = tradeMeter(ev);
   const list = (side2, keys, owner2) => {
     const rows = keys.map((k) => assetRow(k, side2, owner2)).join("");
     return `<ul class="x-assets" aria-label="${side2 === "give" ? "You give" : "You get"}">${rows || '<li class="x-empty">Nothing yet</li>'}</ul>`;
@@ -5547,9 +5610,8 @@ function builder() {
   const payMe = api_exports.payroll(s, me), cap = s.settings.cap;
   const afterMe = payMe - salary(p.give.mons) + salary(p.get.mons);
   const payThem = api_exports.payroll(s, t.team), afterThem = payThem - salary(p.get.mons) + salary(p.give.mons);
-  const why = `<strong>Why: ${esc(meter.word)}</strong><span>${ev ? esc(ev.reason) : "Add Pok\xE9mon or picks to either side."}</span>${ev ? `<span>Their score: ${ev.score > 0 ? "+" : ""}${ev.score} (they need +5).</span>` : ""}`;
-  const st = M.standings(s).find((r) => r.teamId === t.team);
-  return `<div class="l-card"><div class="l-split"><span class="l-row">${teamLogo(them)}${sel}</span><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} \xB7 ${esc(strategyLook(them.lineup.strategyId).says)}</span></div></div>
+  const why = verdictPop(ev, meter2.word);
+  return `<div class="l-card"><div class="l-split"><span class="l-row">${teamLogo(them)}${sel}</span>${oppChips(t.team)}</div></div>
   <div class="x-sides">
     <section class="l-card" aria-labelledby="h-give"><div class="l-split"><h2 class="l-card-title" id="h-give">You give</h2><span class="x-small">${t.give.length}/${MAX_SIDE}</span></div>${list("give", t.give, me)}${addSelect("give", me, t.give)}</section>
     <section class="l-card" aria-labelledby="h-get"><div class="l-split"><h2 class="l-card-title" id="h-get">You get</h2><span class="x-small">${t.get.length}/${MAX_SIDE}</span></div>${list("get", t.get, t.team)}${addSelect("get", t.team, t.get)}</section>
@@ -5557,7 +5619,7 @@ function builder() {
   <section class="l-card" aria-label="Trade summary">
     <div class="l-grid" style="--card-min:320px;grid-auto-rows:auto">
       <div class="l-stack tight"><span class="cap">Cap room after the trade</span>${beforeAfter([["You", cap - payMe, cap - afterMe], [them.name, cap - payThem, cap - afterThem]])}</div>
-      <div class="l-stack tight"><span class="l-row"><span class="cap">Will they accept?</span>${info("Why: " + meter.word, why)}</span>${meter.html}<span class="x-small l-clamp" style="--lines:1">${ev ? esc(ev.reason) : "&nbsp;"}</span></div>
+      <div class="l-stack tight"><span class="l-row"><span class="cap">Will they accept?</span>${info("Will they accept: " + meter2.word, why)}</span>${meter2.html}<span class="x-small l-clamp" style="--lines:1">${verdictNums(ev)}</span></div>
     </div>
     <div class="l-split"><div class="l-actions"><button type="button" class="btn go" data-fo="propose"${!ev ? ' aria-disabled="true"' : ""}>Propose</button><button type="button" class="btn" data-fo="balance"${!ev ? ' aria-disabled="true"' : ""} aria-label="What would make this work?">Make it work</button></div><button type="button" class="btn sm" data-fo="clear"${!ev ? ' aria-disabled="true"' : ""}>${ic("x")}Clear</button></div>
   </section>`;
@@ -5582,6 +5644,7 @@ function viewTrades() {
 }
 function proposeDialog() {
   const s = S(), t = tradeUi(), p = proposal(t), them = s.teams[t.team];
+  const ev = api_exports.evaluateTrade(C(), s, p);
   const res = act((st, c) => api_exports.proposeTrade(c, st, p));
   if (res.accepted) {
     store.ui.trade = { team: t.team, give: [], get: [] };
@@ -5589,7 +5652,7 @@ function proposeDialog() {
   }
   const names = (side2, owner2) => [...side2.mons.map((id) => monName(S().mons[id])), ...side2.picks.map((pk) => `season ${pk.season} round ${pk.round} pick`)].join(" and ") || "nothing";
   void names;
-  const body = `<div class="x-reply">${ic(res.accepted ? "check" : "x")}<span><b>${esc(them.name)} ${res.accepted ? "accept" : "decline"}.</b> ${esc(res.reason)}.</span></div>
+  const body = `<div class="x-reply">${ic(res.accepted ? "check" : "x")}<span><b>${esc(them.name)} ${res.accepted ? "accept" : "decline"}</b></span></div><div class="l-row">${verdictNums(ev)}</div>
     ${res.accepted ? `<p class="muted">You get ${esc([...p.get.mons.map((id) => monName(S().mons[id])), ...p.get.picks.map((pk) => `season ${pk.season} round ${pk.round} pick`)].join(" and ") || "nothing")}. New arrivals join your backups.</p>` : ""}`;
   const fill = res.accepted ? fillChoice() : null;
   openDialog({
@@ -5618,7 +5681,7 @@ function balanceDialog(inPlace = false) {
   }
   const base = api_exports.evaluateTrade(c, s, p);
   if (base.accept) {
-    show2({ title: "Already a deal", body: `<p class="muted">${esc(them.name)} would take this as it stands. Propose it.</p>` });
+    show2({ title: "Already a deal", cap: teamName(them.id), body: `<div class="l-row">${verdictNums(base)}</div>` });
     return;
   }
   if (t.give.length >= MAX_SIDE) {
@@ -5636,7 +5699,7 @@ function balanceDialog(inPlace = false) {
   }
   const pick = cands.sort((a, b) => a.score - b.score)[0];
   if (!pick) {
-    show2({ title: "No single add gets it done", body: `<div class="x-reply">${ic("x")}<span><b>${esc(them.name)}:</b> \u201C${esc(base.reason)}.\u201D Nothing one piece on your side bridges it. Ask for less.</span></div>` });
+    show2({ title: "No single add gets it done", cap: teamName(them.id), body: `<div class="x-reply">${ic("x")}<span><b>0</b> of your Pok\xE9mon or picks bridge it alone</span></div><div class="l-row">${verdictNums(base)}</div>` });
     return;
   }
   const nm = assetName(pick.key, me);
@@ -5644,7 +5707,7 @@ function balanceDialog(inPlace = false) {
   show2({
     title: "What would make this work",
     cap: teamName(them.id),
-    body: `<div class="x-reply">${ic("deal")}<span><b>${esc(them.name)}:</b> \u201CAdd ${esc(nm)} and we have a deal.\u201D</span></div>${m ? `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">${m.contract ? `${money(m.contract.salary)} \xB7 ${m.contract.yearsLeft}y \xB7 ` : ""}age ${m.age}</span></div>` : ""}`,
+    body: `<div class="x-reply">${ic("deal")}<span><b>Add ${esc(nm)}</b></span></div>${m ? `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">${m.contract ? `${money(m.contract.salary)} \xB7 ${m.contract.yearsLeft}y \xB7 ` : ""}age ${m.age}</span></div>` : ""}<div class="l-row"><span class="cap">Value</span><b class="x-num x-over">${signed(base.score)}</b><span class="x-arrow" aria-label="to">\u2192</span><b class="x-num">${signed(pick.score)}</b><span class="muted">of ${signed(base.need)} needed</span></div>`,
     actions: [{ key: "close", label: "Cancel" }, { key: "add", label: "Add it", go: true }],
     onAction: (k) => {
       if (k === "add") {
@@ -5664,11 +5727,10 @@ function offerCard(o) {
   const room = s.settings.cap - api_exports.payroll(s, me);
   const dSal = salary(o.give.mons.filter((id) => s.mons[id])) - salary(o.get.mons.filter((id) => s.mons[id]));
   const today = o.expiresWeek <= s.week;
-  const st = M.standings(s).find((r) => r.teamId === o.fromTeamId);
   const acts = o.status === "open" ? `<div class="l-actions"><button type="button" class="btn go" data-fo="accept" data-offer="${esc(o.id)}">Accept</button><button type="button" class="btn" data-fo="counter" data-offer="${esc(o.id)}">Counter</button><button type="button" class="btn" data-fo="decline" data-offer="${esc(o.id)}">Decline</button></div>` : o.status === "accepted" ? fixChip("growth", "check", "Accepted") : o.status === "declined" ? fixChip("league", "x", "Declined") : fixChip("league", "clock", "Expired");
   return `<article class="l-card" aria-labelledby="h-${esc(o.id)}">
     <div class="l-split">${fixChip("deal", "deal", "Offer")}${o.status === "open" ? `<span class="tag ${today ? "t-dtd" : ""}">${ic("clock")}${today ? "Ends this week" : `Ends week ${o.expiresWeek}`}</span>` : ""}</div>
-    <div class="l-stack tight"><h2 class="l-card-title x-team" id="h-${esc(o.id)}">${teamLogo(them)}<span>${esc(teamName(them.id))}</span></h2><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} \xB7 ${esc(strategyLook(them.lineup.strategyId).says)}</span></div>
+    <div class="l-stack tight"><h2 class="l-card-title x-team" id="h-${esc(o.id)}">${teamLogo(them)}<span>${esc(teamName(them.id))}</span></h2>${oppChips(o.fromTeamId)}</div>
     <div class="x-offer-cols"><div class="l-stack tight"><span class="cap">You give</span>${mini(o.get)}</div><div class="l-stack tight"><span class="cap">You get</span>${mini(o.give)}</div></div>
     ${o.status === "open" ? beforeAfter([["Cap room", room, room - dSal]]) : ""}
     <div class="x-actslot">${acts}</div></article>`;
@@ -5731,7 +5793,7 @@ function viewFreeAgents() {
     }, sort: (m) => ["Keen", "Neutral", "Cool"].indexOf(api_exports.interest(s, m, me)) },
     { key: "act", label: "", width: "232px", cell: (m) => resign ? `<span class="l-cellacts"><button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Re-sign ${esc(monName(m))}">Re-sign</button>${tagButton(m)}</span>` : `<button type="button" class="btn sm" data-fo="negotiate" data-mon="${esc(m.id)}" aria-label="Negotiate with ${esc(monName(m))}">Negotiate</button>` }
   ];
-  const phaseNote = resignPhase ? "Re-sign window: keep your expiring contracts or tag one before free agency opens." : s.phase === "free-agency" ? `Free agency, round ${(s.faRound ?? 0) + 1} of 3. Unsigned Pok\xE9mon lower their ask each round.` : s.phase === "regular" ? "Sign anyone, any week. A full roster releases someone first (Roster \u2192 Release)." : "";
+  const phaseNote = resignPhase ? "Re-sign window" : s.phase === "free-agency" ? `Round ${(s.faRound ?? 0) + 1} of 3 \xB7 asks drop each round` : "";
   const reSign = resignPhase ? `<section class="l-panel flush l-section" aria-labelledby="h-rs"><h2 id="h-rs">Your expiring contracts</h2><div class="l-toolbar l-pad"><span class="x-small">${s.teams[me].tagSeason === s.season ? "You used your franchise tag this offseason." : "One franchise tag per offseason: one year at a high fixed price."}</span></div>${expiring.length ? table({ id: "resign", cols: cols(true), rows: expiring, minWidth: 820, label: "Expiring contracts" }) : `<div class="l-pad">${empty("Nothing expiring", "Every contract runs past this season.")}</div>`}</section>` : "";
   return head("Free agents", `${plural(fa.length, "free agent")}${phaseNote ? " \xB7 " + esc(phaseNote) : ""}`) + `<div class="l-card"><div class="l-split x-capwrap">${capStrip(me)}<span class="x-small"><b class="x-num">${used} / 18</b> roster spots</span></div></div>` + reSign + `<section class="l-panel flush l-section" aria-labelledby="h-fa"><h2 id="h-fa">Available</h2>${fa.length ? table({ id: "fa", cols: cols(false), rows: fa, minWidth: 760, defaultSort: { key: "role", dir: "desc" }, label: "Free agents" }) : `<div class="l-pad">${empty("No free agents", "Players reach free agency when contracts run out or clubs release them.")}</div>`}</section>`;
 }
@@ -5740,28 +5802,33 @@ function negotiateDialog(monId) {
   const a = api_exports.askingPrice(c, s, monId);
   const resign = m.teamId === me;
   let sal = a.salary, yrs = a.years;
-  let reply = `${ic("deal")}<span>Set an offer and send it. ${api_exports.interest(s, m, me) === "Keen" ? `${esc(monName(m))} likes your club and may take a little less.` : api_exports.interest(s, m, me) === "Cool" ? "Cool on your club: expect to pay over the ask." : "Will take about the ask."}</span>`;
-  let signed = false;
+  const lean = api_exports.interest(s, m, me), pct = Math.round((INTEREST_MULT[lean] - 1) * 100);
+  let reply = `${ic("deal")}<span class="muted" aria-label="No offer sent yet">\u2014</span>`;
+  let signed2 = false;
   const step3 = 25e4;
-  const block = () => signed ? { reason: "", rosterFull: false } : api_exports.signBlock(S(), monId);
-  const capWhy = () => signed ? "" : api_exports.capBlock(S(), sal);
+  const block = () => signed2 ? { reason: "", rosterFull: false } : api_exports.signBlock(S(), monId);
+  const capWhy = () => signed2 ? "" : api_exports.capBlock(S(), sal);
   const body = () => {
     const room = s.settings.cap - api_exports.payroll(S(), me);
     const cur = resign ? m.contract?.salary ?? 0 : 0;
     const b = block(), cw = capWhy();
     const note = b.reason ? `${ic("alert")}<span><b>${esc(b.reason)}.</b>${b.rosterFull ? " Release someone to make room, then come back." : ""}</span>` : cw ? `${ic("alert")}<span><b>${esc(cw)}.</b> Lower the salary to the minimum or free cap room.</span>` : "";
-    return `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span>${fixChip(INTEREST[api_exports.interest(s, m, me)][0], INTEREST[api_exports.interest(s, m, me)][1], api_exports.interest(s, m, me))}</div>
-     <p class="muted">Asking ${money(a.salary)} a year for ${plural(a.years, "year")}.</p>
+    return `<div class="l-row">${ico(speciesOf(m))}<b>${esc(monName(m))}</b>${knownBadge(m)}<span class="x-small">age ${m.age}</span></div>
+     ${stats([
+      stat("Asking", money(a.salary), { icon: "deal", sub: "a year" }),
+      stat("Years", String(a.years), { icon: "clock", sub: "asked" }),
+      stat("Interest", `${pct > 0 ? "+" : pct < 0 ? "\u2212" : "\xB1"}${Math.abs(pct)}%`, { icon: INTEREST[lean][1], sub: `${lean} \xB7 on the ask` })
+    ], 3, 3)}
      <div class="x-note l-reserve" style="--lines:2" aria-live="polite">${note}</div>
      <div class="x-form">
-       <div class="x-field-lbl">Salary per year<div class="x-steps"><button type="button" class="btn" data-dlg="dn" aria-label="Lower by $0.25M"${signed || b.reason ? ' aria-disabled="true"' : ""}>\u2212</button><output aria-live="polite">${money(sal)}</output><button type="button" class="btn" data-dlg="up" aria-label="Raise by $0.25M"${signed || b.reason ? ' aria-disabled="true"' : ""}>+</button></div></div>
-       <label class="x-field-lbl">Years<select data-yrs${signed || b.reason ? " disabled" : ""}>${[1, 2, 3, 4, 5, 6, 7].map((y) => `<option${y === yrs ? " selected" : ""}>${y}</option>`).join("")}</select></label>
+       <div class="x-field-lbl">Salary per year<div class="x-steps"><button type="button" class="btn" data-dlg="dn" aria-label="Lower by $0.25M"${signed2 || b.reason ? ' aria-disabled="true"' : ""}>\u2212</button><output aria-live="polite">${money(sal)}</output><button type="button" class="btn" data-dlg="up" aria-label="Raise by $0.25M"${signed2 || b.reason ? ' aria-disabled="true"' : ""}>+</button></div></div>
+       <label class="x-field-lbl">Years<select data-yrs${signed2 || b.reason ? " disabled" : ""}>${[1, 2, 3, 4, 5, 6, 7].map((y) => `<option${y === yrs ? " selected" : ""}>${y}</option>`).join("")}</select></label>
      </div>
-     ${beforeAfter([["Cap room after signing", room, signed ? room : room - sal + cur]])}
+     ${beforeAfter([["Cap room after signing", room, signed2 ? room : room - sal + cur]])}
      <div class="x-reply" aria-live="polite">${reply}</div>`;
   };
   const actions = () => {
-    if (signed) return [{ key: "close", label: "Done", go: true }];
+    if (signed2) return [{ key: "close", label: "Done", go: true }];
     const b = block(), why = b.reason || capWhy();
     return [
       b.rosterFull ? { key: "release", label: "Release someone", href: "#roster?lens=contracts" } : { key: "close", label: "Cancel" },
@@ -5776,13 +5843,13 @@ function negotiateDialog(monId) {
     onAction: (k) => {
       if (k === "close" || k === "release") return;
       if (k === "up" || k === "dn") {
-        if (!signed) {
+        if (!signed2) {
           sal = Math.max(s.settings.minSalary, sal + (k === "up" ? step3 : -step3));
         }
       }
-      if (k === "offer" && !signed) {
+      if (k === "offer" && !signed2) {
         const r = act((st, cat) => api_exports.offerContract(cat, st, monId, sal, yrs));
-        signed = r.accepted;
+        signed2 = r.accepted;
         reply = r.accepted ? `${ic("check")}<span><b>${esc(monName(m))} ${resign ? "re-signs" : "signs"}.</b> ${money(sal)} \xD7 ${plural(yrs, "year")}.${resign ? "" : " Joins your backups."}</span>` : `${ic("x")}<span><b>No deal.</b> ${esc(r.reason)}.</span>`;
       }
       updateDialog({ body: body(), actions: actions() });
@@ -6131,9 +6198,9 @@ function viewRoster() {
   const pay = M.payroll(s, me), cap = s.settings.cap;
   const closest = mons.filter((m) => m.tier !== "ir").map((m) => ({ m, n: nextOf(M.evGrade(s, m)) })).filter((x) => x.n).map((x) => ({ ...x, d: GRADE_AT[x.n] - x.m.growth })).sort((a, b) => a.d - b.d)[0];
   const bar = {
-    list: `<span>Roles for the <b>${esc(strategyName(s.teams[me].lineup.strategyId))}</b> lineup. Others show their best role.</span>`,
+    list: `<span class="l-row"><span class="cap">Roles for</span>${stratChip(s.teams[me].lineup.strategyId)}<span class="cap">bench: best role</span></span>`,
     contracts: `<span class="capm"><span>Cap room</span><b>${money(cap - pay)}</b><span class="fitbar" role="img" aria-label="${money(pay)} of ${money(cap)} used"><i style="width:${Math.min(100, pay / cap * 100).toFixed(1)}%"></i></span><span>${money(pay)} of ${money(cap)} \xB7 ${money(expSum)} expires</span></span>`,
-    growth: `<span>${closest ? `${esc(monName(closest.m))} is closest to a new grade: ${closest.d} Growth from ${closest.n}.` : "Nobody is close to a new grade."}</span>`
+    growth: closest ? `<span class="l-row" title="${esc(`Closest to a new grade: ${monName(closest.m)}, ${closest.d} Growth from ${closest.n}`)}"><span class="cap">Next grade</span>${ico(speciesOf(closest.m))}<b>${esc(monName(closest.m))}</b>${gradeChip(closest.n)}<span><b class="x-num">${closest.d}</b> Growth to go</span></span>` : `<span class="l-row"><span class="cap">Next grade</span><span class="dash">\u2014</span></span>`
   };
   return head("Roster", `${plural(mons.filter((m) => m.tier !== "ir").length, "Pok\xE9mon", "Pok\xE9mon")} \xB7 ${money(expSum)} ${ticked ? "expiring now" : "expires after this season"}`) + `<section class="l-panel flush" aria-label="Roster">${lensTabs("rosterLens", lens, [["list", "List"], ["contracts", "Contracts"], ["growth", "Growth"]])}
     <div class="lensbar">${bar[lens]}</div>
@@ -6167,8 +6234,9 @@ function backupsFor(i) {
 function viewLineup() {
   const s = S(), me = s.userTeamId, L = s.teams[me].lineup;
   const se = M.userSeries(s);
-  const ovrs = L.slots.map((sl) => sl.monId ? M.roleRating(C(), s, s.mons[sl.monId], sl.role) : null).filter((x) => x != null);
-  const avg = ovrs.length ? Math.round(ovrs.reduce((a, b) => a + b, 0) / ovrs.length) : null;
+  const avg2 = myAvg();
+  const opp = se ? oppOf(se, me) : null, sc = opp ? scoutState(opp) : null;
+  const theirs = sc && sc.lo != null && sc.hi != null ? sc.lo === sc.hi ? String(sc.lo) : `${sc.lo}\u2013${sc.hi}` : "\u2014";
   const cards = L.slots.map((sl, i) => {
     const roles3 = slotRoles(i);
     const top = `<div class="slot-h"><div><h3 id="sh-${i}">${esc(ROLE_LABEL[sl.role])}</h3><p>${roles3.length > 1 ? "or " + roles3.filter((r) => r !== sl.role).map((r) => ROLE_LABEL[r]).join(" or ") : "&nbsp;"}</p></div><button class="btn sm" type="button" data-act="chooser" data-slot="${i}" aria-label="Change ${esc(ROLE_LABEL[sl.role])}">Change</button></div>`;
@@ -6200,10 +6268,10 @@ function viewLineup() {
       <div class="l-stack tight"><span class="cap">Backups</span>${bkHtml}</div>
       <div class="slot-foot">${foot}</div></article>`;
   }).join("");
-  const sub = se ? `Week ${se.week} ${se.homeId === me ? "vs" : "at"} ${esc(teamName(oppOf(se, me)))} (${esc(strategyName(s.teams[oppOf(se, me)].lineup.strategyId))}) \xB7 best of ${se.bestOf}` : "No series this week";
+  const sub = se && opp ? `<span class="l-row">Week ${se.week} ${se.homeId === me ? "vs" : "at"} ${esc(teamName(opp))}${stratChip(s.teams[opp].lineup.strategyId)}<span>best of ${se.bestOf}</span></span>` : "No series this week";
   return head("Lineup", sub, `<a class="btn go" href="#week">${ic("check")}Done</a>`) + `<section class="l-panel flush" aria-label="Lineup">
-    <div class="lbar"><label for="strat">Strategy</label><select id="strat" data-act="strategy">${strategies().map((x) => `<option value="${esc(x.id)}"${x.id === L.strategyId ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>
-      <span class="avg">Starters average <b>${avg ?? "\u2014"}</b></span><button class="btn" type="button" data-act="auto">${ic("wand")}Auto-assign</button></div>
+    <div class="lbar"><label for="strat">Strategy</label><select id="strat" data-act="strategy">${strategies().map((x) => `<option value="${esc(x.id)}"${x.id === L.strategyId ? " selected" : ""}>${esc(stratName(x.id))}</option>`).join("")}</select>
+      <span class="avg" title="Starters' average rating${opp ? ", you vs them" : ""}"><span class="cap">Avg</span>${opp ? vs(avg2 == null ? "\u2014" : String(avg2), theirs, avg2, sc.lo != null && sc.hi != null ? (sc.lo + sc.hi) / 2 : null) : `<b>${avg2 ?? "\u2014"}</b>`}</span><button class="btn" type="button" data-act="auto">${ic("wand")}Auto-assign</button></div>
     <div class="l-grid slots">${cards}</div></section>`;
 }
 function openChooser(i, onPick) {
@@ -6721,7 +6789,6 @@ function viewBattle(arg) {
       <div class="x-gtabs" role="tablist" aria-label="Games" style="grid-template-columns:repeat(${se.bestOf},minmax(88px,1fr))">${tabs}</div></div>
     ${frame}
     ${walk}
-    ${g?.summary && !watch ? `<p class="muted l-clamp" style="--lines:2">${esc(g.summary)}</p>` : ""}
     ${box ? `<section class="l-panel flush l-section" aria-labelledby="h-box"><h2 id="h-box">Box score</h2>${box}</section>` : ""}`;
 }
 function watchDialog(kind, arg) {
@@ -6744,7 +6811,7 @@ function watchDialog(kind, arg) {
     title: `${esc(team2(me).name)} ${won ? "win" : "lose"} game ${game}`,
     cap: `Week ${se.week} \xB7 ${g.turns} turns`,
     wide: true,
-    body: `${g.summary ? `<p>${esc(g.summary)}</p>` : ""}${boxTable(g.box)}`,
+    body: `${gameNums(g, me)}${boxTable(g.box)}`,
     actions: last ? [{ key: "close", label: "Close" }, { key: "series", label: `${ic("trophy")}Series result`, go: true }] : [{ key: "close", label: "Close" }, { key: "next", label: `Next: game ${game + 1} ${ic("arrow")}`, href: watchHash(se.id, game + 1), go: true }],
     onAction: (k) => {
       if (k === "series") {
@@ -8077,7 +8144,6 @@ function fixtureLeague(catalog, userTeamIndex = 0) {
 }
 
 // franchise/ui/screens/settings.ts
-var ordinal4 = (n) => n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th";
 var theme = () => {
   try {
     return localStorage.getItem("plateau-theme") ?? "auto";
@@ -8147,17 +8213,13 @@ function previewLeague(mode = newMode() ?? "premade") {
   }
   return st;
 }
-var look = (sid) => {
-  const l = strategyLook(sid);
-  return `<span class="plays">${ic(l.icon)}<span>${esc(l.says)}</span></span>`;
-};
 var playsId = (st, i) => newMode() === "premade" && st?.teams[`t${i}`]?.lineup.strategyId || TEAM_SEEDS[i].favorites[0];
 var where = (i) => `${divisionName(i >> 3, i >> 2 & 1)} \xB7 ${CONFERENCE_NAMES[i >> 3]}`;
 function clubTile(t, i, pick, st) {
   const sid = playsId(st, i), l = strategyLook(sid);
-  return `<button type="button" class="club-tile" data-nl="team" data-i="${i}" aria-pressed="${i === pick}" style="--c:${t.color}" aria-label="${esc(`${t.city} ${t.name}, ${t.gymType} gym, ${l.says.toLowerCase()}`)}">
+  return `<button type="button" class="club-tile" data-nl="team" data-i="${i}" aria-pressed="${i === pick}" style="--c:${t.color}" aria-label="${esc(`${t.city} ${t.name}, ${t.gymType} gym, ${l.short}`)}">
     ${teamLogo({ id: `t${i}`, badge: t.badge }, true)}<b>${esc(t.city)}</b><small>${esc(t.name)}</small>
-    <span class="meta">${typeChips([t.gymType])}<span title="${esc(l.says)}">${ic(l.icon)}</span></span>
+    <span class="meta">${typeChips([t.gymType])}${stratChip(sid, { iconOnly: true })}</span>
     <span class="sub2">${ic(l.icon)}${esc(t.name)}</span></button>`;
 }
 var iconCell = (st, m) => {
@@ -8167,12 +8229,14 @@ var iconCell = (st, m) => {
   return `<span title="${esc(`${monLabel(c, st, m)} \xB7 ${ROLE_LABEL[b.role]} ${b.ovr} \xB7 age ${m.age}`)}">${ico(c.species[m.speciesId])}<span>${b.ovr}</span></span>`;
 };
 var emptyTile = '<span><span class="spr md"></span><span class="nm dash">\u2014</span></span>';
-function clubDetail(i, withPlays = true) {
+function clubDetail(i) {
   const seed = TEAM_SEEDS[i], tid = `t${i}`, mode = newMode() ?? "premade";
   const st = previewLeague(mode), c = store.catalog, team3 = st?.teams[tid];
-  let facts, tiles, rowA, rowB, tilesCap;
+  const dash = '<span class="dash">\u2014</span>';
+  let tiles4, bars, tiles, rowA, rowB, tilesCap;
   if (!st || !c || !team3) {
-    facts = [["Plays", look(seed.favorites[0])], ["Strength", '<span class="dash">\u2014</span>'], ["Payroll", '<span class="dash">\u2014</span>']];
+    tiles4 = [stat("Strength", dash, { icon: "trophy" }), stat("Payroll", dash, { icon: "deal" }), stat("Cap space", dash, { icon: "deal" })];
+    bars = [["Starters", null], ["Backups", null], ["Practice", null]];
     tiles = Array.from({ length: 6 }, () => emptyTile);
     tilesCap = "Starting six";
     rowA = ["Backups", ""];
@@ -8182,10 +8246,10 @@ function clubDetail(i, withPlays = true) {
     const mine = api_exports.teamStrength(c, st, tid);
     const rank = ids.filter((t) => api_exports.teamStrength(c, st, t) > mine).length + 1;
     const pay = api_exports.payroll(st, tid), cap = st.settings.cap;
-    facts = [
-      ["Plays", look(team3.lineup.strategyId)],
-      ["Strength", `<b>${rank}${ordinal4(rank)}</b> <span class="muted">of 16 by its best six</span>`],
-      ["Payroll", `${money(pay)} <span class="muted">\xB7 ${money(cap - pay)} under the cap</span>`]
+    tiles4 = [
+      stat("Strength", `#${rank}<small>of ${ids.length}</small>`, { icon: "trophy", title: `Rank ${rank} of ${ids.length} by the best six (average ${Math.round(mine)})` }),
+      stat("Payroll", money(pay), { icon: "deal" }),
+      stat("Cap space", money(cap - pay), { icon: "deal" })
     ];
     tilesCap = "Starting six";
     tiles = team3.lineup.slots.slice(0, 6).map((sl) => {
@@ -8196,26 +8260,31 @@ function clubDetail(i, withPlays = true) {
     });
     while (tiles.length < 6) tiles.push(emptyTile);
     const mons = api_exports.teamRoster(st, tid);
-    const byOvr = (a, b) => api_exports.bestRole(c, st, b).ovr - api_exports.bestRole(c, st, a).ovr;
+    const ovr = (m) => api_exports.bestRole(c, st, m).ovr;
+    const byOvr = (a, b) => ovr(b) - ovr(a);
     const backups = mons.filter((m) => m.tier === "backup").sort(byOvr), practice2 = mons.filter((m) => m.tier === "practice").sort(byOvr);
+    const starters2 = team3.lineup.slots.map((sl) => sl.monId && st.mons[sl.monId] ? api_exports.roleRating(c, st, st.mons[sl.monId], sl.role) ?? ovr(st.mons[sl.monId]) : null);
+    bars = [["Starters", avg(starters2)], ["Backups", avg(backups.map(ovr))], ["Practice", avg(practice2.map(ovr))]];
     rowA = ["Backups", Array.from({ length: 6 }, (_, k) => iconCell(st, backups[k])).join("")];
     rowB = ["Practice squad", Array.from({ length: 6 }, (_, k) => iconCell(st, practice2[k])).join("")];
   } else {
     const d = st.draft;
     const mine = d.order.map((p, n) => ({ p, n: n + 1 })).filter((x) => x.p.ownerTeamId === tid);
     const board = api_exports.draftBoard(st).sort((a, b) => api_exports.bestRole(c, st, b).ovr - api_exports.bestRole(c, st, a).ovr);
-    facts = [
-      ["Wants to play", look(seed.favorites[0])],
-      ["First pick", `<b>${mine[0].n}${ordinal4(mine[0].n)}</b> <span class="muted">of 16, then every other round from the end</span>`],
-      ["Payroll", `<span class="muted">Contracts are signed after the draft</span>`]
+    const ovr = (m) => m ? api_exports.bestRole(c, st, m).ovr : null;
+    const ofType = board.filter((m) => c.species[m.speciesId]?.types.includes(seed.gymType));
+    tiles4 = [
+      stat("First pick", `#${mine[0].n}<small>of 16</small>`, { icon: "draft" }),
+      stat("Picks", String(mine.length), { icon: "roster", title: `${mine.length} rounds` }),
+      stat("Payroll", dash, { icon: "deal", title: "Contracts are signed after the draft" })
     ];
     tilesCap = "Your first six picks";
-    tiles = mine.slice(0, 6).map((x, k) => `<span><span class="big x-num">${x.n}</span><span class="nm">Round ${x.p.round}</span><span class="x-small">${k === 0 ? "first pick" : `${x.n - mine[k - 1].n} picks later`}</span></span>`);
+    tiles = mine.slice(0, 6).map((x, k) => `<span><span class="big x-num">${x.n}</span><span class="nm">Round ${x.p.round}</span><span class="x-small">${k === 0 ? "1st" : `+${x.n - mine[k - 1].n}`}</span></span>`);
+    bars = [["Board top 6", avg(board.slice(0, 6).map(ovr))], [`${seed.gymType} top 6`, avg(ofType.slice(0, 6).map(ovr))], ["At pick " + mine[0].n, ovr(board[mine[0].n - 1])]];
     rowA = ["Best on the board", Array.from({ length: 6 }, (_, k) => iconCell(st, board[k])).join("")];
-    rowB = [`Best ${seed.gymType} type`, Array.from({ length: 6 }, (_, k) => iconCell(st, board.filter((m) => c.species[m.speciesId]?.types.includes(seed.gymType))[k])).join("")];
+    rowB = [`Best ${seed.gymType} type`, Array.from({ length: 6 }, (_, k) => iconCell(st, ofType[k])).join("")];
   }
-  if (!withPlays) facts = facts.slice(1);
-  return `<dl class="l-kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd class="l-clamp" style="--lines:1">${v}</dd>`).join("")}</dl>
+  return `${stats(tiles4, 3, 3)}${meters(bars.map(([k, v]) => meter(k, v)))}
     <div class="l-stack tight"><span class="cap">${esc(tilesCap)}</span><div class="l-tiles">${tiles.join("")}</div></div>
     <div class="l-stack tight"><span class="cap">${esc(rowA[0])}</span><div class="l-icons">${rowA[1]}</div></div>
     <div class="l-stack tight"><span class="cap">${esc(rowB[0])}</span><div class="l-icons">${rowB[1]}</div></div>`;
@@ -8223,25 +8292,24 @@ function clubDetail(i, withPlays = true) {
 function newPreview(i = newTeamIndex()) {
   const s = TEAM_SEEDS[i];
   return `<section class="l-panel l-section l-sticky" aria-labelledby="h-np" aria-live="polite" id="np">
-    <div class="opp-h">${teamLogo({ id: `t${i}`, badge: s.badge }, true)}<div><span class="cap">${esc(where(i))}</span><h2 id="h-np">${esc(s.city)} ${esc(s.name)}</h2></div></div>
+    <div class="opp-h">${teamLogo({ id: `t${i}`, badge: s.badge }, true)}<div class="l-stack tight"><span class="cap">${esc(where(i))}</span><h2 id="h-np">${esc(s.city)} ${esc(s.name)}</h2><span class="l-row">${typeChips([s.gymType])}${stratChip(playsId(previewLeague(), i))}</span></div></div>
     ${clubDetail(i)}</section>`;
 }
 function stepMode() {
   const m = newMode();
-  const card = (v, icon, title, text, facts) => `<button type="button" class="decide" data-nl="mode" data-v="${v}" aria-pressed="${m === v}"><span class="dic">${ic(icon)}</span><b>${title}</b><span>${text}</span>
-      <ul>${facts.map(([i, f]) => `<li>${ic(i)}${f}</li>`).join("")}</ul></button>`;
-  return `<div class="wz-head"><h1 tabindex="-1">How do you want to start?</h1><p class="sub">Pick one. Every league is saved on its own, so you can try the other way later.</p></div>
+  const card = (v, icon, title, facts) => `<button type="button" class="decide" data-nl="mode" data-v="${v}" aria-pressed="${m === v}"><span class="dic">${ic(icon)}</span><b>${title}</b>
+      <ul>${facts.map(([i, n, f]) => `<li>${ic(i)}<b>${n}</b><span>${f}</span></li>`).join("")}</ul></button>`;
+  return `<div class="wz-head"><h1 tabindex="-1">How do you want to start?</h1></div>
     <div class="l-decide" role="group" aria-label="How to start">
-      ${card("premade", "team", "Pre-made teams", "Every club starts with 18 Pok\xE9mon. Pick a club and the season is ready to go.", [["check", "Rosters ready to play"], ["play", "First week right away"]])}
-      ${card("draft", "draft", "Draft", "Every club starts empty. Take turns picking 18 Pok\xE9mon each from one board of 288.", [["check", "Build your own roster"], ["clock", "18 rounds of picks before the season"]])}
+      ${card("premade", "team", "Pre-made teams", [["roster", "18", "Pok\xE9mon per club"], ["team", "16", "clubs, rosters set"], ["play", "0", "rounds before week 1"]])}
+      ${card("draft", "draft", "Draft", [["roster", "0", "Pok\xE9mon to start"], ["clock", "18", "rounds of picks"], ["scout", "288", "on the board"]])}
     </div>${leaguesPanel()}`;
 }
 function stepClub() {
   const pick = newTeamIndex(), st = previewLeague();
   const regions = DIVISION_NAMES.flat().map((r, g) => `<section class="l-stack tight" aria-labelledby="rg-${g}"><div class="l-split"><h2 id="rg-${g}">${esc(r)}</h2><span class="cap">${esc(CONFERENCE_NAMES[g >> 1])}</span></div>
       <div class="l-clubs">${TEAM_SEEDS.slice(g * 4, g * 4 + 4).map((t, k) => clubTile(t, g * 4 + k, pick, st)).join("")}</div></section>`).join("");
-  const sub = newMode() === "premade" ? "Each club comes with its gym leader\u2019s style and a roster ready to play. You keep it for the whole league." : "Each club drafts toward its gym leader\u2019s style. Your club decides where you pick.";
-  return `<div class="wz-head"><h1 tabindex="-1">Pick your club</h1><p class="sub">${sub}</p></div>
+  return `<div class="wz-head"><h1 tabindex="-1">Pick your club</h1></div>
     <div class="l-cols"><div class="l-stack loose">${regions}</div><div class="wz-side">${newPreview(pick)}</div></div>`;
 }
 function stepReady() {
@@ -8249,11 +8317,10 @@ function stepReady() {
   const name2 = store.ui.newName ?? "Indigo League";
   return `<div class="wz-club">${teamLogo({ id: `t${i}`, badge: s.badge }, "xl")}
       <div class="l-stack tight"><span class="cap">${esc(where(i))}</span><h1 tabindex="-1">${esc(s.city)} ${esc(s.name)}</h1>
-      <div class="facts"><span>${trainerImg(s.trainer, 32)}Leader <b>${esc(s.leader)}</b>${typeChips([s.gymType])}</span>${look(playsId(st, i))}</div></div></div>
-    <div class="l-cols"><section class="l-panel l-section" aria-label="Your club">${clubDetail(i, false)}</section>
+      <div class="facts"><span>${trainerImg(s.trainer, 32)}Leader <b>${esc(s.leader)}</b>${typeChips([s.gymType])}</span>${stratChip(playsId(st, i))}</div></div></div>
+    <div class="l-cols"><section class="l-panel l-section" aria-label="Your club">${clubDetail(i)}</section>
       <section class="l-panel l-section" aria-labelledby="h-ln"><h2 id="h-ln">League name</h2>
-        <input type="text" id="leagueName" class="txt-in" value="${esc(name2)}" maxlength="40" aria-labelledby="h-ln">
-        <p class="muted">${newMode() === "draft" ? "Start opens the draft board. You pick when your club is on the clock; Sim to my pick skips ahead." : "Start takes you to your club\u2019s home, ready for the first week."}</p></section></div>`;
+        <input type="text" id="leagueName" class="txt-in" value="${esc(name2)}" maxlength="40" aria-labelledby="h-ln"></section></div>`;
 }
 function viewNewLeague() {
   const step3 = newStep(), mode = newMode();

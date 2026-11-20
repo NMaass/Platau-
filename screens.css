@@ -59,7 +59,7 @@
 /* ===== Lineup ===== */
 .lbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);border-bottom:1px solid var(--rule)}
 .lbar label{font-weight:650;color:var(--ink-2)}
-.lbar .avg{color:var(--ink-2);white-space:nowrap}
+.lbar .avg{display:inline-flex;align-items:center;gap:var(--s2);color:var(--ink-2);white-space:nowrap}
 .lbar .avg b{font-family:var(--font-display);font-size:var(--t-h3);color:var(--ink);display:inline-block;min-width:3ch}
 .lbar .btn{margin-left:auto;min-width:var(--ctl-w)}
 #strat{width:220px}
@@ -379,3 +379,9 @@ body.booting #app{visibility:hidden}
 .x-draft{grid-template-columns:minmax(280px,1fr) minmax(0,2.4fr)}
 @media (max-width:980px){.x-draft{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:980px){.x-draft>:first-child{order:2}}
+/* numbers, not sentences (2026-11-20) */
+.l-hero .hint-nums{gap:var(--s1);flex-wrap:nowrap;min-width:0}
+.l-hero .hint-nums svg.i{width:14px;height:14px}
+.g-nums{gap:var(--s3);font-size:var(--t-small)}
+.g-nums>.l-row{gap:var(--s1)}
+.g-nums .ico{margin:-4px 0}
