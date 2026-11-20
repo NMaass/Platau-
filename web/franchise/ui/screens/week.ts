@@ -1,6 +1,7 @@
 // Home / This week: the hero (lineup step, then Watch week / Sim week), this week's opponent,
 // Before you play, last week's results (series MVP + summary + replay links), since last week feed.
 // Also the scouting report (#opponent), where weekly scouting points narrow the opponent's ratings.
+import {strategyLook} from '../../model/strategies.ts';
 import type {Series, TeamId, InboxItem, LeagueState} from '../../types.ts';
 import type {Advisory} from '../../model/advisories.ts';
 import {FA_ROUNDS} from '../../model/freeagency.ts';
@@ -90,7 +91,7 @@ function opponentCard(): string {
   const home = se.homeId === s.userTeamId;
   const when = s.phase === 'preseason' ? 'Week 1 opponent' : "This week's opponent";
   return `<section class="l-panel l-section" aria-labelledby="h-opp">
-    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, 'md')}<div><span class="cap">${when}</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2><p class="muted">${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(t.lineup.strategyId))} · ${home ? 'home' : 'away'}</p></div></div>
+    <div class="opp-h">${spr(ace ? speciesOf(ace) : null, 'md')}<div><span class="cap">${when}</span><h2 id="h-opp" class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></h2><p class="muted">${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(t.lineup.strategyId).says)} · ${home ? 'home' : 'away'}</p></div></div>
     <div class="l-facts">
       <div><span class="cap">Series · best of ${se.bestOf}</span>${pips(se)}</div>
       <div><span class="cap">Likely team</span>${likelyTeam(opp)}</div>
@@ -282,7 +283,7 @@ export function viewOpponent(): string {
   }).join('');
   const pts = s.teams[me].scoutingPoints;
   const intro = `<p>${esc(scoutLine(opp))}</p><p class="muted">You have <b>${pts}</b> scouting ${pts === 1 ? 'point' : 'points'} left this week (shared with the draft class). ${s.settings.scoutCost} point narrows a rating; ${s.settings.fullScoutCost} in total show it exactly. A Pokémon's rating is known to everyone after ${REVEAL_BATTLES} battles.</p>`;
-  return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, `Scouting report · ${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(t.lineup.strategyId))}`, `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
+  return `<a class="back" href="#week">${ic('back')}This week</a>` + head(`<span class="x-team">${teamLogo(t)}<span>${esc(teamName(opp))}</span></span>`, `Scouting report · ${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(t.lineup.strategyId).says)}`, `<a class="btn" href="#lineup">Set lineup ${ic('arrow')}</a>`) +
     panel('likely', 'Likely team', `${intro}<div class="l-grid scout-grid">${cards}</div>`) +
     panel('recent', 'Recent results', recent ? `<ul class="l-list top recent">${recent}</ul>` : `<p class="muted">No results yet.</p>`);
 }

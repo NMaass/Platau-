@@ -2,6 +2,7 @@
 // reason in a peek, Propose and "What would make this work?" in dialogs, trade block of
 // your own Pokémon), Offers (incoming AI offers: Accept / Decline / Counter), Free agents
 // (ZenGM columns, negotiate in a dialog, re-sign window + franchise tag in the offseason).
+import {strategyLook} from '../../model/strategies.ts';
 import type {DraftPick, Mon, MonId, TeamId, TradeOffer} from '../../types.ts';
 import {esc, ic, money, plural, record} from '../dom.ts';
 import {C, S, store, act, notify} from '../store.ts';
@@ -87,7 +88,7 @@ function builder(): string {
   const payThem = api.payroll(s, t.team), afterThem = payThem - salary(p.get.mons) + salary(p.give.mons);
   const why = `<strong>Why: ${esc(meter.word)}</strong><span>${ev ? esc(ev.reason) : 'Add Pokémon or picks to either side.'}</span>${ev ? `<span>Their score: ${ev.score > 0 ? '+' : ''}${ev.score} (they need +5).</span>` : ''}`;
   const st = M.standings(s).find((r) => r.teamId === t.team);
-  return `<div class="l-card"><div class="l-split"><span class="l-row">${teamLogo(them)}${sel}</span><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(them.lineup.strategyId))}</span></div></div>
+  return `<div class="l-card"><div class="l-split"><span class="l-row">${teamLogo(them)}${sel}</span><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(them.lineup.strategyId).says)}</span></div></div>
   <div class="x-sides">
     <section class="l-card" aria-labelledby="h-give"><div class="l-split"><h2 class="l-card-title" id="h-give">You give</h2><span class="x-small">${t.give.length}/${MAX_SIDE}</span></div>${list('give', t.give, me)}${addSelect('give', me, t.give)}</section>
     <section class="l-card" aria-labelledby="h-get"><div class="l-split"><h2 class="l-card-title" id="h-get">You get</h2><span class="x-small">${t.get.length}/${MAX_SIDE}</span></div>${list('get', t.get, t.team)}${addSelect('get', t.team, t.get)}</section>
@@ -183,7 +184,7 @@ function offerCard(o: TradeOffer): string {
     : o.status === 'accepted' ? fixChip('growth', 'check', 'Accepted') : o.status === 'declined' ? fixChip('league', 'x', 'Declined') : fixChip('league', 'clock', 'Expired');
   return `<article class="l-card" aria-labelledby="h-${esc(o.id)}">
     <div class="l-split">${fixChip('deal', 'deal', 'Offer')}${o.status === 'open' ? `<span class="tag ${today ? 't-dtd' : ''}">${ic('clock')}${today ? 'Ends this week' : `Ends week ${o.expiresWeek}`}</span>` : ''}</div>
-    <div class="l-stack tight"><h2 class="l-card-title x-team" id="h-${esc(o.id)}">${teamLogo(them)}<span>${esc(teamName(them.id))}</span></h2><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} · plays ${esc(strategyName(them.lineup.strategyId))}</span></div>
+    <div class="l-stack tight"><h2 class="l-card-title x-team" id="h-${esc(o.id)}">${teamLogo(them)}<span>${esc(teamName(them.id))}</span></h2><span class="x-small">${record(st?.wins ?? 0, st?.losses ?? 0)} · ${esc(strategyLook(them.lineup.strategyId).says)}</span></div>
     <div class="x-offer-cols"><div class="l-stack tight"><span class="cap">You give</span>${mini(o.get)}</div><div class="l-stack tight"><span class="cap">You get</span>${mini(o.give)}</div></div>
     ${o.status === 'open' ? beforeAfter([['Cap room', room, room - dSal]]) : ''}
     <div class="x-actslot">${acts}</div></article>`;
