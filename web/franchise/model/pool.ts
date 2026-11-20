@@ -1,7 +1,7 @@
 // Rarity pool: a finite count per species family, drawn without replacement.
 // Legendary/mythical families start at 1, pseudo-legendary at ~3, others ~20.
 // A retiring mon returns its family's slot so the league never runs dry.
-import type {Catalog, CatalogSpecies, LeagueState, Rarity} from '../types.ts';
+import type {Catalog, CatalogSpecies, LeagueState, Mon, MonId, Rarity, TeamId} from '../types.ts';
 import type {Rng} from './rng.ts';
 
 export interface PoolCounts { legendary: number; pseudo: number; common: number }
@@ -62,12 +62,13 @@ export function initPool(catalog: Catalog, counts: PoolCounts = DEFAULT_POOL_COU
   return pool;
 }
 
-/** Draw one family from the pool (weighted by remaining count). Refills commons if the pool runs dry. */
-export function drawFamily(catalog: Catalog, state: LeagueState, rng: Rng, bucket: 'legendary' | 'nonlegendary', prefer?: (f: FamilyInfo) => boolean): string | null {
+/** Draw one family from the pool (weighted by remaining count). Refills commons if the pool runs dry.
+ *  `avoid`: families never drawn (the species clause: a club's own families). */
+export function drawFamily(catalog: Catalog, state: LeagueState, rng: Rng, bucket: 'legendary' | 'nonlegendary', prefer?: (f: FamilyInfo) => boolean, avoid?: ReadonlySet<string>): string | null {
   const fams = families(catalog);
   const eligible = (): string[] => Object.keys(state.pool).filter(id => {
     const f = fams.get(id);
-    if (!f || state.pool[id] <= 0) return false;
+    if (!f || state.pool[id] <= 0 || avoid?.has(id)) return false;
     return bucket === 'legendary' ? f.bucket === 'legendary' : f.bucket !== 'legendary';
   });
   let ids = eligible();
@@ -83,6 +84,27 @@ export function drawFamily(catalog: Catalog, state: LeagueState, rng: Rng, bucke
   state.pool[id]--;
   return id;
 }
+
+// ---------------------------------------------------------------- species clause
+// A club never holds two Pokémon of one evolutionary family: two of a species (or two that could evolve into one)
+// on one roster is not allowed. Enforced by pre-made rosters, drafts, free agency, waivers and trades.
+
+/** A mon's family (old saves without `family`: the catalog's, else the species itself). */
+export const monFamily = (m: Mon, catalog?: Catalog): string => m.family ?? catalog?.species[m.speciesId]?.family ?? m.speciesId;
+
+/** Families on a club (retired and `except` mons left out). */
+export function clubFamilies(state: LeagueState, teamId: TeamId, except: Iterable<MonId> = [], catalog?: Catalog): Set<string> {
+  const skip = new Set(except), out = new Set<string>();
+  for (const id in state.mons) {
+    const m = state.mons[id];
+    if (m.teamId === teamId && !m.retired && !skip.has(id)) out.add(monFamily(m, catalog));
+  }
+  return out;
+}
+
+/** The club already has this mon's family (a second would break the species clause). */
+export const clubHasFamily = (state: LeagueState, teamId: TeamId, mon: Mon, except: Iterable<MonId> = [], catalog?: Catalog): boolean =>
+  mon.teamId !== teamId && clubFamilies(state, teamId, except, catalog).has(monFamily(mon, catalog));
 
 export function returnToPool(state: LeagueState, family: string | undefined): void {
   if (!family || !(family in state.pool)) return;

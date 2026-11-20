@@ -59,7 +59,7 @@ test('re-sign window, franchise tag, free agency signing', () => {
   }
   api.advancePhase(C, s);
   assert.equal(s.phase, 'free-agency');
-  const fa = api.freeAgents(s).sort((x, y) => api.bestRole(C, s, y).ovr - api.bestRole(C, s, x).ovr).find(m => api.askingPrice(C, s, m.id).salary <= api.capSpace(s, s.userTeamId));
+  const fa = api.freeAgents(s).sort((x, y) => api.bestRole(C, s, y).ovr - api.bestRole(C, s, x).ovr).find(m => api.askingPrice(C, s, m.id).salary <= api.capSpace(s, s.userTeamId) && !api.signBlock(s, m.id).reason);
   if (fa) {
     const price = api.askingPrice(C, s, fa.id);
     const res = api.offerContract(C, s, fa.id, above(s, price.salary), price.years);

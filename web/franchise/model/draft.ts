@@ -3,7 +3,7 @@
 // and their favourite strategies' needs, rookie scale contracts.
 import type {Catalog, DraftPick, LeagueState, Mon, MonId, TeamId} from '../types.ts';
 import type {Rng} from './rng.ts';
-import {drawFamily} from './pool.ts';
+import {clubFamilies, drawFamily, monFamily} from './pool.ts';
 import {createMon} from './mons.ts';
 import {rookieContract} from './cap.ts';
 import {reverseStandings, rankTeams} from './standings.ts';
@@ -101,6 +101,13 @@ export function onTheClock(state: LeagueState): DraftPick | null {
   return d.order[d.picks.length] ?? null;
 }
 
+/** What a club may draft: the board without families it already has (species clause); the whole board if nothing else is left. */
+export function draftableFor(state: LeagueState, teamId: TeamId, avail = availableProspects(state)): Mon[] {
+  const fams = clubFamilies(state, teamId);
+  const ok = avail.filter(m => !fams.has(monFamily(m)));
+  return ok.length ? ok : avail;
+}
+
 export function availableProspects(state: LeagueState): Mon[] {
   const d = state.draft;
   if (!d) return [];
@@ -111,7 +118,7 @@ export function availableProspects(state: LeagueState): Mon[] {
 /** AI (or auto) choice: perceived projected rating + need for its strategies. */
 export function aiChoice(catalog: Catalog, state: LeagueState, teamId: TeamId): Mon | undefined {
   if (state.draft?.startup) return startupChoice(catalog, state, teamId);
-  const avail = availableProspects(state);
+  const avail = draftableFor(state, teamId);
   let best: Mon | undefined, bestScore = -Infinity;
   for (const m of avail) {
     const k = knownRating(catalog, state, teamId, m);
@@ -138,7 +145,7 @@ export function startupChoice(catalog: Catalog, state: LeagueState, teamId: Team
     .map(([sid, w]) => [strategyById(sid as string).slots as string[][], slotFits(catalog, state, teamId, sid as string), w as number]);
   const typed = mine.filter(m => catalog.species[m.speciesId]?.types.includes(team.gymType ?? '')).length;
   let best: Mon | undefined, bestScore = -Infinity;
-  for (const m of availableProspects(state)) {
+  for (const m of draftableFor(state, teamId)) {
     const roles = rolesOf(catalog, m);
     const ovr = roles[0]?.ovr ?? 0;
     let score = ovr + (m.age <= 24 ? STARTUP_AI.young : m.age >= 31 ? STARTUP_AI.old : 0);
@@ -163,6 +170,7 @@ export function makePick(catalog: Catalog, state: LeagueState, monId: MonId): {o
   if (!d || !pick) return {ok: false, reason: 'No pick on the clock'};
   const mon = state.mons[monId];
   if (!mon || mon.prospect === undefined || d.picks.some(p => p.monId === monId)) return {ok: false, reason: 'Not available'};
+  if (!draftableFor(state, pick.ownerTeamId).includes(mon)) return {ok: false, reason: `Already one of the ${catalog.species[mon.speciesId]?.name ?? 'Pokémon'} line on this club: one of a species per club`};
   const overall = d.picks.length + 1;
   const inRound = overall - (pick.round - 1) * 16;
   d.picks.push({pick, monId});

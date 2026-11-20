@@ -9,6 +9,7 @@ import {logTx, monLabel, newId, rosterCount, teamMons} from './util.ts';
 import {inbox} from './inbox.ts';
 import {enforceRosters} from './roster.ts';
 import {leagueRng} from './rng.ts';
+import {clubFamilies, monFamily} from './pool.ts';
 
 export type TradeProposal = Omit<TradeOffer, 'id' | 'status' | 'expiresWeek'>;
 
@@ -35,6 +36,15 @@ export function tradeProblem(catalog: Catalog, state: LeagueState, o: TradePropo
   const owns = (t: TeamId, p: DraftPick) => state.teams[t].draftPicks.some(x => samePick(x, p));
   for (const p of o.give.picks) if (!owns(o.fromTeamId, p)) return 'You do not own that pick';
   for (const p of o.get.picks) if (!owns(o.toTeamId, p)) return 'They do not own that pick';
+  // species clause: one of a family per club, counting what each side sends away
+  for (const [team, out, inc] of [[o.fromTeamId, o.give.mons, o.get.mons], [o.toTeamId, o.get.mons, o.give.mons]] as [TeamId, MonId[], MonId[]][]) {
+    const fams = clubFamilies(state, team, out, catalog);
+    for (const id of inc) {
+      const f = monFamily(state.mons[id], catalog);
+      if (fams.has(f)) return `${state.teams[team].human ? 'You' : state.teams[team].name} already have a ${spName(catalog, state, id)} line: one of a species per club`;
+      fams.add(f);
+    }
+  }
   const nonIr = (ids: MonId[]) => ids.filter(id => state.mons[id].tier !== 'ir').length;
   const inSeason = state.phase === 'regular' || state.phase === 'preseason';
   for (const [team, out, inc] of [[o.fromTeamId, o.give.mons, o.get.mons], [o.toTeamId, o.get.mons, o.give.mons]] as [TeamId, MonId[], MonId[]][]) {

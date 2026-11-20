@@ -8,7 +8,7 @@ import {monValue} from './value.ts';
 import {bestRole} from './ratings.ts';
 import {freeAgents, logTx, money, monLabel, rosterCount, teamMons} from './util.ts';
 import {inbox} from './inbox.ts';
-import {drawFamily} from './pool.ts';
+import {clubFamilies, drawFamily, monFamily} from './pool.ts';
 import {createMon} from './mons.ts';
 
 const spName = (catalog: Catalog, state: LeagueState, m: Mon) => monLabel(catalog, state, m);
@@ -39,8 +39,8 @@ export function releaseMon(catalog: Catalog, state: LeagueState, mon: Mon, why =
 }
 
 /** A replacement-level free agent made on the spot when the FA pool is empty. */
-export function streetFreeAgent(catalog: Catalog, state: LeagueState, rng: Rng): Mon {
-  const fam = drawFamily(catalog, state, rng, 'nonlegendary')!;
+export function streetFreeAgent(catalog: Catalog, state: LeagueState, rng: Rng, avoid?: ReadonlySet<string>): Mon {
+  const fam = drawFamily(catalog, state, rng, 'nonlegendary', undefined, avoid)!;
   const m = createMon(catalog, state, rng, {family: fam, age: rng.range(24, 30), teamId: null});
   m.faSince = state.season;
   m.askMult = 0.5;
@@ -50,9 +50,10 @@ export function streetFreeAgent(catalog: Catalog, state: LeagueState, rng: Rng):
 /** Best free agent this team can still sign at the minimum (in-season replacements, roster fill). */
 export function bestCheapFa(catalog: Catalog, state: LeagueState, teamId: TeamId, rng: Rng): Mon {
   // unsigned after the bidding rounds (or mid-season), every free agent takes a minimum deal
-  const fas = freeAgents(state);
+  const fams = clubFamilies(state, teamId);   // species clause: never a second of a family
+  const fas = freeAgents(state).filter(m => !fams.has(monFamily(m, catalog)));
   fas.sort((a, b) => monValue(catalog, state, b, teamId) - monValue(catalog, state, a, teamId) || a.id.localeCompare(b.id));
-  return fas[0] ?? streetFreeAgent(catalog, state, rng);
+  return fas[0] ?? streetFreeAgent(catalog, state, rng, fams);
 }
 
 export function minimumDeal(state: LeagueState, years = 1): Contract {

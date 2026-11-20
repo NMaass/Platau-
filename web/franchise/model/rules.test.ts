@@ -130,7 +130,7 @@ test('cap rules: minimum deals fit over the cap, others do not; rookie scale; de
   assert.ok(deadMoneyOnCut(c) > 0 && deadMoneyOnCut(c) <= c.salary);
   // a free agent asking more than the room is refused, at the minimum accepted only if his ask is the minimum
   s.phase = 'free-agency';
-  const fa = teamMons(s, 't3')[0];
+  const fa = teamMons(s, 't3').find(m => !teamMons(s, t).some(x => x.family === m.family))!;   // species clause aside
   fa.teamId = null; fa.contract = null; fa.askMult = 1;
   // fill the user's cap
   const mine = teamMons(s, t).find(m => !m.contract!.exception)!;

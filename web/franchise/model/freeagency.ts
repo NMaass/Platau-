@@ -7,6 +7,7 @@ import {gi} from './grades.ts';
 import {lineupGain, monValue} from './value.ts';
 import {freeAgents, logTx, money, monLabel, rosterCount, teamMons} from './util.ts';
 import {releaseMon, signMon} from './roster.ts';
+import {clubFamilies, clubHasFamily, monFamily} from './pool.ts';
 import {ROSTER, autoLineup, removeFromLineup} from './lineup.ts';
 import {bestRole} from './ratings.ts';
 import {inbox} from './inbox.ts';
@@ -42,6 +43,7 @@ export function signBlock(state: LeagueState, teamId: TeamId, mon: Mon): {reason
   if (!resign && mon.prospect !== undefined) return no('In the draft class');
   if (resign && state.phase !== 'resign') return no('Re-signing happens in the re-sign window');
   if (resign) return no('');
+  if (clubHasFamily(state, teamId, mon)) return no('Already one of this species on the club');
   if (state.phase === 'regular' && state.week > state.settings.weeks) return no('Season over');
   const inSeason = state.phase === 'regular' || state.phase === 'playoffs';
   const n = rosterCount(teamMons(state, teamId));
@@ -164,12 +166,13 @@ export function faRound(catalog: Catalog, state: LeagueState, rng: Rng): number 
   }
   // the floor these contracts count toward: next season's (it grows with the cap), with a little margin for cuts
   const floorTarget = round50k(state.settings.floor * (capYear(state) > state.season ? 1 + state.settings.capGrowth : 1) * FA_BID.floorMargin);
+  const fams = new Map(Object.keys(state.teams).map(t => [t, clubFamilies(state, t)]));
   let signed = 0;
   for (const fa of fas) {
     const ask = askingPrice(catalog, state, fa);
     const bids: {teamId: TeamId; salary: number; years: number; score: number}[] = [];
     for (const team of Object.values(state.teams)) {
-      if (team.human) continue;
+      if (team.human || fams.get(team.id)!.has(monFamily(fa))) continue;   // species clause
       const n = counts.get(team.id)!;
       const v = monValue(catalog, state, fa, team.id);
       const gain = lineupGain(catalog, state, team.id, fa);
@@ -195,6 +198,7 @@ export function faRound(catalog: Catalog, state: LeagueState, rng: Rng): number 
     if (b.salary < ask.salary * 0.95) continue;
     signMon(catalog, state, b.teamId, fa, makeContract(b.salary, b.years, {exception: b.salary <= state.settings.minSalary ? 'minimum' : undefined}));
     counts.set(b.teamId, counts.get(b.teamId)! + 1);
+    fams.get(b.teamId)!.add(monFamily(fa));
     signed++;
   }
   for (const m of freeAgents(state)) m.askMult = Math.max(0.3, (m.askMult ?? 1) * FA_ASK_DROP);
