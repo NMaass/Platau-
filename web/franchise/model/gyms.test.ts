@@ -76,3 +76,90 @@ test("'fantasy-draft' still returns a ready league (auto-picked startup draft)",
   assert.equal(s.phase, 'preseason');
   for (const t of Object.keys(s.teams)) assert.equal(teamMons(s, t).length, 18);
 });
+
+// ---------------------------------------------------------------- pre-made rosters (model/premade.ts), species clause
+import {readFileSync} from 'node:fs';
+import type {Catalog, LeagueState} from '../types.ts';
+import {premadeRosters, PREMADE} from './premade.ts';
+import {initPool, monFamily} from './pool.ts';
+import {leagueRng} from './rng.ts';
+import {planLineup} from './lineup.ts';
+import {runsStrategy, strategyById} from './strategies.ts';
+import {startupChoice} from './draft.ts';
+import {tradeProblem} from './trades.ts';
+import {signBlock} from './freeagency.ts';
+
+const REAL = JSON.parse(readFileSync(new URL('../data/catalog.json', import.meta.url), 'utf8')) as Catalog;
+const youngestSix = (s: LeagueState, t: string) => {
+  const ms = teamMons(s, t);
+  for (const m of ms) m.tier = 'backup';
+  [...ms].sort((a, b) => a.age - b.age || a.id.localeCompare(b.id)).slice(0, 6).forEach(m => { m.tier = 'practice'; });
+};
+/** A league's clubs with empty rosters and a full pool, then pre-made rosters as newLeague builds them. */
+function premade(seed: number): LeagueState {
+  const s = api.newLeague(REAL, {seed, start: 'draft'});
+  for (const id in s.mons) delete s.mons[id];
+  s.pool = initPool(REAL); s.draft = undefined; s.phase = 'preseason';
+  const rng = leagueRng(s);
+  premadeRosters(REAL, s, rng, Object.keys(s.teams), {perTeam: 18, legendaries: 9,
+    ages: n => rng.shuffle(Array.from({length: n}, (_, k) => 21 + Math.round(k * 12 / (n - 1)))), practice: t => youngestSix(s, t)});
+  return s;
+}
+const gymTyped = (C2: Catalog, s: LeagueState, id: string | null, type?: string) => !!id && !!type && C2.species[s.mons[id].speciesId].types.includes(type);
+
+test('pre-made: every club can run its favourite strategy (a rain club has a rain setter), the gym type is at most half the six, one of a species, even clubs', () => {
+  for (const seed of [3, 41, 777, 2026]) {
+    const s = premade(seed);
+    const str: number[] = [];
+    for (const t of Object.keys(s.teams)) {
+      const team = s.teams[t], mons = teamMons(s, t);
+      const fav = team.favoriteStrategies[0], plan = planLineup(REAL, s, t, fav);
+      assert.equal(mons.length, 18);
+      assert.ok(runsStrategy(plan), `seed ${seed}: ${team.city} can't run ${fav}: ${plan.slots.map(sl => sl.role).join(', ')}`);
+      const w = strategyById(fav).weather;
+      if (w) assert.equal(plan.slots[0].role, `${w}-setter`, `${team.city} leads with its ${w} setter`);
+      assert.ok(plan.slots.filter(sl => gymTyped(REAL, s, sl.monId, team.gymType)).length <= PREMADE.typedStarters, `${team.city}: gym type at most half the starters`);
+      const typed = mons.filter(m => gymTyped(REAL, s, m.id, team.gymType)).length;
+      assert.ok(typed >= 4 && typed <= 9, `${team.city}: ${typed} of 18 of the gym type (a theme, not the whole club)`);
+      assert.equal(new Set(mons.map(m => monFamily(m, REAL))).size, 18, `${team.city}: one of each species line`);
+      str.push(api.teamStrength(REAL, s, t));
+    }
+    assert.ok(Math.max(...str) - Math.min(...str) <= PREMADE.spread + 1.5, `seed ${seed}: clubs within ${PREMADE.spread} of each other (${Math.min(...str).toFixed(1)}–${Math.max(...str).toFixed(1)})`);
+  }
+});
+
+test('weather needs its setter: a lineup without one does not run the strategy', () => {
+  const s = premade(5);
+  const t = Object.keys(s.teams).find(x => s.teams[x].favoriteStrategies[0] === 'rain')!;
+  for (const m of teamMons(s, t)) if (REAL.species[m.speciesId].sets.some(x => x.roles.includes('rain-setter'))) m.teamId = null;
+  const plan = planLineup(REAL, s, t, 'rain');
+  assert.equal(runsStrategy(plan), false);
+});
+
+test('species clause: the startup draft, free agency and trades never put two of a species line on a club', () => {
+  const s = api.newLeague(REAL, {seed: 21, start: 'fantasy-draft'});
+  for (const t of Object.keys(s.teams)) {
+    const ms = teamMons(s, t);
+    assert.equal(new Set(ms.map(m => monFamily(m, REAL))).size, ms.length, `${s.teams[t].city}: no duplicate after the draft`);
+  }
+  void startupChoice;
+  // free agency: a free agent of a line the club has is blocked
+  const me = s.userTeamId, mine = teamMons(s, me)[0];
+  const twin = teamMons(s, 't7').find(m => m.speciesId !== mine.speciesId)!;
+  const was = twin.family;
+  twin.family = mine.family; twin.teamId = null; twin.contract = null;
+  s.phase = 'free-agency';
+  assert.match(signBlock(s, me, twin).reason, /species/);
+  twin.family = was;
+  assert.doesNotMatch(signBlock(s, me, twin).reason, /species/);
+  twin.teamId = 't7';
+  // trades: getting a second of a line is refused, swapping one for the other is fine
+  s.phase = 'preseason';
+  const theirs = teamMons(s, 't7')[1];
+  const keep = theirs.family;
+  theirs.family = teamMons(s, me)[1].family;
+  const o = {fromTeamId: me, toTeamId: 't7', give: {mons: [teamMons(s, me)[2].id], picks: []}, get: {mons: [theirs.id], picks: []}};
+  assert.match(tradeProblem(REAL, s, o), /species/);
+  assert.doesNotMatch(tradeProblem(REAL, s, {...o, give: {mons: [teamMons(s, me)[1].id], picks: []}}), /species/);
+  theirs.family = keep;
+});

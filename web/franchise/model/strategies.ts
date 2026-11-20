@@ -5,14 +5,14 @@ import {WEATHER_ABUSER, WEATHER_SETTER} from '../catalog/roles.ts';
 
 const SETTER: Role[] = ['rocks', 'spikes', 'screens', 'rain-setter', 'sun-setter', 'sand-setter', 'snow-setter'];
 
-/** Weather: its setter and abusers come first (the solver prefers earlier roles), but a typical roster can field it
- *  on-role: the lead slot takes another setter when the club has no weather setter (only 4 species set sand), and
- *  the abuser slots take the attackers a weather team plays alongside them. */
+/** Weather: the lead slot is the weather setter and nothing else (a rain club without Drizzle or Rain Dance can't
+ *  play in the rain: the slot shows off-role and the AI picks another strategy), then abusers first (the solver
+ *  prefers earlier roles), with the attackers a weather team plays alongside them. */
 function weather(id: string, name: string, w: Weather): StrategyDef {
   const ab = WEATHER_ABUSER[w];
   return {
     id, name, weather: w,
-    slots: [[WEATHER_SETTER[w], 'rocks', 'spikes', 'screens'], [ab, 'sweeper', 'attacker'], [ab, 'wallbreaker', 'attacker'],
+    slots: [[WEATHER_SETTER[w]], [ab, 'sweeper', 'attacker'], [ab, 'wallbreaker', 'attacker'],
       [ab, 'attacker', 'wallbreaker'], ['sweeper', ab, 'attacker'], ['pivot', 'remover', 'wall']],
   };
 }
@@ -38,3 +38,21 @@ export const STRATEGIES: StrategyDef[] = [
 export function strategyById(id: string): StrategyDef {
   return STRATEGIES.find(s => s.id === id) ?? STRATEGIES[2];
 }
+
+/** How a strategy reads in plain English, with its icon (ui/icons.ts id): "Plays in the rain", never jargon. */
+export const STRATEGY_LOOK: Record<string, {icon: string; says: string}> = {
+  'hyper-offense': {icon: 'bolt', says: 'All-out attack'},
+  'bulky-offense': {icon: 'fist', says: 'Hits hard, takes hits'},
+  balance: {icon: 'scales', says: 'A bit of everything'},
+  stall: {icon: 'shield', says: 'Walls up, wears you down'},
+  rain: {icon: 'rain', says: 'Plays in the rain'},
+  sun: {icon: 'sun', says: 'Plays in the sun'},
+  sand: {icon: 'sand', says: 'Plays in the sand'},
+  snow: {icon: 'snow', says: 'Plays in the snow'},
+  'hazard-stack': {icon: 'spikes', says: 'Lays traps on the field'},
+};
+export const strategyLook = (id: string): {icon: string; says: string} => STRATEGY_LOOK[id] ?? STRATEGY_LOOK.balance;
+
+/** Can this lineup plan run the strategy as meant? Every slot on-role (so a weather club has its setter leading). */
+export const runsStrategy = (plan: {onRole: number; slots: {monId: string | null}[]}): boolean =>
+  plan.onRole === plan.slots.length && plan.slots.every(sl => sl.monId);
