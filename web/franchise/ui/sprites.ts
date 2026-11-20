@@ -51,8 +51,8 @@ export function installSpriteFallback(): void {
 }
 
 /** A club's logo: its gym badge in the fixed `.logo` square (older saves without a badge use their slot's badge). */
-export function teamLogo(t: {id: string; badge?: number} | undefined, lg = false): string {
+export function teamLogo(t: {id: string; badge?: number} | undefined, lg: boolean | 'lg' | 'xl' = false): string {
   const n = t?.badge ?? (t ? seedOf(t.id)?.badge : undefined);
-  const cls = 'logo' + (lg ? ' lg' : '');
+  const cls = 'logo' + (lg === 'xl' ? ' xl' : lg ? ' lg' : '');
   return n ? `<span class="${cls}" aria-hidden="true"><img src="${esc(badgeUrl(n))}" alt="" width="64" height="64"></span>` : `<span class="${cls}" aria-hidden="true"></span>`;
 }
