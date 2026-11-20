@@ -27,7 +27,7 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `model.ts` | `M.*` = model/api.ts with per-function fallback (`fallback.ts`) while bodies throw; `api` raw; `strategies()` |
 | `router.ts` | `parse()` → `{path, arg, params}` (`#mon-m12`, `#battle-<seriesId>-<game>`, `#roster?lens=contracts`), `ROOMS`, `roomOf` |
 | `shell.ts` | sidebar / phone header / tab bar / room sub-tabs, `applyTeamColour`, `divisionName`, `phaseLabel` |
-| `sprites.ts` | `ico(species)` 40×30 row icon, `spr(species, ''|'md'|'xl')` framed front sprite, `trainerImg`, `teamLogo(team, lg?)` the club's gym badge in the fixed `.logo` box (32 px; `.lg` 56 px on New League only) |
+| `sprites.ts` | `ico(species)` 40×30 row icon, `spr(species, ''|'md'|'xl')` framed front sprite, `trainerImg`, `teamLogo(team, lg?: true|'xl')` the club's gym badge on its round `.logo` plate (32 px; `.lg` 56 px, `.xl` 112 px on New League and the intro) |
 | `routes.ts` | `ROUTES` registry for extra screens |
 | `dev-fixture.ts` | `fixtureCatalog()`, `fixtureLeague()` |
 
@@ -57,7 +57,7 @@ Run: `cd web && node franchise/scripts/build.mjs --serve` → http://127.0.0.1:8
 | `info(label, popHtml)`, `peekLabel(label, popHtml)`, `prow(k, v)` | peeks (one floating layer, hover/focus/tap) |
 
 ## data-* actions (app.ts)
-`data-act="play|auto|swap|chooser|theme|fastsim|export|import|pickteam|newmode|newreroll|newleague|release|saveopen|saveexport|savedelete"` (click; `release` opens the Release confirm (moves.ts `releaseDialog`), `save*` act on Your leagues (store.ts `savedLeagues`/`openSave`/`exportSaveById`/`deleteSave`); `play` takes `data-mode` watch | sim | step (screens/play.ts), `fastsim` is the Settings dev toggle read by `store.fastSim()`),
+`data-act="play|auto|swap|chooser|theme|fastsim|export|import|release|saveopen|saveexport|savedelete"` (click; `release` opens the Release confirm (moves.ts `releaseDialog`), `save*` act on Your leagues (store.ts `savedLeagues`/`openSave`/`exportSaveById`/`deleteSave`); `play` takes `data-mode` watch | sim | step (screens/play.ts), `fastsim` is the Settings dev toggle read by `store.fastSim()`),
 `data-act="strategy|slotset|monset|tier|budget"` (change), `data-sort="<table>:<col>:<desc 0|1>"`,
 `data-lens="<uiKey>:<value>"`. Re-render after state changes with `act()` or `notify()`.
 
@@ -71,8 +71,12 @@ League / front office screens live in `screens/league.ts` (standings, playoffs, 
 `screens/draft.ts` (scouting, draft), `screens/moves.ts` (trades, offers, free agents) and are registered in
 `routes.ts`. Their buttons use `data-fo="..."`, handled by one delegated listener per module (`once`).
 Design-system primitives added for them: `.chip.fix`, `.l-cellacts` (two equal buttons in a cell; `--n` for more), `.l-toolbar`.
-New League (`screens/settings.ts`) adds `.logo`, `.l-pick` (selectable card of one height, accent `--c`), `.l-tiles`
-(N equal fixed tiles), `.l-icons` (six row icons with a number), `.l-sticky` (side panel in view on desktop).
+New League (`screens/settings.ts`, a wizard wired by its own `data-nl="mode|next|back|team|start"` listener) adds
+`body.focus` (no sidebar / tab bar), `.l-wizard` (`.wz-top` steps, `.wz-body`, `.wz-foot` Back/Next of fixed width),
+`.l-decide` + `.decide` (equal decision cards, aria-pressed), `.l-clubs` + `.club-tile` (badge tiles, a row tile on
+phones), `.plays` (strategy icon + plain words, `model/strategies.ts` `STRATEGY_LOOK`), `.l-tiles`, `.l-icons`,
+`.l-sticky`, and `.l-intro` (the league-start intro). Motion: `--dur-fast|base|slow`, `--ease-out|in|in-out` (when to
+use each is in the tokens file), `.l-enter` (a step's content arriving; `.back` from above).
 This week's hero: `.l-hero` (numbered `.step`s, `.is-done` / `.is-todo`) and `.btn.xl` (the main action: icon, label,
 one-line `<small>` hint; one height `--ctl-h-xl`) in `.l-hero-acts` (`--n` equal columns, stacked under 480 px).
 

@@ -34,10 +34,17 @@ signs nobody silently: its result dialog offers the best free agent on a minimum
 Two of a species on one club show as "Espathra" and "Espathra #2" everywhere (`model/util.ts` `monLabel`).
 
 ## Starting a league
-New league is one page: Pre-made teams or Draft, the 16 gyms as cards by region, and a preview of the picked club.
-- **Pre-made**: every club gets 18 from the rarity pool, about half of them of its gym type; filler Pokémon are
-  swapped until the clubs' best-six strength is within 2 points. The preview shows the actual league that starts
-  (generated once per seed; Reroll draws another).
+New league is a three-step wizard on a focus page (no sidebar): 1 Pre-made teams or Draft (two decision cards),
+2 pick a club (16 badge tiles by region, the club's preview beside them on desktop), 3 the club large, its roster or
+draft slot and the league name; Start plays a ~1.5 s intro (badge, club, Season 1; click skips; none under reduced
+motion) and opens the team home. The league is generated once when the wizard opens (one seed per mode): the
+preview is the league that starts. No reroll; Draft is the way to a different roster.
+- **Pre-made** (`model/premade.ts`): every club gets 18 from the rarity pool, built so it can run its favourite
+  strategy on-role (the six roles are drawn first; a weather club gets its weather setter), with about a third of
+  the roster and at most half the starting six of its gym type, one of each species line, and swaps between clubs
+  until their best-six strength is within 2 points.
+- **Species clause**: no club holds two of one species line (`pool.ts` `clubFamilies`): pre-made rosters, draft
+  picks (`draft.ts` `draftableFor`), free agency and waivers skip them, trades with one are refused.
 - **Draft**: the league opens on a startup draft: empty rosters, 18 snake rounds, the whole starting pool (288,
   every rating known) as the board. AI clubs draft for their favourite strategy's open slots and their gym type.
   After the last pick, Sign contracts assigns contracts and practice squads and opens the preseason.
@@ -85,7 +92,7 @@ build, `--headed` shows the browser, `e2e.mjs --shots <dir>` saves screenshots).
 | `model/value.ts` `PLAN_SEASONS`, `GROWTH_PER_SEASON` | how far ahead clubs value young mons (projected rating = the Growth and evolutions reachable in 3 seasons); `needBoost`/`lineupGain` = what a mon adds to the club's current and favourite strategies |
 | `model/trades.ts` `AI_TRADE`, `model/freeagency.ts` `FA_BID` | AI-AI trades: fair by neutral value (30%) and a lineup gain for one side; FA bids by lineup gain, under-floor clubs spend toward next season's floor |
 | `model/pool.ts`, `model/awards.ts` | rarity pool counts; fame values (hall of fame) |
-| `model/teams.ts`, `model/season.ts` `THEME`, `model/draft.ts` `STARTUP_AI` | the 16 gym clubs (badge, type, leader, favourite strategies); pre-made rosters: picks drawn from the gym type, balance spread; startup-draft AI bonuses |
+| `model/teams.ts`, `model/premade.ts` `PREMADE`, `model/draft.ts` `STARTUP_AI` | the 16 gym clubs (badge, type, leader, favourite strategies); pre-made rosters: gym-type count and starters cap, role draws, balance spread; startup-draft AI bonuses |
 
 ## Known gaps
 - The replay viewer and Showdown sprites hotlink play.pokemonshowdown.com (PokeAPI sprite fallback); offline or
